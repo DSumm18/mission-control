@@ -1,0 +1,225 @@
+{
+  "lastUpdated": "2026-02-17T20:00:00Z",
+  "modules": [
+    {
+      "id": "safeguarding",
+      "name": "Safeguarding Hub",
+      "currentGate": "G3",
+      "gates": {
+        "G1": { "status": "passed", "date": "2026-02-10", "approver": "Ed" },
+        "G2": { "status": "passed", "date": "2026-02-12", "approver": "Ed" },
+        "G3": { "status": "in-progress", "date": null, "approver": null },
+        "G4": { "status": "locked", "date": null, "approver": null },
+        "G5": { "status": "locked", "date": null, "approver": null }
+      },
+      "docs": {
+        "RESEARCH.md": true,
+        "SPEC.md": true,
+        "TEST-CASES.md": false,
+        "QA-REPORT.md": false
+      },
+      "releaseBlocked": true,
+      "blockReason": "Missing TEST-CASES.md, QA-REPORT.md",
+      "assignee": "build-agent-1",
+      "priority": "high"
+    },
+    {
+      "id": "staff-wellbeing",
+      "name": "Staff Wellbeing",
+      "currentGate": "G4",
+      "gates": {
+        "G1": { "status": "passed", "date": "2026-02-08", "approver": "Ed" },
+        "G2": { "status": "passed", "date": "2026-02-09", "approver": "Ed" },
+        "G3": { "status": "passed", "date": "2026-02-12", "approver": "Agent Beta" },
+        "G4": { "status": "in-progress", "date": null, "approver": null },
+        "G5": { "status": "locked", "date": null, "approver": null }
+      },
+      "docs": {
+        "RESEARCH.md": true,
+        "SPEC.md": true,
+        "TEST-CASES.md": true,
+        "QA-REPORT.md": false
+      },
+      "releaseBlocked": true,
+      "blockReason": "Missing QA-REPORT.md",
+      "assignee": "build-agent-2",
+      "priority": "medium"
+    },
+    {
+      "id": "behaviour",
+      "name": "Behaviour Management",
+      "currentGate": "G2",
+      "gates": {
+        "G1": { "status": "passed", "date": "2026-02-10", "approver": "Ed" },
+        "G2": { "status": "in-progress", "date": null, "approver": null },
+        "G3": { "status": "locked", "date": null, "approver": null },
+        "G4": { "status": "locked", "date": null, "approver": null },
+        "G5": { "status": "locked", "date": null, "approver": null }
+      },
+      "docs": {
+        "RESEARCH.md": true,
+        "SPEC.md": false,
+        "TEST-CASES.md": false,
+        "QA-REPORT.md": false
+      },
+      "releaseBlocked": true,
+      "blockReason": "Waiting on SPEC, tests, QA",
+      "assignee": "build-agent-3",
+      "priority": "high"
+    },
+    {
+      "id": "send-hub",
+      "name": "SEND Hub",
+      "currentGate": "G5",
+      "gates": {
+        "G1": { "status": "passed", "date": "2026-01-28", "approver": "Ed" },
+        "G2": { "status": "passed", "date": "2026-01-30", "approver": "Ed" },
+        "G3": { "status": "passed", "date": "2026-02-02", "approver": "Agent Alpha" },
+        "G4": { "status": "passed", "date": "2026-02-04", "approver": "QA Agent" },
+        "G5": { "status": "passed", "date": "2026-02-06", "approver": "Ed" }
+      },
+      "docs": {
+        "RESEARCH.md": true,
+        "SPEC.md": true,
+        "TEST-CASES.md": true,
+        "QA-REPORT.md": true
+      },
+      "releaseBlocked": false,
+      "blockReason": null,
+      "assignee": "build-agent-2",
+      "priority": "medium"
+    },
+    {
+      "id": "attendance",
+      "name": "Attendance Intelligence",
+      "currentGate": "G3",
+      "gates": {
+        "G1": { "status": "passed", "date": "2026-02-05", "approver": "Ed" },
+        "G2": { "status": "passed", "date": "2026-02-07", "approver": "Ed" },
+        "G3": { "status": "in-progress", "date": null, "approver": null },
+        "G4": { "status": "locked", "date": null, "approver": null },
+        "G5": { "status": "locked", "date": null, "approver": null }
+      },
+      "docs": {
+        "RESEARCH.md": true,
+        "SPEC.md": true,
+        "TEST-CASES.md": false,
+        "QA-REPORT.md": false
+      },
+      "releaseBlocked": true,
+      "blockReason": "Build not complete",
+      "assignee": "build-agent-1",
+      "priority": "high"
+    },
+    {
+      "id": "parent-engagement",
+      "name": "Parent Engagement",
+      "currentGate": "G1",
+      "gates": {
+        "G1": { "status": "in-progress", "date": null, "approver": null },
+        "G2": { "status": "locked", "date": null, "approver": null },
+        "G3": { "status": "locked", "date": null, "approver": null },
+        "G4": { "status": "locked", "date": null, "approver": null },
+        "G5": { "status": "locked", "date": null, "approver": null }
+      },
+      "docs": {
+        "RESEARCH.md": false,
+        "SPEC.md": false,
+        "TEST-CASES.md": false,
+        "QA-REPORT.md": false
+      },
+      "releaseBlocked": true,
+      "blockReason": "Research not complete",
+      "assignee": "build-agent-3",
+      "priority": "low"
+    },
+    {
+      "id": "timetable",
+      "name": "Timetable Optimizer",
+      "currentGate": "G4",
+      "gates": {
+        "G1": { "status": "passed", "date": "2026-02-01", "approver": "Ed" },
+        "G2": { "status": "passed", "date": "2026-02-03", "approver": "Ed" },
+        "G3": { "status": "passed", "date": "2026-02-09", "approver": "Agent Alpha" },
+        "G4": { "status": "failed", "date": "2026-02-16", "approver": "QA Agent" },
+        "G5": { "status": "locked", "date": null, "approver": null }
+      },
+      "docs": {
+        "RESEARCH.md": true,
+        "SPEC.md": true,
+        "TEST-CASES.md": true,
+        "QA-REPORT.md": true
+      },
+      "releaseBlocked": true,
+      "blockReason": "G4 failed performance tests",
+      "assignee": "build-agent-4",
+      "priority": "medium"
+    },
+    {
+      "id": "reporting",
+      "name": "Reporting Suite",
+      "currentGate": "G5",
+      "gates": {
+        "G1": { "status": "passed", "date": "2026-01-20", "approver": "Ed" },
+        "G2": { "status": "passed", "date": "2026-01-24", "approver": "Ed" },
+        "G3": { "status": "passed", "date": "2026-01-31", "approver": "Agent Beta" },
+        "G4": { "status": "passed", "date": "2026-02-02", "approver": "QA Agent" },
+        "G5": { "status": "passed", "date": "2026-02-03", "approver": "Ed" }
+      },
+      "docs": {
+        "RESEARCH.md": true,
+        "SPEC.md": true,
+        "TEST-CASES.md": true,
+        "QA-REPORT.md": true
+      },
+      "releaseBlocked": false,
+      "blockReason": null,
+      "assignee": "build-agent-5",
+      "priority": "low"
+    },
+    {
+      "id": "onboarding",
+      "name": "Student Onboarding",
+      "currentGate": "G3",
+      "gates": {
+        "G1": { "status": "passed", "date": "2026-02-04", "approver": "Ed" },
+        "G2": { "status": "passed", "date": "2026-02-07", "approver": "Ed" },
+        "G3": { "status": "in-progress", "date": null, "approver": null },
+        "G4": { "status": "locked", "date": null, "approver": null },
+        "G5": { "status": "locked", "date": null, "approver": null }
+      },
+      "docs": {
+        "RESEARCH.md": true,
+        "SPEC.md": true,
+        "TEST-CASES.md": false,
+        "QA-REPORT.md": false
+      },
+      "releaseBlocked": true,
+      "blockReason": "Awaiting test plan",
+      "assignee": "build-agent-1",
+      "priority": "high"
+    },
+    {
+      "id": "compliance",
+      "name": "Compliance Ledger",
+      "currentGate": "G2",
+      "gates": {
+        "G1": { "status": "passed", "date": "2026-02-06", "approver": "Ed" },
+        "G2": { "status": "in-progress", "date": null, "approver": null },
+        "G3": { "status": "locked", "date": null, "approver": null },
+        "G4": { "status": "locked", "date": null, "approver": null },
+        "G5": { "status": "locked", "date": null, "approver": null }
+      },
+      "docs": {
+        "RESEARCH.md": true,
+        "SPEC.md": false,
+        "TEST-CASES.md": false,
+        "QA-REPORT.md": false
+      },
+      "releaseBlocked": true,
+      "blockReason": "Spec under review",
+      "assignee": "build-agent-6",
+      "priority": "medium"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "builds": [
+    {"id":"build-20260217-014","timestamp":"2026-02-17T20:18:00Z","module":"safeguarding","tool":"next-build","agent":"build-agent-1","result":"fail","failureCategory":"spec","failureDetail":"Missing API contract for safeguarding risk endpoint","durationMs":12890,"gate":"G3","commit":"7d4c1f2"},
+    {"id":"build-20260217-013","timestamp":"2026-02-17T20:12:00Z","module":"attendance","tool":"next-build","agent":"build-agent-1","result":"pass","failureCategory":null,"failureDetail":null,"durationMs":9230,"gate":"G3","commit":"7d4c1e8"},
+    {"id":"build-20260217-012","timestamp":"2026-02-17T20:05:00Z","module":"onboarding","tool":"next-build","agent":"build-agent-2","result":"fail","failureCategory":"test","failureDetail":"E2E flow failed at consent capture","durationMs":11350,"gate":"G3","commit":"7d4c1a0"},
+    {"id":"build-20260217-011","timestamp":"2026-02-17T19:58:00Z","module":"send-hub","tool":"next-build","agent":"build-agent-4","result":"pass","failureCategory":null,"failureDetail":null,"durationMs":8120,"gate":"G5","commit":"7d4c198"},
+    {"id":"build-20260217-010","timestamp":"2026-02-17T19:45:00Z","module":"safeguarding","tool":"next-build","agent":"build-agent-1","result":"fail","failureCategory":"resource","failureDetail":"schema snapshot missing from repository","durationMs":12400,"gate":"G3","commit":"7d4c182"},
+    {"id":"build-20260217-009","timestamp":"2026-02-17T19:30:00Z","module":"reporting","tool":"next-build","agent":"build-agent-5","result":"pass","failureCategory":null,"failureDetail":null,"durationMs":10500,"gate":"G5","commit":"7d4c17d"},
+    {"id":"build-20260217-008","timestamp":"2026-02-17T19:18:00Z","module":"behaviour","tool":"next-build","agent":"build-agent-3","result":"fail","failureCategory":"tool","failureDetail":"Turbopack process terminated unexpectedly","durationMs":6800,"gate":"G2","commit":"7d4c16a"},
+    {"id":"build-20260217-007","timestamp":"2026-02-17T19:05:00Z","module":"timetable","tool":"next-build","agent":"build-agent-4","result":"fail","failureCategory":"test","failureDetail":"Performance budget exceeded by 210ms","durationMs":14560,"gate":"G4","commit":"7d4c15f"},
+    {"id":"build-20260217-006","timestamp":"2026-02-17T18:42:00Z","module":"attendance","tool":"next-build","agent":"build-agent-1","result":"pass","failureCategory":null,"failureDetail":null,"durationMs":9010,"gate":"G3","commit":"7d4c144"},
+    {"id":"build-20260217-005","timestamp":"2026-02-17T18:25:00Z","module":"compliance","tool":"next-build","agent":"build-agent-6","result":"fail","failureCategory":"spec","failureDetail":"Spec missing retention-period requirements","durationMs":7340,"gate":"G2","commit":"7d4c130"},
+    {"id":"build-20260217-004","timestamp":"2026-02-17T18:12:00Z","module":"staff-wellbeing","tool":"next-build","agent":"build-agent-2","result":"pass","failureCategory":null,"failureDetail":null,"durationMs":7600,"gate":"G4","commit":"7d4c11a"},
+    {"id":"build-20260217-003","timestamp":"2026-02-17T17:57:00Z","module":"safeguarding","tool":"next-build","agent":"build-agent-1","result":"fail","failureCategory":"auth","failureDetail":"Missing permission token for secured test suite","durationMs":9950,"gate":"G3","commit":"7d4c101"},
+    {"id":"build-20260217-002","timestamp":"2026-02-17T17:40:00Z","module":"reporting","tool":"next-build","agent":"build-agent-5","result":"pass","failureCategory":null,"failureDetail":null,"durationMs":8500,"gate":"G5","commit":"7d4c0f1"},
+    {"id":"build-20260217-001","timestamp":"2026-02-17T17:22:00Z","module":"onboarding","tool":"next-build","agent":"build-agent-2","result":"pass","failureCategory":null,"failureDetail":null,"durationMs":9300,"gate":"G3","commit":"7d4c0d8"}
+  ]
+}

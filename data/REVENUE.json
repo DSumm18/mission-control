@@ -1,0 +1,31 @@
+{
+  "currency": "GBP",
+  "target": { "amount": 10000, "deadline": "2026-03-31", "label": "£10K/month" },
+  "current": {
+    "month": "2026-02",
+    "total": 5530,
+    "daily": [
+      {"date":"2026-02-01","amount":120,"breakdown":{"mymeme":20,"clawphone":15,"dealfind":55,"schoolgle":30}},
+      {"date":"2026-02-02","amount":180,"breakdown":{"mymeme":25,"clawphone":20,"dealfind":75,"schoolgle":60}},
+      {"date":"2026-02-03","amount":205,"breakdown":{"mymeme":35,"clawphone":15,"dealfind":80,"schoolgle":75}},
+      {"date":"2026-02-04","amount":245,"breakdown":{"mymeme":30,"clawphone":20,"dealfind":95,"schoolgle":100}},
+      {"date":"2026-02-05","amount":260,"breakdown":{"mymeme":34,"clawphone":25,"dealfind":96,"schoolgle":105}},
+      {"date":"2026-02-06","amount":305,"breakdown":{"mymeme":40,"clawphone":25,"dealfind":120,"schoolgle":120}},
+      {"date":"2026-02-07","amount":330,"breakdown":{"mymeme":45,"clawphone":28,"dealfind":137,"schoolgle":120}},
+      {"date":"2026-02-08","amount":335,"breakdown":{"mymeme":50,"clawphone":20,"dealfind":135,"schoolgle":130}},
+      {"date":"2026-02-09","amount":355,"breakdown":{"mymeme":48,"clawphone":32,"dealfind":145,"schoolgle":130}},
+      {"date":"2026-02-10","amount":375,"breakdown":{"mymeme":50,"clawphone":35,"dealfind":150,"schoolgle":140}},
+      {"date":"2026-02-11","amount":390,"breakdown":{"mymeme":52,"clawphone":38,"dealfind":155,"schoolgle":145}},
+      {"date":"2026-02-12","amount":410,"breakdown":{"mymeme":54,"clawphone":39,"dealfind":162,"schoolgle":155}},
+      {"date":"2026-02-13","amount":430,"breakdown":{"mymeme":55,"clawphone":42,"dealfind":170,"schoolgle":163}},
+      {"date":"2026-02-14","amount":470,"breakdown":{"mymeme":58,"clawphone":47,"dealfind":190,"schoolgle":175}},
+      {"date":"2026-02-15","amount":490,"breakdown":{"mymeme":62,"clawphone":48,"dealfind":198,"schoolgle":182}},
+      {"date":"2026-02-16","amount":520,"breakdown":{"mymeme":65,"clawphone":54,"dealfind":209,"schoolgle":192}},
+      {"date":"2026-02-17","amount":615,"breakdown":{"mymeme":75,"clawphone":68,"dealfind":235,"schoolgle":237}}
+    ]
+  },
+  "history": [
+    { "month": "2025-12", "total": 3800 },
+    { "month": "2026-01", "total": 4670 }
+  ]
+}

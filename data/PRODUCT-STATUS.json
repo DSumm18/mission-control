@@ -1,0 +1,11 @@
+{
+  "products": [
+    {"id":"mymeme","name":"MyMeme","status":"beta","version":"0.3.1","users":420,"revenue":320,"revenueTarget":500,"blockers":["Need App Store approval"],"lastDeploy":"2026-02-15T10:00:00Z","health":"yellow","url":"https://mymeme.app"},
+    {"id":"mysongs","name":"MySongs","status":"in development","version":"0.2.4","users":95,"revenue":145,"revenueTarget":400,"blockers":["Lyric sync bug"],"lastDeploy":"2026-02-14T11:00:00Z","health":"yellow","url":"https://mysongs.app"},
+    {"id":"dealfind","name":"DealFind","status":"live","version":"1.2.0","users":2850,"revenue":1900,"revenueTarget":2200,"blockers":[],"lastDeploy":"2026-02-16T08:30:00Z","health":"green","url":"https://dealfind.app"},
+    {"id":"cricbook","name":"CricBook","status":"beta","version":"0.9.2","users":640,"revenue":510,"revenueTarget":700,"blockers":["Feed cache misses"],"lastDeploy":"2026-02-13T20:10:00Z","health":"yellow","url":"https://cricbook.app"},
+    {"id":"clawphone","name":"ClawPhone","status":"in development","version":"0.6.5","users":210,"revenue":275,"revenueTarget":900,"blockers":["Watch icons broken","Store signing pipeline unstable"],"lastDeploy":"2026-02-12T22:45:00Z","health":"red","url":"https://clawphone.app"},
+    {"id":"schoolgle","name":"Schoolgle","status":"live","version":"2.0.0","users":1240,"revenue":2380,"revenueTarget":3000,"blockers":["Two modules blocked at G4"],"lastDeploy":"2026-02-17T09:10:00Z","health":"yellow","url":"https://schoolgle.com"},
+    {"id":"sleep-sounds","name":"Sleep Sounds","status":"planning","version":"0.1.0","users":0,"revenue":0,"revenueTarget":300,"blockers":["Audio library licensing"],"lastDeploy":"2026-02-01T09:00:00Z","health":"yellow","url":"https://sleepsounds.app"}
+  ]
+}
