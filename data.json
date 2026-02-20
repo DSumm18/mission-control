@@ -1,0 +1,516 @@
+{
+  "lastUpdatedAt": "2026-02-20T10:22:00Z",
+  "kpis": {
+    "mrr": "£0",
+    "activeUsers7d": 0,
+    "leadsThisWeek": 0,
+    "productsLive": 1
+  },
+  "departments": [
+    {
+      "name": "Build / Engineering",
+      "owner": "Ed",
+      "role": "GM",
+      "rag": "amber",
+      "topMetric": "2 products in progress",
+      "topPriority": "Ship MyMeme + ClawPhone",
+      "blocker": "David approvals (MyMeme security, App Store)",
+      "focus": "Ship MyMeme + ClawPhone"
+    },
+    {
+      "name": "Marketing",
+      "owner": "Ed",
+      "role": "GM",
+      "rag": "red",
+      "topMetric": "0 active campaigns",
+      "topPriority": "Staff Room launch + social presence",
+      "blocker": "No Substack account, no active posts",
+      "focus": "Staff Room launch + social presence"
+    },
+    {
+      "name": "Finance",
+      "owner": "Stub",
+      "role": "—",
+      "rag": "red",
+      "topMetric": "£0 revenue",
+      "topPriority": "Stripe integration",
+      "blocker": "No paying products live",
+      "focus": "Stripe integration"
+    }
+  ],
+  "autonomy": {
+    "mode": "Semi-Autonomous",
+    "canDo": [
+      "Build and deploy code to GitHub",
+      "Research and summarise opportunities",
+      "Create content drafts",
+      "Update Mission Control data",
+      "Run scheduled scans and crons",
+      "Install and configure skills"
+    ],
+    "cannotDo": [
+      "Publish content externally (needs David approval)",
+      "Create paid accounts or subscriptions",
+      "Submit to app stores",
+      "Approve spend over £0",
+      "Access David's personal accounts"
+    ]
+  },
+  "integrations": [
+    { "name": "GitHub", "status": "connected" },
+    { "name": "Supabase", "status": "connected", "note": "Schoolgle DfE warehouse" },
+    { "name": "Notion", "status": "connected" },
+    { "name": "X / Twitter", "status": "connected", "note": "bird + x-api skills" },
+    { "name": "LinkedIn", "status": "unknown" },
+    { "name": "Facebook", "status": "unknown" },
+    { "name": "App Store Connect", "status": "unknown" },
+    { "name": "Stripe", "status": "connected", "note": "MyMeme" },
+    { "name": "Vercel", "status": "unknown" },
+    { "name": "Fish Audio", "status": "connected", "note": "ClawPhone TTS" }
+  ],
+  "audit": [
+    { "timestamp": "2026-02-20T10:20:00Z", "actor": "David", "action": "Requested Mission Control v2 build" },
+    { "timestamp": "2026-02-20T09:45:00Z", "actor": "Ed", "action": "Created Mission Control repo on GitHub" },
+    { "timestamp": "2026-02-19T23:30:00Z", "actor": "Ed", "action": "Shipped 6 Schoolgle toolbox tools overnight" },
+    { "timestamp": "2026-02-19T22:00:00Z", "actor": "Ed", "action": "Rendered 5 Remotion animations" },
+    { "timestamp": "2026-02-19T18:00:00Z", "actor": "Ed", "action": "Completed MyMeme auth middleware (Phase 1)" },
+    { "timestamp": "2026-02-19T16:30:00Z", "actor": "Ed", "action": "Fixed SEND Explorer unicode bug" },
+    { "timestamp": "2026-02-19T14:00:00Z", "actor": "Ed", "action": "Published Notion spec page for Mission Control" },
+    { "timestamp": "2026-02-19T11:00:00Z", "actor": "Ed", "action": "Ran education pain point research" },
+    { "timestamp": "2026-02-19T10:00:00Z", "actor": "Ed", "action": "Installed Last 30 Days skill" },
+    { "timestamp": "2026-02-18T20:00:00Z", "actor": "David", "action": "Reviewed Antigravity proxy — decided against (ban risk)" },
+    { "timestamp": "2026-02-18T18:00:00Z", "actor": "Ed", "action": "Installed antigravity-claude-proxy (later abandoned)" },
+    { "timestamp": "2026-02-18T04:00:00Z", "actor": "System", "action": "Overnight AI monitor cron ran (4AM)" },
+    { "timestamp": "2026-02-18T01:00:00Z", "actor": "System", "action": "Overnight AI monitor cron ran (1AM)" }
+  ],
+  "products": [
+    {
+      "id": "mymeme",
+      "name": "MyMeme",
+      "url": "mymeme.uk",
+      "status": "IN PROGRESS",
+      "percentComplete": 75,
+      "currentWork": "Security Phase 2 (45 mins)",
+      "blocker": "David approval",
+      "blockerType": "David",
+      "confidence": "High",
+      "lastTouched": "2026-02-19T18:00:00Z",
+      "links": { "repo": "https://github.com/DSumm18/my-meme-web" },
+      "weeklyBet": {
+        "feature": "Server-side credit system",
+        "distribution": "Prevents localStorage bypass",
+        "metricTarget": "Unlocks paid credits"
+      }
+    },
+    {
+      "id": "mysongs",
+      "name": "MySongs",
+      "url": "mysongs.uk",
+      "status": "BLOCKED",
+      "percentComplete": 40,
+      "currentWork": "Awaiting Suno API key",
+      "blocker": "No Suno API key",
+      "blockerType": "David/External",
+      "confidence": "Medium",
+      "lastTouched": "2026-02-15T12:00:00Z",
+      "links": {},
+      "weeklyBet": {
+        "feature": "AI song generation from text prompt",
+        "distribution": "Social sharing of generated songs",
+        "metricTarget": "First 10 generated songs"
+      }
+    },
+    {
+      "id": "myshow",
+      "name": "MyShow",
+      "url": "myshow.uk",
+      "status": "BLOCKED",
+      "percentComplete": 30,
+      "currentWork": "Needs Supabase + Sync.so singing validation",
+      "blocker": "David to create Supabase project",
+      "blockerType": "David",
+      "confidence": "Medium",
+      "lastTouched": "2026-02-14T10:00:00Z",
+      "links": { "repo": "https://github.com/DSumm18/myshow" },
+      "weeklyBet": {
+        "feature": "Sync.so singing avatar validation",
+        "distribution": "Viral singing video clips",
+        "metricTarget": "Working demo with 1 song"
+      }
+    },
+    {
+      "id": "clawphone",
+      "name": "ClawPhone",
+      "url": "clawphone.app",
+      "status": "BLOCKED",
+      "percentComplete": 85,
+      "currentWork": "App Store submission 2+ weeks overdue",
+      "blocker": "David to submit to App Store",
+      "blockerType": "David",
+      "confidence": "High",
+      "lastTouched": "2026-02-17T15:00:00Z",
+      "links": {},
+      "weeklyBet": {
+        "feature": "Voice AI assistant on iOS",
+        "distribution": "App Store organic discovery",
+        "metricTarget": "App Store approval"
+      }
+    },
+    {
+      "id": "dealfind",
+      "name": "DealFind",
+      "url": null,
+      "status": "BLOCKED",
+      "percentComplete": 20,
+      "currentWork": "Needs new Supabase project",
+      "blocker": "David to create Supabase project",
+      "blockerType": "David",
+      "confidence": "Medium",
+      "lastTouched": "2026-02-10T09:00:00Z",
+      "links": {},
+      "weeklyBet": {
+        "feature": "AI deal aggregation engine",
+        "distribution": "SEO + social sharing",
+        "metricTarget": "MVP with 100 deals indexed"
+      }
+    },
+    {
+      "id": "cricbook",
+      "name": "CricBook",
+      "url": null,
+      "status": "IN PROGRESS",
+      "percentComplete": 15,
+      "currentWork": "Building in Codex",
+      "blocker": "Ed (building)",
+      "blockerType": "Ed",
+      "confidence": "Medium",
+      "lastTouched": "2026-02-20T08:00:00Z",
+      "links": { "repo": "https://github.com/DSumm18/CricBook" },
+      "weeklyBet": {
+        "feature": "Live cricket scoring + stats",
+        "distribution": "Cricket community forums",
+        "metricTarget": "Working scorecard UI"
+      }
+    },
+    {
+      "id": "schoolgle-toolbox",
+      "name": "Schoolgle Toolbox",
+      "url": null,
+      "status": "LIVE",
+      "percentComplete": 100,
+      "currentWork": "Maintenance only",
+      "blocker": null,
+      "blockerType": null,
+      "confidence": "High",
+      "lastTouched": "2026-02-19T23:30:00Z",
+      "links": { "preview": "https://dsumm18.github.io/schoolgle-tools/" },
+      "weeklyBet": {
+        "feature": "6 free tools for school staff",
+        "distribution": "GitHub Pages + Staff Room newsletter",
+        "metricTarget": "100 unique visitors/week"
+      }
+    },
+    {
+      "id": "staff-room",
+      "name": "Staff Room Newsletter",
+      "url": null,
+      "status": "READY TO SHIP",
+      "percentComplete": 95,
+      "currentWork": "Needs David Substack account",
+      "blocker": "David to create Substack account",
+      "blockerType": "David",
+      "confidence": "High",
+      "lastTouched": "2026-02-19T20:00:00Z",
+      "links": {},
+      "weeklyBet": {
+        "feature": "Weekly education newsletter with AI tools",
+        "distribution": "Substack + X cross-posting",
+        "metricTarget": "100 subscribers in first month"
+      }
+    },
+    {
+      "id": "schoolgle-os",
+      "name": "Schoolgle OS / PWA",
+      "url": null,
+      "status": "PAUSED",
+      "percentComplete": 5,
+      "currentWork": "Concept stage",
+      "blocker": null,
+      "blockerType": null,
+      "confidence": "Low",
+      "lastTouched": "2026-02-05T12:00:00Z",
+      "links": {},
+      "weeklyBet": {
+        "feature": "Unified school operating system",
+        "distribution": "Schoolgle brand + existing toolbox users",
+        "metricTarget": "Validated concept doc"
+      }
+    }
+  ],
+  "jobs": [
+    {
+      "id": "j1",
+      "title": "MyMeme Phase 2 Security",
+      "product": "mymeme",
+      "owner": "Ed",
+      "status": "IN PROGRESS",
+      "dependency": "David approval",
+      "nextAction": "Add auth to /api/animate, /api/upload, /api/checkout",
+      "link": null,
+      "dueDate": null
+    },
+    {
+      "id": "j2",
+      "title": "Staff Room Substack Setup",
+      "product": "staff-room",
+      "owner": "David",
+      "status": "BLOCKED",
+      "dependency": null,
+      "nextAction": "Create Substack account",
+      "link": null,
+      "dueDate": null
+    },
+    {
+      "id": "j3",
+      "title": "Mission Control v2",
+      "product": null,
+      "owner": "Ed",
+      "status": "IN PROGRESS",
+      "dependency": null,
+      "nextAction": "Build + deploy",
+      "link": null,
+      "dueDate": "2026-02-20"
+    },
+    {
+      "id": "j4",
+      "title": "Last 30 Days Education Scan",
+      "product": null,
+      "owner": "Ed",
+      "status": "QUEUED",
+      "dependency": null,
+      "nextAction": "Run with API keys",
+      "link": null,
+      "dueDate": null
+    },
+    {
+      "id": "j5",
+      "title": "Humanise Newsletters (weeks 1–8, 10)",
+      "product": "staff-room",
+      "owner": "Ed",
+      "status": "QUEUED",
+      "dependency": "Humaniser skill",
+      "nextAction": "Process all 9 newsletters",
+      "link": null,
+      "dueDate": null
+    },
+    {
+      "id": "j6",
+      "title": "MyShow Sync.so Validation",
+      "product": "myshow",
+      "owner": "Ed",
+      "status": "BLOCKED",
+      "dependency": "David creating Supabase",
+      "nextAction": "Test singing audio",
+      "link": null,
+      "dueDate": null
+    },
+    {
+      "id": "j7",
+      "title": "ClawPhone App Store Submission",
+      "product": "clawphone",
+      "owner": "David",
+      "status": "BLOCKED",
+      "dependency": "Unknown blocker",
+      "nextAction": "Investigate",
+      "link": null,
+      "dueDate": null
+    },
+    {
+      "id": "j8",
+      "title": "CricBook Codex Build",
+      "product": "cricbook",
+      "owner": "Ed",
+      "status": "IN PROGRESS",
+      "dependency": "Supabase key",
+      "nextAction": "Continue build",
+      "link": null,
+      "dueDate": null
+    }
+  ],
+  "research": [
+    {
+      "id": "r1",
+      "title": "Google Lyria 3 — free AI music in Gemini",
+      "type": "threat",
+      "source": "Google blog",
+      "sourceUrl": "https://blog.google",
+      "whyItMatters": "Direct threat to MySongs — free AI music generation bundled with Gemini",
+      "confidence": "High",
+      "stage": "Evidence",
+      "nextAction": "Differentiate MySongs on pro features",
+      "affectedProducts": ["mysongs"]
+    },
+    {
+      "id": "r2",
+      "title": "Gemini 3.1 Pro — half-price reasoning model",
+      "type": "opportunity",
+      "source": "blog.google",
+      "sourceUrl": "https://blog.google",
+      "whyItMatters": "Opportunity to reduce AI costs by 50% on reasoning tasks",
+      "confidence": "High",
+      "stage": "Test Plan",
+      "nextAction": "Test as fallback model",
+      "affectedProducts": ["all"]
+    },
+    {
+      "id": "r3",
+      "title": "Education funding crisis (IFS report)",
+      "type": "opportunity",
+      "source": "ifs.org.uk",
+      "sourceUrl": "https://ifs.org.uk",
+      "whyItMatters": "Validates Schoolgle toolbox — schools need free/cheap tools",
+      "confidence": "High",
+      "stage": "Evidence",
+      "nextAction": "Use in Staff Room newsletter",
+      "affectedProducts": ["schoolgle-toolbox", "staff-room"]
+    },
+    {
+      "id": "r4",
+      "title": "SEND support staff losing to supermarkets",
+      "type": "opportunity",
+      "source": "tgescapes.co.uk",
+      "sourceUrl": "https://tgescapes.co.uk",
+      "whyItMatters": "Content angle — SEND staff pay crisis is viral topic in education",
+      "confidence": "Medium",
+      "stage": "Idea",
+      "nextAction": "Write Staff Room piece",
+      "affectedProducts": ["staff-room"]
+    },
+    {
+      "id": "r5",
+      "title": "Substack 2026: membership products win",
+      "type": "opportunity",
+      "source": "writebuildscale.substack.com",
+      "sourceUrl": "https://writebuildscale.substack.com",
+      "whyItMatters": "Validates Staff Room 3-tier model — memberships outperform ads",
+      "confidence": "High",
+      "stage": "Evidence",
+      "nextAction": "Launch Substack",
+      "affectedProducts": ["staff-room"]
+    }
+  ],
+  "dailyBrief": {
+    "date": "2026-02-20",
+    "topOpportunities": [
+      "Staff Room newsletter is 95% ready — Substack account is only blocker",
+      "MyMeme Phase 2 security is 45 mins of work — unlocks paid credits",
+      "Gemini 3.1 Pro could halve our fallback model costs"
+    ],
+    "topRisks": [
+      "Google Lyria 3 threatens MySongs before it launches",
+      "ClawPhone App Store submission is 2+ weeks overdue",
+      "£0 MRR — no revenue engine running yet"
+    ],
+    "todaysFocus": "Ship Mission Control v2, then MyMeme Phase 2 security"
+  },
+  "marketing": {
+    "accounts": [
+      {
+        "platform": "X / Twitter",
+        "accountName": "@schoolaboratory",
+        "purpose": "Education brand + product promotion",
+        "verification": "Not verified",
+        "twoFactor": "Unknown",
+        "recoveryStored": "N",
+        "notes": "Connected via bird CLI. No recent posts."
+      },
+      {
+        "platform": "LinkedIn",
+        "accountName": "Unknown",
+        "purpose": "Professional network + B2B",
+        "verification": "N/A",
+        "twoFactor": "N/A",
+        "recoveryStored": "N",
+        "notes": "Not connected"
+      },
+      {
+        "platform": "Facebook",
+        "accountName": "Unknown",
+        "purpose": "Community + ads",
+        "verification": "N/A",
+        "twoFactor": "N/A",
+        "recoveryStored": "N",
+        "notes": "Not connected"
+      }
+    ],
+    "contentPipeline": [
+      { "type": "Newsletters", "status": "drafted", "count": 10, "note": "Not published — awaiting Substack" },
+      { "type": "Social snippets", "status": "drafted", "count": 10, "note": "Built, not posted" },
+      { "type": "Animations", "status": "drafted", "count": 5, "note": "Remotion renders complete" }
+    ],
+    "campaigns": []
+  },
+  "edActivity": {
+    "current": "Building Mission Control v2",
+    "completed": [
+      "Installed Last 30 Days skill",
+      "Education pain point research",
+      "Antigravity proxy research",
+      "6 toolbox tools built overnight",
+      "5 Remotion animations rendered"
+    ],
+    "queue": [
+      "Run Last 30 Days education scan",
+      "Humanise newsletters",
+      "MyMeme Phase 2 security"
+    ]
+  },
+  "davidActions": [
+    { "action": "Create Substack account", "why": "Staff Room launch", "impact": "HIGH" },
+    { "action": "Approve MyMeme Phase 2 security", "why": "Unlock credit revenue", "impact": "HIGH" },
+    { "action": "Submit ClawPhone to App Store", "why": "2+ weeks overdue", "impact": "HIGH" },
+    { "action": "Create MyShow Supabase project", "why": "Unblock development", "impact": "MEDIUM" },
+    { "action": "Create DealFind Supabase project", "why": "Unblock development", "impact": "MEDIUM" },
+    { "action": "Provide CricBook Supabase service-role key", "why": "Unblock Codex build", "impact": "LOW" }
+  ],
+  "modelRouter": {
+    "routes": [
+      {
+        "taskType": "Coding",
+        "primary": "Claude Opus 4.6",
+        "fallback": "Gemini 3.1 Pro",
+        "costCap": "Included in subscription",
+        "qualityGate": "All tests pass, no regressions"
+      },
+      {
+        "taskType": "Research",
+        "primary": "Claude Opus 4.6",
+        "fallback": "Gemini Flash",
+        "costCap": "Included in subscription",
+        "qualityGate": "Sources cited, confidence rated"
+      },
+      {
+        "taskType": "Copywriting",
+        "primary": "Claude Opus 4.6",
+        "fallback": "Gemini 3.1 Pro",
+        "costCap": "Included in subscription",
+        "qualityGate": "UK spelling, no fluff, on-brand"
+      },
+      {
+        "taskType": "Planning / PM",
+        "primary": "Claude Opus 4.6",
+        "fallback": "Gemini 3.1 Pro",
+        "costCap": "Included in subscription",
+        "qualityGate": "Actionable, time-boxed, owner assigned"
+      },
+      {
+        "taskType": "Data Analysis",
+        "primary": "Claude Opus 4.6",
+        "fallback": "Gemini Flash",
+        "costCap": "Included in subscription",
+        "qualityGate": "Reproducible, data source linked"
+      }
+    ],
+    "proposals": []
+  }
+}

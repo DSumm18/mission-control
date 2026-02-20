@@ -1,9 +1,0 @@
-{
-  "issues": [
-    {"id":"ISS-001","title":"ClawPhone watch icons broken","severity":"critical","status":"open","product":"clawphone","assignee":"Ed","createdAt":"2026-02-15T12:00:00Z","updatedAt":"2026-02-17T18:00:00Z","tags":["build","ios"]},
-    {"id":"ISS-002","title":"Safeguarding API timeout under load","severity":"high","status":"open","product":"schoolgle","assignee":"build-agent-1","createdAt":"2026-02-14T09:30:00Z","updatedAt":"2026-02-17T17:20:00Z","tags":["backend","performance"]},
-    {"id":"ISS-003","title":"MyMeme upload progress bar desync","severity":"medium","status":"open","product":"mymeme","assignee":"Unassigned","createdAt":"2026-02-13T10:00:00Z","updatedAt":"2026-02-16T15:30:00Z","tags":["frontend"]},
-    {"id":"ISS-004","title":"DealFind webhook retries duplicate events","severity":"high","status":"blocked","product":"dealfind","assignee":"build-agent-5","createdAt":"2026-02-12T11:10:00Z","updatedAt":"2026-02-17T16:40:00Z","tags":["integration","payments"]},
-    {"id":"ISS-005","title":"Staff wellbeing report export typo","severity":"low","status":"resolved","product":"schoolgle","assignee":"build-agent-2","createdAt":"2026-02-11T08:00:00Z","updatedAt":"2026-02-14T09:15:00Z","tags":["ui","copy"]}
-  ]
-}

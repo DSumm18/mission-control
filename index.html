@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mission Control</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#070B12;--card:#0F1629;--card-border:#1a2340;
+  --cyan:#00D4D4;--green:#22C55E;--red:#EF4444;--amber:#F59E0B;
+  --text:#E2E8F0;--text-dim:#94A3B8;--text-bright:#F8FAFC;
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;line-height:1.6;min-height:100vh}
+a{color:var(--cyan);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Layout */
+.container{max-width:1200px;margin:0 auto;padding:0 16px}
+section{margin-bottom:32px}
+h2{font-size:1.25rem;font-weight:700;color:var(--text-bright);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+h2 .icon{font-size:1.1em}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:20px;backdrop-filter:blur(8px)}
+
+/* Header */
+header{background:var(--card);border-bottom:1px solid var(--card-border);padding:16px 0;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.header-title{font-size:1.5rem;font-weight:800;color:var(--text-bright)}
+.header-title span{color:var(--cyan)}
+.header-meta{display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:.85rem}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:.8rem;font-weight:600}
+.badge-cyan{background:rgba(0,212,212,.15);color:var(--cyan);border:1px solid rgba(0,212,212,.3)}
+.badge-green{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.badge-amber{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.badge-grey{background:rgba(148,163,184,.15);color:var(--text-dim);border:1px solid rgba(148,163,184,.3)}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.status-dot.live{background:var(--green);box-shadow:0 0 6px var(--green)}
+.status-dot.pending{background:var(--amber)}
+.status-dot.off{background:var(--text-dim)}
+
+/* Revenue Bar */
+.revenue-bar{display:grid;grid-template-columns:1fr auto auto;gap:24px;align-items:center;padding:20px 24px}
+.revenue-main{font-size:2rem;font-weight:800;color:var(--text-bright)}
+.revenue-main small{font-size:1rem;color:var(--text-dim);font-weight:400}
+.revenue-stat{text-align:center}
+.revenue-stat .num{font-size:1.5rem;font-weight:700;color:var(--cyan)}
+.revenue-stat .label{font-size:.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em}
+.revenue-progress{height:6px;background:rgba(0,212,212,.15);border-radius:3px;overflow:hidden;grid-column:1/-1}
+.revenue-progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:3px;transition:width .5s}
+
+/* Action Items */
+.actions-panel{border:2px solid rgba(0,212,212,.3);background:rgba(0,212,212,.05)}
+.action-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--card-border);min-height:48px}
+.action-item:last-child{border-bottom:none}
+.action-product{font-size:.8rem;color:var(--text-dim);min-width:100px}
+.action-text{flex:1;font-weight:500}
+.action-status{font-size:.8rem}
+
+/* Product Grid */
+.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.product-card h3{font-size:1rem;font-weight:700;color:var(--text-bright);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.product-detail{font-size:.85rem;color:var(--text-dim);margin-bottom:4px}
+.product-detail strong{color:var(--text)}
+.progress-bar{height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;margin:8px 0}
+.progress-fill{height:100%;border-radius:3px;transition:width .5s}
+.product-bet{font-size:.8rem;color:var(--amber);font-style:italic;margin-top:8px}
+
+/* Activity */
+.activity-current{font-size:1.1rem;font-weight:600;color:var(--cyan);margin-bottom:12px;padding:12px;background:rgba(0,212,212,.08);border-radius:8px}
+.activity-list{list-style:none}
+.activity-list li{padding:8px 0;border-bottom:1px solid var(--card-border);font-size:.9rem;display:flex;justify-content:space-between;gap:8px}
+.activity-list li:last-child{border-bottom:none}
+.activity-time{color:var(--text-dim);font-size:.8rem;white-space:nowrap}
+
+/* Brief */
+.brief-area{background:#0a0f1c;border:1px solid var(--card-border);border-radius:8px;padding:16px;font-family:'SF Mono',SFMono-Regular,Consolas,monospace;font-size:.85rem;white-space:pre-wrap;line-height:1.7;color:var(--text);max-height:300px;overflow-y:auto}
+.copy-btn{min-height:44px;min-width:44px;padding:10px 20px;background:var(--cyan);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.9rem;transition:opacity .2s}
+.copy-btn:hover{opacity:.85}
+.copy-btn:active{transform:scale(.97)}
+.brief-headlines,.brief-actions{margin-bottom:12px}
+.brief-headlines li,.brief-actions li{padding:4px 0;font-size:.9rem}
+
+/* Departments */
+.dept-accordion{border:1px solid var(--card-border);border-radius:12px;overflow:hidden}
+.dept-header{padding:16px 20px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--card-border);min-height:48px;user-select:none}
+.dept-header:hover{background:#141d35}
+.dept-header h3{font-size:1rem;font-weight:600;color:var(--text-bright)}
+.dept-body{padding:16px 20px;background:rgba(15,22,41,.5);display:none}
+.dept-body.open{display:block}
+.dept-kpi{display:flex;justify-content:space-between;padding:6px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.05)}
+.dept-kpi:last-child{border-bottom:none}
+.dept-kpi .kv{color:var(--cyan);font-weight:600}
+
+/* Tables */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{text-align:left;padding:10px 12px;color:var(--text-dim);font-weight:600;text-transform:uppercase;font-size:.75rem;letter-spacing:.05em;border-bottom:2px solid var(--card-border)}
+td{padding:10px 12px;border-bottom:1px solid var(--card-border);vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.02)}
+
+/* Integrations Grid */
+.int-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.int-item{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--card);border:1px solid var(--card-border);border-radius:8px;font-size:.9rem}
+
+/* Audit */
+.audit-log{max-height:400px;overflow-y:auto}
+.audit-entry{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--card-border);font-size:.85rem}
+.audit-entry:last-child{border-bottom:none}
+.audit-actor{min-width:60px}
+.audit-actor.ed{color:var(--cyan)}
+.audit-actor.david{color:var(--green)}
+.audit-actor.system{color:var(--text-dim)}
+.audit-time{color:var(--text-dim);font-size:.8rem;min-width:140px}
+.audit-detail{color:var(--text-dim)}
+
+/* Responsive */
+@media(max-width:600px){
+  .revenue-bar{grid-template-columns:1fr;gap:12px}
+  .revenue-stat{text-align:left;display:flex;gap:8px;align-items:baseline}
+  .product-grid{grid-template-columns:1fr}
+  .header-inner{flex-direction:column;align-items:flex-start}
+  .int-grid{grid-template-columns:1fr 1fr}
+}
+
+/* Print */
+@media print{
+  header{position:static}
+  body{background:#fff;color:#000}
+  .card{border:1px solid #ccc;background:#f9f9f9}
+  .audit-log,.activity-list,.dept-accordion{max-height:none}
+  section:nth-child(n+8){display:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container header-inner">
+    <div class="header-title">⚡ Mission <span>Control</span></div>
+    <div class="header-meta">
+      <span class="badge badge-cyan" id="autonomy-badge"></span>
+      <span class="badge badge-green" id="ed-status"><span class="status-dot live"></span> Ed: Loading...</span>
+      <span style="color:var(--text-dim);font-size:.8rem" id="last-updated">—</span>
+    </div>
+  </div>
+</header>
+
+<main class="container" style="padding-top:24px;padding-bottom:48px">
+
+  <!-- Revenue -->
+  <section>
+    <div class="card revenue-bar" id="revenue-section">
+      <div class="revenue-main">£<span id="rev-current">0</span> <small>/ £<span id="rev-target">10K</span></small></div>
+      <div class="revenue-stat"><div class="num" id="rev-products">0</div><div class="label">Products Live</div></div>
+      <div class="revenue-stat"><div class="num" id="rev-days">0</div><div class="label">Days Building</div></div>
+      <div class="revenue-progress"><div class="revenue-progress-fill" id="rev-bar" style="width:0%"></div></div>
+    </div>
+  </section>
+
+  <!-- David Actions -->
+  <section>
+    <h2><span class="icon">🎯</span> David's Action Items</h2>
+    <div class="card actions-panel" id="actions-panel"></div>
+  </section>
+
+  <!-- Products -->
+  <section>
+    <h2><span class="icon">📦</span> Product Board</h2>
+    <div class="product-grid" id="product-grid"></div>
+  </section>
+
+  <!-- Ed Activity -->
+  <section>
+    <h2><span class="icon">🤖</span> Ed Activity</h2>
+    <div class="card" id="ed-activity"></div>
+  </section>
+
+  <!-- Daily Brief -->
+  <section>
+    <h2><span class="icon">📋</span> Daily Brief <button class="copy-btn" id="copy-brief" style="margin-left:auto;font-size:.8rem">📋 Copy</button></h2>
+    <div class="card" id="daily-brief"></div>
+  </section>
+
+  <!-- Departments -->
+  <section>
+    <h2><span class="icon">🏢</span> Departments</h2>
+    <div class="dept-accordion" id="departments"></div>
+  </section>
+
+  <!-- Opportunities -->
+  <section>
+    <h2><span class="icon">🔍</span> Opportunity Pipeline</h2>
+    <div class="card table-wrap" id="opportunities"></div>
+  </section>
+
+  <!-- Model Router -->
+  <section>
+    <h2><span class="icon">🧠</span> Model Router</h2>
+    <div class="card table-wrap" id="model-router"></div>
+  </section>
+
+  <!-- Integrations -->
+  <section>
+    <h2><span class="icon">🔌</span> Integrations</h2>
+    <div class="int-grid" id="integrations"></div>
+  </section>
+
+  <!-- Audit Trail -->
+  <section>
+    <h2><span class="icon">📜</span> Audit Trail</h2>
+    <div class="card audit-log" id="audit-trail"></div>
+  </section>
+
+</main>
+
+<script>
+const $ = s => document.getElementById(s);
+const statusColors = {'blocked':'red','in-progress':'cyan','ready-to-ship':'amber','live':'green','concept':'grey'};
+const impactOrder = {'high':0,'medium':1,'low':2};
+
+function timeAgo(ts){
+  if(!ts)return '—';
+  const d=Date.now()-new Date(ts).getTime(),m=Math.floor(d/60000),h=Math.floor(m/60);
+  if(m<1)return 'just now';if(m<60)return m+'m ago';if(h<24)return h+'h ago';
+  return Math.floor(h/24)+'d ago';
+}
+function fmtTime(ts){
+  if(!ts)return '—';
+  const d=new Date(ts);
+  return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+
+function render(data){
+  // Header
+  $('autonomy-badge').textContent='🛡️ '+data.meta.autonomyMode.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  $('ed-status').innerHTML='<span class="status-dot live"></span> Ed: '+esc(data.meta.edStatus);
+  $('last-updated').textContent='Updated '+timeAgo(data.meta.lastUpdated);
+
+  // Revenue
+  const r=data.revenue;
+  $('rev-current').textContent=r.current.toLocaleString();
+  $('rev-target').textContent=(r.target/1000)+'K';
+  $('rev-products').textContent=r.products_live;
+  $('rev-days').textContent=r.days_building;
+  $('rev-bar').style.width=Math.min(100,r.target?r.current/r.target*100:0)+'%';
+
+  // Actions
+  const actions=data.davidActions.filter(a=>a.status==='pending').sort((a,b)=>impactOrder[a.revenueImpact]-impactOrder[b.revenueImpact]);
+  $('actions-panel').innerHTML=actions.length?actions.map(a=>`
+    <div class="action-item">
+      <span class="action-product">${esc(a.product)}</span>
+      <span class="action-text">${esc(a.action)}</span>
+      <span class="badge badge-${a.revenueImpact==='high'?'red':a.revenueImpact==='medium'?'amber':'grey'}">${a.revenueImpact}</span>
+    </div>`).join(''):'<p style="color:var(--green);padding:12px">✅ No pending actions — all clear!</p>';
+
+  // Products
+  $('product-grid').innerHTML=data.products.map(p=>{
+    const sc=statusColors[p.status]||'grey';
+    const pct=p.percentComplete||0;
+    const fillColor=pct>=80?'var(--green)':pct>=40?'var(--amber)':'var(--red)';
+    return `<div class="card product-card">
+      <h3>${esc(p.name)} <span class="badge badge-${sc}">${p.status}</span></h3>
+      ${p.blocker?`<div class="product-detail">🚧 <strong>${esc(p.blocker)}</strong></div>`:''}
+      ${p.blockerOwner?`<div class="product-detail">Owner: <span class="badge badge-${p.blockerOwner==='david'?'green':'cyan'}" style="font-size:.75rem">${p.blockerOwner}</span></div>`:''}
+      <div class="product-detail">Next: ${esc(p.nextAction)}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${fillColor}"></div></div>
+      <div style="font-size:.8rem;color:var(--text-dim)">${pct}% complete</div>
+      ${p.weeklyBet?`<div class="product-bet">💡 ${esc(p.weeklyBet)}</div>`:''}
+    </div>`;
+  }).join('');
+
+  // Ed Activity
+  const ea=data.edActivity;
+  $('ed-activity').innerHTML=`
+    <div class="activity-current">⚡ ${esc(ea.current)}</div>
+    <h3 style="font-size:.9rem;color:var(--text-dim);margin:12px 0 8px">Completed</h3>
+    <ul class="activity-list">${ea.completed.slice(0,5).map(c=>`<li><span>${esc(c.task)}</span><span class="activity-time">${timeAgo(c.timestamp)}</span></li>`).join('')}</ul>
+    <h3 style="font-size:.9rem;color:var(--text-dim);margin:12px 0 8px">Queue</h3>
+    <ul class="activity-list">${ea.queue.map(q=>`<li>${esc(q)}</li>`).join('')}</ul>`;
+
+  // Brief
+  const db=data.dailyBrief;
+  $('daily-brief').innerHTML=`
+    <h3 style="font-size:.9rem;color:var(--text-dim);margin-bottom:8px">Headlines — ${esc(db.date)}</h3>
+    <ul class="brief-headlines">${db.headlines.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>
+    <h3 style="font-size:.9rem;color:var(--text-dim);margin-bottom:8px">Next Actions</h3>
+    <ol class="brief-actions">${db.nextActions.map(a=>`<li>${esc(a)}</li>`).join('')}</ol>
+    <h3 style="font-size:.9rem;color:var(--text-dim);margin:12px 0 8px">Copy-Paste Ready</h3>
+    <div class="brief-area" id="brief-text">${esc(db.copyPasteReady)}</div>`;
+
+  $('copy-brief').onclick=()=>{
+    navigator.clipboard.writeText(db.copyPasteReady).then(()=>{
+      $('copy-brief').textContent='✅ Copied!';
+      setTimeout(()=>$('copy-brief').textContent='📋 Copy',2000);
+    });
+  };
+
+  // Departments
+  $('departments').innerHTML=data.departments.map((d,i)=>`
+    <div>
+      <div class="dept-header" onclick="this.nextElementSibling.classList.toggle('open')">
+        <h3>${esc(d.name)} <span class="badge badge-${d.status==='active'?'green':d.status==='pending'?'amber':'grey'}" style="margin-left:8px">${d.status}</span></h3>
+        <span style="color:var(--text-dim)">▾</span>
+      </div>
+      <div class="dept-body${i===0?' open':''}">
+        <div style="font-size:.9rem;margin-bottom:8px"><strong>Lead:</strong> ${esc(d.lead)} · <strong>Focus:</strong> ${esc(d.focus)}</div>
+        ${d.kpis.map(k=>`<div class="dept-kpi"><span>${esc(k.label)}</span><span class="kv">${esc(k.value)}</span></div>`).join('')}
+      </div>
+    </div>`).join('');
+
+  // Opportunities
+  $('opportunities').innerHTML=`<table><thead><tr><th>Opportunity</th><th>Source</th><th>Category</th><th>Status</th><th>Next Action</th></tr></thead><tbody>
+    ${data.opportunities.map(o=>`<tr>
+      <td><strong>${esc(o.title)}</strong></td>
+      <td><a href="${esc(o.sourceUrl)}" target="_blank" rel="noopener">${esc(o.source)}</a></td>
+      <td>${esc(o.category)}</td>
+      <td><span class="badge badge-${o.status==='new'?'cyan':o.status==='evaluating'?'amber':o.status==='actioned'?'green':'grey'}">${o.status}</span></td>
+      <td>${esc(o.nextAction)}</td>
+    </tr>`).join('')}</tbody></table>`;
+
+  // Model Router
+  $('model-router').innerHTML=`<table><thead><tr><th>Task</th><th>Model</th><th>Provider</th><th>Reason</th></tr></thead><tbody>
+    ${data.modelRouter.map(m=>`<tr><td>${esc(m.task)}</td><td><strong>${esc(m.model)}</strong></td><td>${esc(m.provider)}</td><td style="color:var(--text-dim)">${esc(m.reason)}</td></tr>`).join('')}</tbody></table>`;
+
+  // Integrations
+  $('integrations').innerHTML=data.integrations.map(i=>`
+    <div class="int-item"><span class="status-dot ${i.status}"></span><span>${esc(i.name)}</span></div>`).join('');
+
+  // Audit
+  $('audit-trail').innerHTML=data.auditTrail.map(a=>`
+    <div class="audit-entry">
+      <span class="audit-time">${fmtTime(a.timestamp)}</span>
+      <span class="audit-actor ${a.actor}">${a.actor}</span>
+      <span><strong>${esc(a.action)}</strong> ${esc(a.target)}</span>
+      <span class="audit-detail">${esc(a.detail)}</span>
+    </div>`).join('');
+}
+
+async function load(){
+  try{
+    const r=await fetch('data.json?t='+Date.now());
+    if(!r.ok)throw new Error(r.status);
+    render(await r.json());
+  }catch(e){console.error('Failed to load data.json',e)}
+}
+
+load();
+setInterval(load,60000);
+</script>
+</body>
+</html>
