@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,346 +9,421 @@
 :root{
   --bg:#070B12;--card:#0F1629;--card-border:#1a2340;
   --cyan:#00D4D4;--green:#22C55E;--red:#EF4444;--amber:#F59E0B;
-  --text:#E2E8F0;--text-dim:#94A3B8;--text-bright:#F8FAFC;
+  --text:#E2E8F0;--text-dim:#94A3B8;--text-muted:#64748B;
+  --font:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
 }
-html{font-size:16px;scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;line-height:1.6;min-height:100vh}
+html{font-size:14px;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;overflow-x:hidden}
 a{color:var(--cyan);text-decoration:none}
 a:hover{text-decoration:underline}
 
 /* Layout */
-.container{max-width:1200px;margin:0 auto;padding:0 16px}
-section{margin-bottom:32px}
-h2{font-size:1.25rem;font-weight:700;color:var(--text-bright);margin-bottom:16px;display:flex;align-items:center;gap:8px}
-h2 .icon{font-size:1.1em}
+.shell{display:flex;flex-direction:column;height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:48px;background:var(--card);border-bottom:1px solid var(--card-border);flex-shrink:0}
+.topbar h1{font-size:1rem;font-weight:700;color:var(--cyan);letter-spacing:.5px}
+.topbar .meta{font-size:.75rem;color:var(--text-muted)}
+.tabs{display:flex;gap:0;background:var(--bg);border-bottom:1px solid var(--card-border);flex-shrink:0;overflow-x:auto}
+.tab{padding:10px 20px;font-size:.8rem;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;min-height:44px;display:flex;align-items:center}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+.main-area{display:flex;flex:1;overflow:hidden}
+.content{flex:1;overflow-y:auto;padding:16px}
+.sidebar{width:320px;border-left:1px solid var(--card-border);overflow-y:auto;padding:16px;flex-shrink:0;background:var(--card)}
 
 /* Cards */
-.card{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:20px;backdrop-filter:blur(8px)}
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:16px;margin-bottom:12px;backdrop-filter:blur(8px)}
+.card h3{font-size:.85rem;font-weight:700;margin-bottom:8px;color:var(--text)}
+.card h4{font-size:.75rem;font-weight:600;margin-bottom:6px;color:var(--text-dim)}
+.section-title{font-size:.95rem;font-weight:700;margin-bottom:12px;color:var(--text);border-bottom:1px solid var(--card-border);padding-bottom:8px}
 
-/* Header */
-header{background:var(--card);border-bottom:1px solid var(--card-border);padding:16px 0;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
-.header-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-.header-title{font-size:1.5rem;font-weight:800;color:var(--text-bright)}
-.header-title span{color:var(--cyan)}
-.header-meta{display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:.85rem}
-.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:.8rem;font-weight:600}
-.badge-cyan{background:rgba(0,212,212,.15);color:var(--cyan);border:1px solid rgba(0,212,212,.3)}
-.badge-green{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)}
-.badge-red{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
-.badge-amber{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
-.badge-grey{background:rgba(148,163,184,.15);color:var(--text-dim);border:1px solid rgba(148,163,184,.3)}
-.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
-.status-dot.live{background:var(--green);box-shadow:0 0 6px var(--green)}
-.status-dot.pending{background:var(--amber)}
-.status-dot.off{background:var(--text-dim)}
+/* KPI Bar */
+.kpi-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--card-border);border-radius:8px;padding:12px;text-align:center}
+.kpi .value{font-size:1.4rem;font-weight:800;color:var(--cyan)}
+.kpi .label{font-size:.7rem;color:var(--text-muted);margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
 
-/* Revenue Bar */
-.revenue-bar{display:grid;grid-template-columns:1fr auto auto;gap:24px;align-items:center;padding:20px 24px}
-.revenue-main{font-size:2rem;font-weight:800;color:var(--text-bright)}
-.revenue-main small{font-size:1rem;color:var(--text-dim);font-weight:400}
-.revenue-stat{text-align:center}
-.revenue-stat .num{font-size:1.5rem;font-weight:700;color:var(--cyan)}
-.revenue-stat .label{font-size:.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em}
-.revenue-progress{height:6px;background:rgba(0,212,212,.15);border-radius:3px;overflow:hidden;grid-column:1/-1}
-.revenue-progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:3px;transition:width .5s}
+/* Badges */
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.badge-green{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-amber{background:rgba(245,158,11,.15);color:var(--amber)}
+.badge-cyan{background:rgba(0,212,212,.15);color:var(--cyan)}
+.badge-dim{background:rgba(100,116,139,.15);color:var(--text-muted)}
 
-/* Action Items */
-.actions-panel{border:2px solid rgba(0,212,212,.3);background:rgba(0,212,212,.05)}
-.action-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--card-border);min-height:48px}
-.action-item:last-child{border-bottom:none}
-.action-product{font-size:.8rem;color:var(--text-dim);min-width:100px}
-.action-text{flex:1;font-weight:500}
-.action-status{font-size:.8rem}
+/* RAG dot */
+.rag{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.rag-green{background:var(--green)}.rag-red{background:var(--red)}.rag-amber{background:var(--amber)}
 
-/* Product Grid */
-.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
-.product-card h3{font-size:1rem;font-weight:700;color:var(--text-bright);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
-.product-detail{font-size:.85rem;color:var(--text-dim);margin-bottom:4px}
-.product-detail strong{color:var(--text)}
-.progress-bar{height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;margin:8px 0}
-.progress-fill{height:100%;border-radius:3px;transition:width .5s}
-.product-bet{font-size:.8rem;color:var(--amber);font-style:italic;margin-top:8px}
+/* Status lights */
+.status-light{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.sl-connected{background:var(--green)}.sl-unknown{background:var(--amber)}.sl-disconnected{background:var(--red)}
 
-/* Activity */
-.activity-current{font-size:1.1rem;font-weight:600;color:var(--cyan);margin-bottom:12px;padding:12px;background:rgba(0,212,212,.08);border-radius:8px}
-.activity-list{list-style:none}
-.activity-list li{padding:8px 0;border-bottom:1px solid var(--card-border);font-size:.9rem;display:flex;justify-content:space-between;gap:8px}
-.activity-list li:last-child{border-bottom:none}
-.activity-time{color:var(--text-dim);font-size:.8rem;white-space:nowrap}
+/* Product cards */
+.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.product-card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:16px}
+.product-card .pc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.product-card .pc-name{font-size:.95rem;font-weight:700}
+.product-card .pc-url{font-size:.7rem;color:var(--text-muted)}
+.pc-row{display:flex;justify-content:space-between;font-size:.75rem;margin-bottom:4px;color:var(--text-dim)}
+.pc-row .label{color:var(--text-muted)}
+.progress-bar{height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin:8px 0;overflow:hidden}
+.progress-bar .fill{height:100%;border-radius:2px;background:var(--cyan);transition:width .3s}
+.weekly-bet{background:rgba(0,212,212,.05);border:1px solid rgba(0,212,212,.15);border-radius:6px;padding:10px;margin-top:8px;font-size:.73rem;color:var(--text-dim)}
+.weekly-bet strong{color:var(--cyan)}
 
-/* Brief */
-.brief-area{background:#0a0f1c;border:1px solid var(--card-border);border-radius:8px;padding:16px;font-family:'SF Mono',SFMono-Regular,Consolas,monospace;font-size:.85rem;white-space:pre-wrap;line-height:1.7;color:var(--text);max-height:300px;overflow-y:auto}
-.copy-btn{min-height:44px;min-width:44px;padding:10px 20px;background:var(--cyan);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.9rem;transition:opacity .2s}
-.copy-btn:hover{opacity:.85}
-.copy-btn:active{transform:scale(.97)}
-.brief-headlines,.brief-actions{margin-bottom:12px}
-.brief-headlines li,.brief-actions li{padding:4px 0;font-size:.9rem}
-
-/* Departments */
-.dept-accordion{border:1px solid var(--card-border);border-radius:12px;overflow:hidden}
-.dept-header{padding:16px 20px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--card-border);min-height:48px;user-select:none}
-.dept-header:hover{background:#141d35}
-.dept-header h3{font-size:1rem;font-weight:600;color:var(--text-bright)}
-.dept-body{padding:16px 20px;background:rgba(15,22,41,.5);display:none}
-.dept-body.open{display:block}
-.dept-kpi{display:flex;justify-content:space-between;padding:6px 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.05)}
-.dept-kpi:last-child{border-bottom:none}
-.dept-kpi .kv{color:var(--cyan);font-weight:600}
-
-/* Tables */
-.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-table{width:100%;border-collapse:collapse;font-size:.85rem}
-th{text-align:left;padding:10px 12px;color:var(--text-dim);font-weight:600;text-transform:uppercase;font-size:.75rem;letter-spacing:.05em;border-bottom:2px solid var(--card-border)}
-td{padding:10px 12px;border-bottom:1px solid var(--card-border);vertical-align:top}
-tr:hover td{background:rgba(255,255,255,.02)}
-
-/* Integrations Grid */
-.int-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
-.int-item{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--card);border:1px solid var(--card-border);border-radius:8px;font-size:.9rem}
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:.75rem}
+.tbl th{text-align:left;padding:8px 10px;color:var(--text-muted);border-bottom:1px solid var(--card-border);font-weight:600;text-transform:uppercase;font-size:.65rem;letter-spacing:.5px}
+.tbl td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text-dim);vertical-align:top}
+.tbl tr:hover td{background:rgba(255,255,255,.02)}
 
 /* Audit */
-.audit-log{max-height:400px;overflow-y:auto}
-.audit-entry{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--card-border);font-size:.85rem}
-.audit-entry:last-child{border-bottom:none}
-.audit-actor{min-width:60px}
-.audit-actor.ed{color:var(--cyan)}
-.audit-actor.david{color:var(--green)}
-.audit-actor.system{color:var(--text-dim)}
-.audit-time{color:var(--text-dim);font-size:.8rem;min-width:140px}
-.audit-detail{color:var(--text-dim)}
+.audit-item{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.73rem}
+.audit-item .time{color:var(--text-muted);white-space:nowrap;min-width:50px}
+.audit-item .actor{color:var(--cyan);font-weight:600;min-width:50px}
+.audit-item .desc{color:var(--text-dim)}
 
-/* Responsive */
-@media(max-width:600px){
-  .revenue-bar{grid-template-columns:1fr;gap:12px}
-  .revenue-stat{text-align:left;display:flex;gap:8px;align-items:baseline}
+/* Research */
+.research-card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px;margin-bottom:10px}
+.research-card .rc-title{font-size:.85rem;font-weight:700;margin-bottom:6px}
+.pipeline-stages{display:flex;gap:4px;margin:8px 0}
+.pipeline-stage{padding:3px 8px;border-radius:3px;font-size:.6rem;font-weight:700;text-transform:uppercase;background:rgba(255,255,255,.05);color:var(--text-muted)}
+.pipeline-stage.active{background:rgba(0,212,212,.2);color:var(--cyan)}
+
+/* Sidebar */
+.sidebar h3{font-size:.8rem;font-weight:700;color:var(--cyan);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.sidebar-item{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.73rem;color:var(--text-dim)}
+.sidebar-item .impact{font-weight:700;margin-left:4px}
+.impact-high{color:var(--red)}.impact-medium{color:var(--amber)}.impact-low{color:var(--text-muted)}
+.activity-current{color:var(--cyan);font-weight:600}
+
+/* Tab panels */
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* Brief card */
+.brief-section{margin-bottom:12px}
+.brief-section h4{font-size:.75rem;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase}
+.brief-list{list-style:none;padding:0}
+.brief-list li{padding:4px 0;font-size:.78rem;color:var(--text-dim);padding-left:16px;position:relative}
+.brief-list li::before{content:'›';position:absolute;left:0;color:var(--cyan);font-weight:700}
+
+/* Model router */
+.router-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.router-card{background:rgba(0,212,212,.03);border:1px solid rgba(0,212,212,.1);border-radius:8px;padding:12px;font-size:.73rem}
+.router-card .rc-type{font-weight:700;color:var(--cyan);margin-bottom:6px;font-size:.78rem}
+.router-card .rc-row{display:flex;justify-content:space-between;margin-bottom:3px;color:var(--text-dim)}
+.router-card .rc-row .lbl{color:var(--text-muted)}
+
+/* Dept scorecards */
+.dept-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:16px}
+
+/* Marketing */
+.acct-inventory{overflow-x:auto}
+
+/* Mobile */
+@media(max-width:768px){
+  .sidebar{display:none;position:fixed;top:0;right:0;bottom:0;width:85%;z-index:100;border-left:1px solid var(--card-border)}
+  .sidebar.open{display:block}
   .product-grid{grid-template-columns:1fr}
-  .header-inner{flex-direction:column;align-items:flex-start}
-  .int-grid{grid-template-columns:1fr 1fr}
+  .kpi-bar{grid-template-columns:repeat(2,1fr)}
+  .router-grid{grid-template-columns:1fr}
+  .tab{padding:10px 14px}
+  .mob-toggle{display:block!important}
 }
-
-/* Print */
-@media print{
-  header{position:static}
-  body{background:#fff;color:#000}
-  .card{border:1px solid #ccc;background:#f9f9f9}
-  .audit-log,.activity-list,.dept-accordion{max-height:none}
-  section:nth-child(n+8){display:none}
-}
+.mob-toggle{display:none;position:fixed;bottom:16px;right:16px;z-index:101;width:44px;height:44px;border-radius:50%;background:var(--cyan);color:var(--bg);border:none;font-size:1.2rem;font-weight:700;cursor:pointer}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+.overlay.open{display:block}
 </style>
 </head>
 <body>
-
-<header>
-  <div class="container header-inner">
-    <div class="header-title">⚡ Mission <span>Control</span></div>
-    <div class="header-meta">
-      <span class="badge badge-cyan" id="autonomy-badge"></span>
-      <span class="badge badge-green" id="ed-status"><span class="status-dot live"></span> Ed: Loading...</span>
-      <span style="color:var(--text-dim);font-size:.8rem" id="last-updated">—</span>
+<div class="shell">
+  <div class="topbar">
+    <h1>⌘ MISSION CONTROL</h1>
+    <div class="meta">Last updated: <span id="lastUpdated">—</span></div>
+  </div>
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="company">Company</div>
+    <div class="tab" data-tab="products">Products</div>
+    <div class="tab" data-tab="jobs">Jobs</div>
+    <div class="tab" data-tab="research">Research</div>
+    <div class="tab" data-tab="marketing">Marketing Ops</div>
+  </div>
+  <div class="main-area">
+    <div class="content" id="content">
+      <!-- COMPANY TAB -->
+      <div class="tab-panel active" id="panel-company">
+        <div class="kpi-bar" id="kpiBar"></div>
+        <div class="section-title">Department Scorecards</div>
+        <div class="dept-grid" id="deptGrid"></div>
+        <div class="section-title">Autonomy Mode</div>
+        <div class="card" id="autonomyCard"></div>
+        <div class="section-title">Integrations</div>
+        <div class="card" id="integrationsCard"></div>
+        <div class="section-title">Models &amp; Spend</div>
+        <div class="router-grid" id="routerGrid"></div>
+        <div class="section-title" style="margin-top:16px">Audit Timeline</div>
+        <div class="card" id="auditCard"></div>
+      </div>
+      <!-- PRODUCTS TAB -->
+      <div class="tab-panel" id="panel-products">
+        <div class="section-title">Product Board</div>
+        <div class="product-grid" id="productGrid"></div>
+      </div>
+      <!-- JOBS TAB -->
+      <div class="tab-panel" id="panel-jobs">
+        <div class="section-title">Work Queue</div>
+        <div class="card" style="padding:0;overflow-x:auto">
+          <table class="tbl" id="jobsTable">
+            <thead><tr><th>Job</th><th>Product</th><th>Owner</th><th>Status</th><th>Dependency</th><th>Next Action</th><th>Due</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- RESEARCH TAB -->
+      <div class="tab-panel" id="panel-research">
+        <div class="section-title">Daily Brief — <span id="briefDate"></span></div>
+        <div class="card" id="dailyBriefCard"></div>
+        <div class="section-title" style="margin-top:16px">Opportunity Pipeline</div>
+        <div id="researchList"></div>
+      </div>
+      <!-- MARKETING TAB -->
+      <div class="tab-panel" id="panel-marketing">
+        <div class="section-title">Social Accounts</div>
+        <div class="card" id="socialCard"></div>
+        <div class="section-title">Content Pipeline</div>
+        <div class="card" id="contentCard"></div>
+        <div class="section-title">Campaigns</div>
+        <div class="card" id="campaignCard"></div>
+        <div class="section-title">Account Inventory</div>
+        <div class="card acct-inventory" style="padding:0;overflow-x:auto">
+          <table class="tbl" id="acctTable">
+            <thead><tr><th>Platform</th><th>Account</th><th>Purpose</th><th>Verified</th><th>2FA</th><th>Recovery</th><th>Notes</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar" id="sidebar">
+      <h3>🤖 Ed Activity</h3>
+      <div id="edActivity"></div>
+      <h3 style="margin-top:20px">🎯 David Action Items</h3>
+      <div id="davidActions"></div>
     </div>
   </div>
-</header>
-
-<main class="container" style="padding-top:24px;padding-bottom:48px">
-
-  <!-- Revenue -->
-  <section>
-    <div class="card revenue-bar" id="revenue-section">
-      <div class="revenue-main">£<span id="rev-current">0</span> <small>/ £<span id="rev-target">10K</span></small></div>
-      <div class="revenue-stat"><div class="num" id="rev-products">0</div><div class="label">Products Live</div></div>
-      <div class="revenue-stat"><div class="num" id="rev-days">0</div><div class="label">Days Building</div></div>
-      <div class="revenue-progress"><div class="revenue-progress-fill" id="rev-bar" style="width:0%"></div></div>
-    </div>
-  </section>
-
-  <!-- David Actions -->
-  <section>
-    <h2><span class="icon">🎯</span> David's Action Items</h2>
-    <div class="card actions-panel" id="actions-panel"></div>
-  </section>
-
-  <!-- Products -->
-  <section>
-    <h2><span class="icon">📦</span> Product Board</h2>
-    <div class="product-grid" id="product-grid"></div>
-  </section>
-
-  <!-- Ed Activity -->
-  <section>
-    <h2><span class="icon">🤖</span> Ed Activity</h2>
-    <div class="card" id="ed-activity"></div>
-  </section>
-
-  <!-- Daily Brief -->
-  <section>
-    <h2><span class="icon">📋</span> Daily Brief <button class="copy-btn" id="copy-brief" style="margin-left:auto;font-size:.8rem">📋 Copy</button></h2>
-    <div class="card" id="daily-brief"></div>
-  </section>
-
-  <!-- Departments -->
-  <section>
-    <h2><span class="icon">🏢</span> Departments</h2>
-    <div class="dept-accordion" id="departments"></div>
-  </section>
-
-  <!-- Opportunities -->
-  <section>
-    <h2><span class="icon">🔍</span> Opportunity Pipeline</h2>
-    <div class="card table-wrap" id="opportunities"></div>
-  </section>
-
-  <!-- Model Router -->
-  <section>
-    <h2><span class="icon">🧠</span> Model Router</h2>
-    <div class="card table-wrap" id="model-router"></div>
-  </section>
-
-  <!-- Integrations -->
-  <section>
-    <h2><span class="icon">🔌</span> Integrations</h2>
-    <div class="int-grid" id="integrations"></div>
-  </section>
-
-  <!-- Audit Trail -->
-  <section>
-    <h2><span class="icon">📜</span> Audit Trail</h2>
-    <div class="card audit-log" id="audit-trail"></div>
-  </section>
-
-</main>
+</div>
+<button class="mob-toggle" id="mobToggle">☰</button>
+<div class="overlay" id="overlay"></div>
 
 <script>
-const $ = s => document.getElementById(s);
-const statusColors = {'blocked':'red','in-progress':'cyan','ready-to-ship':'amber','live':'green','concept':'grey'};
-const impactOrder = {'high':0,'medium':1,'low':2};
+const STAGES = ['Idea','Evidence','Test Plan','Build','Ship'];
 
-function timeAgo(ts){
-  if(!ts)return '—';
-  const d=Date.now()-new Date(ts).getTime(),m=Math.floor(d/60000),h=Math.floor(m/60);
-  if(m<1)return 'just now';if(m<60)return m+'m ago';if(h<24)return h+'h ago';
-  return Math.floor(h/24)+'d ago';
+function statusBadge(s){
+  const m={'BLOCKED':'badge-red','IN PROGRESS':'badge-cyan','READY TO SHIP':'badge-amber','LIVE':'badge-green','PAUSED':'badge-dim','QUEUED':'badge-dim'};
+  return `<span class="badge ${m[s]||'badge-dim'}">${s}</span>`;
 }
-function fmtTime(ts){
-  if(!ts)return '—';
-  const d=new Date(ts);
-  return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+function ragClass(r){return 'rag-'+(r||'amber');}
+function slClass(s){return 'sl-'+(s||'unknown');}
+function confidenceBadge(c){
+  const m={'High':'badge-green','Medium':'badge-amber','Low':'badge-red'};
+  return `<span class="badge ${m[c]||'badge-dim'}">${c}</span>`;
 }
-function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+function impactClass(i){return 'impact-'+(i||'LOW').toLowerCase();}
+function relTime(iso){
+  if(!iso)return '—';
+  const d=new Date(iso),now=new Date(),diff=now-d,mins=Math.floor(diff/60000);
+  if(mins<60)return mins+'m ago';
+  const hrs=Math.floor(mins/60);if(hrs<24)return hrs+'h ago';
+  const days=Math.floor(hrs/24);return days+'d ago';
+}
+function fmtTime(iso){
+  if(!iso)return '';
+  const d=new Date(iso);
+  return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
 
-function render(data){
-  // Header
-  $('autonomy-badge').textContent='🛡️ '+data.meta.autonomyMode.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-  $('ed-status').innerHTML='<span class="status-dot live"></span> Ed: '+esc(data.meta.edStatus);
-  $('last-updated').textContent='Updated '+timeAgo(data.meta.lastUpdated);
+let DATA=null;
 
-  // Revenue
-  const r=data.revenue;
-  $('rev-current').textContent=r.current.toLocaleString();
-  $('rev-target').textContent=(r.target/1000)+'K';
-  $('rev-products').textContent=r.products_live;
-  $('rev-days').textContent=r.days_building;
-  $('rev-bar').style.width=Math.min(100,r.target?r.current/r.target*100:0)+'%';
+function render(d){
+  DATA=d;
+  document.getElementById('lastUpdated').textContent=relTime(d.lastUpdatedAt);
 
-  // Actions
-  const actions=data.davidActions.filter(a=>a.status==='pending').sort((a,b)=>impactOrder[a.revenueImpact]-impactOrder[b.revenueImpact]);
-  $('actions-panel').innerHTML=actions.length?actions.map(a=>`
-    <div class="action-item">
-      <span class="action-product">${esc(a.product)}</span>
-      <span class="action-text">${esc(a.action)}</span>
-      <span class="badge badge-${a.revenueImpact==='high'?'red':a.revenueImpact==='medium'?'amber':'grey'}">${a.revenueImpact}</span>
-    </div>`).join(''):'<p style="color:var(--green);padding:12px">✅ No pending actions — all clear!</p>';
+  // KPIs
+  const k=d.kpis;
+  document.getElementById('kpiBar').innerHTML=
+    `<div class="kpi"><div class="value">${k.mrr}</div><div class="label">MRR</div></div>`+
+    `<div class="kpi"><div class="value">${k.activeUsers7d}</div><div class="label">Active Users (7d)</div></div>`+
+    `<div class="kpi"><div class="value">${k.leadsThisWeek}</div><div class="label">Leads This Week</div></div>`+
+    `<div class="kpi"><div class="value">${k.productsLive}</div><div class="label">Products Live</div></div>`;
+
+  // Departments
+  document.getElementById('deptGrid').innerHTML=d.departments.map(dep=>`
+    <div class="card">
+      <h3><span class="rag ${ragClass(dep.rag)}"></span>${dep.name}</h3>
+      <div class="pc-row"><span class="label">Owner</span><span>${dep.owner} (${dep.role})</span></div>
+      <div class="pc-row"><span class="label">Top Metric</span><span>${dep.topMetric}</span></div>
+      <div class="pc-row"><span class="label">Priority</span><span>${dep.topPriority}</span></div>
+      <div class="pc-row"><span class="label">Blocker</span><span>${dep.blocker||'None'}</span></div>
+    </div>`).join('');
+
+  // Autonomy
+  document.getElementById('autonomyCard').innerHTML=`
+    <div class="pc-row"><span class="label">Mode</span><span class="badge badge-cyan">${d.autonomy.mode}</span></div>
+    <h4 style="margin-top:10px;color:var(--green)">✓ Can Do</h4>
+    <ul style="list-style:none;padding:0">${d.autonomy.canDo.map(x=>`<li style="font-size:.73rem;color:var(--text-dim);padding:2px 0">› ${x}</li>`).join('')}</ul>
+    <h4 style="margin-top:8px;color:var(--red)">✗ Cannot Do</h4>
+    <ul style="list-style:none;padding:0">${d.autonomy.cannotDo.map(x=>`<li style="font-size:.73rem;color:var(--text-dim);padding:2px 0">› ${x}</li>`).join('')}</ul>`;
+
+  // Integrations
+  document.getElementById('integrationsCard').innerHTML=d.integrations.map(i=>`
+    <span style="display:inline-flex;align-items:center;margin:4px 12px 4px 0;font-size:.75rem">
+      <span class="status-light ${slClass(i.status)}"></span>${i.name}
+      <span style="color:var(--text-muted);margin-left:4px;font-size:.65rem">${i.note?'('+i.note+')':''}</span>
+    </span>`).join('');
+
+  // Model Router
+  document.getElementById('routerGrid').innerHTML=d.modelRouter.routes.map(r=>`
+    <div class="router-card">
+      <div class="rc-type">${r.taskType}</div>
+      <div class="rc-row"><span class="lbl">Primary</span><span>${r.primary}</span></div>
+      <div class="rc-row"><span class="lbl">Fallback</span><span>${r.fallback}</span></div>
+      <div class="rc-row"><span class="lbl">Cost Cap</span><span>${r.costCap}</span></div>
+      <div class="rc-row"><span class="lbl">Quality</span><span>${r.qualityGate}</span></div>
+    </div>`).join('')+
+    (d.modelRouter.proposals.length?'<div style="margin-top:8px;font-size:.73rem;color:var(--amber)">⚠ '+d.modelRouter.proposals.length+' pending proposal(s)</div>':'');
+
+  // Audit
+  document.getElementById('auditCard').innerHTML=d.audit.slice(0,20).map(a=>`
+    <div class="audit-item">
+      <span class="time">${fmtTime(a.timestamp)}</span>
+      <span class="actor">${a.actor}</span>
+      <span class="desc">${a.action}</span>
+    </div>`).join('');
 
   // Products
-  $('product-grid').innerHTML=data.products.map(p=>{
-    const sc=statusColors[p.status]||'grey';
-    const pct=p.percentComplete||0;
-    const fillColor=pct>=80?'var(--green)':pct>=40?'var(--amber)':'var(--red)';
-    return `<div class="card product-card">
-      <h3>${esc(p.name)} <span class="badge badge-${sc}">${p.status}</span></h3>
-      ${p.blocker?`<div class="product-detail">🚧 <strong>${esc(p.blocker)}</strong></div>`:''}
-      ${p.blockerOwner?`<div class="product-detail">Owner: <span class="badge badge-${p.blockerOwner==='david'?'green':'cyan'}" style="font-size:.75rem">${p.blockerOwner}</span></div>`:''}
-      <div class="product-detail">Next: ${esc(p.nextAction)}</div>
-      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${fillColor}"></div></div>
-      <div style="font-size:.8rem;color:var(--text-dim)">${pct}% complete</div>
-      ${p.weeklyBet?`<div class="product-bet">💡 ${esc(p.weeklyBet)}</div>`:''}
+  document.getElementById('productGrid').innerHTML=d.products.map(p=>{
+    const links=Object.entries(p.links||{}).map(([k,v])=>`<a href="${v}" target="_blank">${k}</a>`).join(' · ');
+    return `<div class="product-card">
+      <div class="pc-header">
+        <div><div class="pc-name">${p.name}</div>${p.url?`<div class="pc-url">${p.url}</div>`:''}</div>
+        <div>${statusBadge(p.status)}</div>
+      </div>
+      <div class="progress-bar"><div class="fill" style="width:${p.percentComplete}%"></div></div>
+      <div class="pc-row"><span class="label">Progress</span><span>${p.percentComplete}%</span></div>
+      <div class="pc-row"><span class="label">Confidence</span>${confidenceBadge(p.confidence)}</div>
+      <div class="pc-row"><span class="label">Blocker</span><span>${p.blocker||'None'}</span></div>
+      <div class="pc-row"><span class="label">Current</span><span>${p.currentWork}</span></div>
+      <div class="pc-row"><span class="label">Last Touched</span><span>${relTime(p.lastTouched)}</span></div>
+      ${links?`<div class="pc-row"><span class="label">Links</span><span>${links}</span></div>`:''}
+      <div class="weekly-bet">
+        <strong>Weekly Bet:</strong> ${p.weeklyBet.feature}<br>
+        <strong>Distribution:</strong> ${p.weeklyBet.distribution}<br>
+        <strong>Target:</strong> ${p.weeklyBet.metricTarget}
+      </div>
     </div>`;
   }).join('');
 
-  // Ed Activity
-  const ea=data.edActivity;
-  $('ed-activity').innerHTML=`
-    <div class="activity-current">⚡ ${esc(ea.current)}</div>
-    <h3 style="font-size:.9rem;color:var(--text-dim);margin:12px 0 8px">Completed</h3>
-    <ul class="activity-list">${ea.completed.slice(0,5).map(c=>`<li><span>${esc(c.task)}</span><span class="activity-time">${timeAgo(c.timestamp)}</span></li>`).join('')}</ul>
-    <h3 style="font-size:.9rem;color:var(--text-dim);margin:12px 0 8px">Queue</h3>
-    <ul class="activity-list">${ea.queue.map(q=>`<li>${esc(q)}</li>`).join('')}</ul>`;
+  // Jobs
+  const pMap=Object.fromEntries(d.products.map(p=>[p.id,p.name]));
+  document.querySelector('#jobsTable tbody').innerHTML=d.jobs.map(j=>`
+    <tr>
+      <td style="font-weight:600;color:var(--text)">${j.title}</td>
+      <td>${pMap[j.product]||'—'}</td>
+      <td>${j.owner}</td>
+      <td>${statusBadge(j.status)}</td>
+      <td>${j.dependency||'—'}</td>
+      <td>${j.nextAction}</td>
+      <td>${j.dueDate||'—'}</td>
+    </tr>`).join('');
 
-  // Brief
-  const db=data.dailyBrief;
-  $('daily-brief').innerHTML=`
-    <h3 style="font-size:.9rem;color:var(--text-dim);margin-bottom:8px">Headlines — ${esc(db.date)}</h3>
-    <ul class="brief-headlines">${db.headlines.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>
-    <h3 style="font-size:.9rem;color:var(--text-dim);margin-bottom:8px">Next Actions</h3>
-    <ol class="brief-actions">${db.nextActions.map(a=>`<li>${esc(a)}</li>`).join('')}</ol>
-    <h3 style="font-size:.9rem;color:var(--text-dim);margin:12px 0 8px">Copy-Paste Ready</h3>
-    <div class="brief-area" id="brief-text">${esc(db.copyPasteReady)}</div>`;
+  // Daily Brief
+  const b=d.dailyBrief;
+  document.getElementById('briefDate').textContent=b.date;
+  document.getElementById('dailyBriefCard').innerHTML=`
+    <div class="brief-section"><h4>Top 3 Opportunities</h4><ul class="brief-list">${b.topOpportunities.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+    <div class="brief-section"><h4>Top 3 Risks</h4><ul class="brief-list">${b.topRisks.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+    <div class="brief-section"><h4>Today's Focus</h4><ul class="brief-list"><li>${b.todaysFocus}</li></ul></div>`;
 
-  $('copy-brief').onclick=()=>{
-    navigator.clipboard.writeText(db.copyPasteReady).then(()=>{
-      $('copy-brief').textContent='✅ Copied!';
-      setTimeout(()=>$('copy-brief').textContent='📋 Copy',2000);
-    });
-  };
-
-  // Departments
-  $('departments').innerHTML=data.departments.map((d,i)=>`
-    <div>
-      <div class="dept-header" onclick="this.nextElementSibling.classList.toggle('open')">
-        <h3>${esc(d.name)} <span class="badge badge-${d.status==='active'?'green':d.status==='pending'?'amber':'grey'}" style="margin-left:8px">${d.status}</span></h3>
-        <span style="color:var(--text-dim)">▾</span>
+  // Research
+  document.getElementById('researchList').innerHTML=d.research.map(r=>{
+    const typeB=r.type==='threat'?'badge-red':'badge-green';
+    return `<div class="research-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div class="rc-title">${r.title}</div>
+        <span class="badge ${typeB}">${r.type}</span>
       </div>
-      <div class="dept-body${i===0?' open':''}">
-        <div style="font-size:.9rem;margin-bottom:8px"><strong>Lead:</strong> ${esc(d.lead)} · <strong>Focus:</strong> ${esc(d.focus)}</div>
-        ${d.kpis.map(k=>`<div class="dept-kpi"><span>${esc(k.label)}</span><span class="kv">${esc(k.value)}</span></div>`).join('')}
-      </div>
+      <div class="pipeline-stages">${STAGES.map(s=>`<span class="pipeline-stage${s===r.stage?' active':''}">${s}</span>`).join('')}</div>
+      <div class="pc-row"><span class="label">Source</span><a href="${r.sourceUrl}" target="_blank">${r.source}</a></div>
+      <div class="pc-row"><span class="label">Why it matters</span><span>${r.whyItMatters}</span></div>
+      <div class="pc-row"><span class="label">Confidence</span>${confidenceBadge(r.confidence)}</div>
+      <div class="pc-row"><span class="label">Next Action</span><span>${r.nextAction}</span></div>
+      <div class="pc-row"><span class="label">Affects</span><span>${r.affectedProducts.map(x=>pMap[x]||x).join(', ')}</span></div>
+    </div>`;
+  }).join('');
+
+  // Marketing
+  document.getElementById('socialCard').innerHTML=d.marketing.accounts.map(a=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:.75rem">
+      <span class="status-light ${a.accountName==='Unknown'?'sl-unknown':'sl-connected'}"></span>
+      <strong>${a.platform}</strong>
+      <span style="color:var(--text-dim)">${a.accountName}</span>
     </div>`).join('');
 
-  // Opportunities
-  $('opportunities').innerHTML=`<table><thead><tr><th>Opportunity</th><th>Source</th><th>Category</th><th>Status</th><th>Next Action</th></tr></thead><tbody>
-    ${data.opportunities.map(o=>`<tr>
-      <td><strong>${esc(o.title)}</strong></td>
-      <td><a href="${esc(o.sourceUrl)}" target="_blank" rel="noopener">${esc(o.source)}</a></td>
-      <td>${esc(o.category)}</td>
-      <td><span class="badge badge-${o.status==='new'?'cyan':o.status==='evaluating'?'amber':o.status==='actioned'?'green':'grey'}">${o.status}</span></td>
-      <td>${esc(o.nextAction)}</td>
-    </tr>`).join('')}</tbody></table>`;
+  document.getElementById('contentCard').innerHTML=`<table class="tbl"><thead><tr><th>Type</th><th>Status</th><th>Count</th><th>Note</th></tr></thead><tbody>`+
+    d.marketing.contentPipeline.map(c=>`<tr><td>${c.type}</td><td>${statusBadge(c.status.toUpperCase())}</td><td>${c.count}</td><td style="color:var(--text-muted)">${c.note}</td></tr>`).join('')+
+    '</tbody></table>';
 
-  // Model Router
-  $('model-router').innerHTML=`<table><thead><tr><th>Task</th><th>Model</th><th>Provider</th><th>Reason</th></tr></thead><tbody>
-    ${data.modelRouter.map(m=>`<tr><td>${esc(m.task)}</td><td><strong>${esc(m.model)}</strong></td><td>${esc(m.provider)}</td><td style="color:var(--text-dim)">${esc(m.reason)}</td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('campaignCard').innerHTML=d.marketing.campaigns.length?
+    d.marketing.campaigns.map(c=>`<div>${c.name}</div>`).join(''):
+    '<div style="font-size:.75rem;color:var(--text-muted);padding:8px 0">No active campaigns</div>';
 
-  // Integrations
-  $('integrations').innerHTML=data.integrations.map(i=>`
-    <div class="int-item"><span class="status-dot ${i.status}"></span><span>${esc(i.name)}</span></div>`).join('');
+  document.querySelector('#acctTable tbody').innerHTML=d.marketing.accounts.map(a=>`
+    <tr>
+      <td style="font-weight:600">${a.platform}</td>
+      <td>${a.accountName}</td>
+      <td>${a.purpose}</td>
+      <td>${a.verification}</td>
+      <td>${a.twoFactor}</td>
+      <td>${a.recoveryStored}</td>
+      <td style="color:var(--text-muted)">${a.notes}</td>
+    </tr>`).join('');
 
-  // Audit
-  $('audit-trail').innerHTML=data.auditTrail.map(a=>`
-    <div class="audit-entry">
-      <span class="audit-time">${fmtTime(a.timestamp)}</span>
-      <span class="audit-actor ${a.actor}">${a.actor}</span>
-      <span><strong>${esc(a.action)}</strong> ${esc(a.target)}</span>
-      <span class="audit-detail">${esc(a.detail)}</span>
+  // Sidebar
+  const ea=d.edActivity;
+  document.getElementById('edActivity').innerHTML=`
+    <div class="sidebar-item activity-current">▶ ${ea.current}</div>
+    <div style="font-size:.65rem;color:var(--text-muted);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px">Completed</div>
+    ${ea.completed.map(x=>`<div class="sidebar-item">✓ ${x}</div>`).join('')}
+    <div style="font-size:.65rem;color:var(--text-muted);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px">Queue</div>
+    ${ea.queue.map(x=>`<div class="sidebar-item">◻ ${x}</div>`).join('')}`;
+
+  document.getElementById('davidActions').innerHTML=d.davidActions.map(a=>`
+    <div class="sidebar-item">
+      ${a.action}<br>
+      <span style="font-size:.65rem;color:var(--text-muted)">${a.why}</span>
+      <span class="impact ${impactClass(a.impact)}">${a.impact}</span>
     </div>`).join('');
 }
 
-async function load(){
-  try{
-    const r=await fetch('data.json?t='+Date.now());
-    if(!r.ok)throw new Error(r.status);
-    render(await r.json());
-  }catch(e){console.error('Failed to load data.json',e)}
-}
+// Tabs
+document.getElementById('tabs').addEventListener('click',e=>{
+  const tab=e.target.closest('.tab');if(!tab)return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
+});
 
+// Mobile sidebar
+const mobToggle=document.getElementById('mobToggle');
+const sidebar=document.getElementById('sidebar');
+const overlay=document.getElementById('overlay');
+mobToggle.addEventListener('click',()=>{sidebar.classList.toggle('open');overlay.classList.toggle('open');});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');});
+
+// Fetch + poll
+function load(){
+  fetch('data.json?t='+Date.now()).then(r=>r.json()).then(render).catch(e=>console.error('Fetch error:',e));
+}
 load();
 setInterval(load,60000);
 </script>

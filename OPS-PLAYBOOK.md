@@ -1,78 +1,88 @@
-# OPS-PLAYBOOK.md — How to Use Mission Control
+# Ops Playbook — Mission Control v2
 
-## Quick Start
+## How to Run It
 
-```bash
-cd /Users/david/.openclaw/workspace/mission-control
-python3 -m http.server 8899
-```
+1. Open a terminal in the `mission-control` directory
+2. Run: `python3 -m http.server 8899`
+3. Open: `http://localhost:8899`
 
-Open **http://localhost:8899** in your browser.
+That's it. No build step, no dependencies.
 
-## How to Read the Dashboard
+## How to Read It
 
-### Sections (top to bottom)
+### Company Tab
+- **KPI bar** — the four numbers that matter. If MRR is still £0, that's the priority.
+- **Department scorecards** — RAG status at a glance. Red means something is stuck. Amber means progress but with blockers.
+- **Autonomy Mode** — what Ed can and can't do without your approval.
+- **Integrations** — green dot = connected, amber = unknown, red = disconnected.
+- **Models & Spend** — which AI model handles which task type. Proposals appear here when Ed wants to change a route.
+- **Audit Timeline** — last 20 actions. Check this to see what Ed's been doing.
 
-1. **Header** — Shows Ed's current status, autonomy mode, and when data was last updated
-2. **Revenue Bar** — £current / £target, products live, days since we started building
-3. **David's Action Items** — **This is your TODO list.** Sorted by revenue impact (high → low). These are things only you can do that are blocking products from shipping.
-4. **Product Board** — Every product as a card. Colour-coded status. Shows blockers, who owns the blocker, next action, and % complete.
-5. **Ed Activity** — What Ed is doing right now, what's queued, what's been done recently
-6. **Daily Brief** — Headlines + next actions + a copy-paste ready summary you can send to anyone
-7. **Departments** — Click to expand. Shows KPIs for each area.
-8. **Opportunity Pipeline** — Research items and potential integrations with source links
-9. **Model Router** — Which AI model Ed uses for what task and why
-10. **Integrations** — Status of all connected services (green = live, amber = pending, grey = off)
-11. **Audit Trail** — Everything that's happened, most recent first. Actor badges: Ed (cyan), David (green), System (grey)
+### Products Tab
+- Each card shows status, progress, blocker, confidence, and the weekly bet.
+- **Weekly Bet** = the one feature + distribution angle + target metric for the week.
+- If a card shows "Blocker: David" — that's on you.
 
-## Status Colours
+### Jobs Tab
+- The work queue. Every job has an owner, status, dependency, and next action.
+- If your name is in the Owner column, it's your job.
 
-| Colour | Status | Meaning |
-|--------|--------|---------|
-| 🔴 Red | `blocked` | Can't progress — needs someone to act |
-| 🔵 Cyan | `in-progress` | Ed is actively working on it |
-| 🟡 Amber | `ready-to-ship` | Built, needs final approval/action |
-| 🟢 Green | `live` | Shipped and running |
-| ⚪ Grey | `concept` | Idea stage, not yet started |
+### Research Tab
+- **Daily Brief** — read this first each morning. Three opportunities, three risks, today's focus.
+- **Pipeline** — ideas move from Idea → Evidence → Test Plan → Build → Ship.
 
-## Revenue Impact Badges
+### Marketing Ops Tab
+- Account inventory shows what social accounts exist and their status.
+- Content pipeline shows what's drafted, queued, or scheduled.
 
-- **High** (red) — Directly unblocks revenue or a key product
-- **Medium** (amber) — Unblocks a product that's on the path to revenue
-- **Low** (grey) — Nice to have, not urgent
+## How to Edit Products
 
-## How Ed Updates data.json
+Edit `data.json` directly. The app polls every 60 seconds.
 
-Ed updates `data.json` directly — it's the single source of truth. The dashboard auto-refreshes every 60 seconds. Ed will update it:
-- When a task is completed
-- When a blocker changes
-- When new opportunities are found (overnight cron)
-- When the daily brief is generated (each morning)
+### Add a New Product
 
-## How to Approve Changes
-
-When David's Action Items show a pending task:
-1. Do the thing (e.g., approve a deploy, create an account, provide an API key)
-2. Tell Ed it's done (via Telegram)
-3. Ed updates data.json — the item moves to "done" and disappears from the panel
-
-## How to Add a New Product
-
-Edit `data.json` → `products` array. Add an object:
+Add an object to the `products` array:
 
 ```json
 {
-  "id": "new-product",
-  "name": "New Product",
-  "owner": "Ed",
-  "status": "concept",
+  "id": "my-new-product",
+  "name": "My New Product",
+  "url": "myproduct.com",
+  "status": "IN PROGRESS",
+  "percentComplete": 10,
+  "currentWork": "Building MVP",
   "blocker": null,
-  "blockerOwner": null,
-  "nextAction": "Define MVP scope",
-  "percentComplete": 0,
-  "weeklyBet": "What's the hypothesis?",
-  "distribution": "Web app"
+  "blockerType": null,
+  "confidence": "Medium",
+  "lastTouched": "2026-02-20T10:00:00Z",
+  "links": { "repo": "https://github.com/DSumm18/my-product" },
+  "weeklyBet": {
+    "feature": "Core feature description",
+    "distribution": "How users find it",
+    "metricTarget": "What success looks like"
+  }
 }
 ```
 
-Or just tell Ed to add it — he'll update the file.
+### Status Values
+
+| Status | Meaning |
+|--------|---------|
+| BLOCKED | Needs external unblock (David, third party, etc.) |
+| IN PROGRESS | Actively being worked on |
+| READY TO SHIP | Done, awaiting final step to go live |
+| LIVE | Shipped and available to users |
+| PAUSED | On hold, not being worked on |
+
+### % Complete
+
+Rough estimate. Be consistent:
+- 0–20% = concept/early build
+- 20–50% = core features in progress
+- 50–80% = most features done, polish/testing
+- 80–95% = nearly ready, final blockers
+- 100% = live
+
+## How Ed Updates Data
+
+Ed writes to a temporary file, then renames it to `data.json`. This prevents partial reads. The `lastUpdatedAt` timestamp reflects when Ed last wrote the file.

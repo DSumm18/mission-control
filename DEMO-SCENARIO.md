@@ -1,75 +1,62 @@
-# DEMO-SCENARIO.md — Walkthrough
+# Demo Scenario — Adding a New Product
 
-## Scenario: Adding "Schoolgle OS / PWA" and Watching the Dashboard React
+## Scenario: Launch "QuizDrop" — an AI quiz generator for teachers
 
-### Step 1: The product exists as a concept
+### Step 1: Add to data.json
 
-Schoolgle OS / PWA is already in `data.json` with status `concept` and 5% complete. On the dashboard:
-- Product Board shows a **grey "concept" badge**
-- No blocker shown (it's just an idea)
-- Next action: "Validate concept, define MVP scope"
-
-### Step 2: David says "Let's build it — start with auth + dashboard"
-
-Ed updates `data.json`:
+Open `data.json` and add to the `products` array:
 
 ```json
 {
-  "id": "schoolgle-os",
-  "name": "Schoolgle OS / PWA",
-  "status": "in-progress",         // was: concept
+  "id": "quizdrop",
+  "name": "QuizDrop",
+  "url": "quizdrop.uk",
+  "status": "IN PROGRESS",
+  "percentComplete": 5,
+  "currentWork": "Concept + tech spike",
   "blocker": null,
-  "blockerOwner": "ed",
-  "nextAction": "Build auth flow + teacher dashboard",
-  "percentComplete": 10             // was: 5
+  "blockerType": null,
+  "confidence": "Medium",
+  "lastTouched": "2026-02-20T11:00:00Z",
+  "links": { "repo": "https://github.com/DSumm18/quizdrop" },
+  "weeklyBet": {
+    "feature": "Generate 10-question quiz from any topic in 5 seconds",
+    "distribution": "Staff Room newsletter + teacher Facebook groups",
+    "metricTarget": "50 quizzes generated in week 1"
+  }
 }
 ```
 
-**Dashboard changes:**
-- Badge turns **cyan** ("in-progress")
-- Progress bar moves to 10%
-- Ed Activity shows this as current task
+### Step 2: Add a Job
 
-### Step 3: Ed hits a blocker — needs Supabase project
+Add to the `jobs` array:
 
 ```json
 {
-  "status": "blocked",
-  "blocker": "Needs new Supabase project for school data",
-  "blockerOwner": "david"
+  "id": "j9",
+  "title": "QuizDrop MVP Build",
+  "product": "quizdrop",
+  "owner": "Ed",
+  "status": "IN PROGRESS",
+  "dependency": null,
+  "nextAction": "Build quiz generation API + basic UI",
+  "link": null,
+  "dueDate": "2026-02-25"
 }
 ```
 
-**Dashboard changes:**
-- Badge turns **red** ("blocked")
-- Blocker text appears with "Owner: david" badge
-- A new item appears in **David's Action Items**: "Create Supabase project for Schoolgle OS" with medium impact
+### Step 3: Update KPIs (if applicable)
 
-Ed also adds to `davidActions`:
-```json
-{
-  "id": "da-8",
-  "action": "Create Supabase project for Schoolgle OS",
-  "product": "Schoolgle OS / PWA",
-  "revenueImpact": "medium",
-  "status": "pending"
-}
-```
+If QuizDrop goes live, increment `productsLive`.
 
-### Step 4: David creates the project, tells Ed
+### Step 4: Wait 60 seconds
 
-Ed updates:
-- `davidActions[da-8].status` → `"done"` (disappears from panel)
-- Product blocker → `null`, status → `"in-progress"`
-- Adds audit entry: `{ actor: "david", action: "unblocked", target: "Schoolgle OS" }`
+The dashboard polls `data.json` every 60 seconds. The new product card appears on the Products tab, and the job appears on the Jobs tab.
 
-### Step 5: Daily Brief reflects everything
+### Step 5: Add Research (optional)
 
-Next morning's brief includes:
-> "🏫 Schoolgle OS / PWA unblocked — Ed building auth + dashboard"
-
-The copy-paste text updates automatically.
+If there's a market signal that prompted QuizDrop, add it to the `research` array with the appropriate pipeline stage.
 
 ---
 
-This is the full loop: concept → in-progress → blocked → unblocked → shipping. All visible in one dashboard, all driven by a single JSON file.
+That's the full cycle. No rebuild, no deploy. Edit JSON → wait → it's live on screen.
