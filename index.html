@@ -3,44 +3,56 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mission Control</title>
+<title>Mission Control v2.1</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#070B12;--card:#0F1629;--card-border:#1a2340;
-  --cyan:#00D4D4;--green:#22C55E;--red:#EF4444;--amber:#F59E0B;
+  --bg:#070B12;--card:#0F1629;--card-border:#1a2340;--card-hover:#141d38;
+  --cyan:#00D4D4;--green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;
   --text:#E2E8F0;--text-dim:#94A3B8;--text-muted:#64748B;
   --font:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  --radius:10px;--transition:all .2s ease;
 }
 html{font-size:14px;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased}
 body{min-height:100vh;overflow-x:hidden}
-a{color:var(--cyan);text-decoration:none}
-a:hover{text-decoration:underline}
+a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--card-border);border-radius:3px}
 
 /* Layout */
 .shell{display:flex;flex-direction:column;height:100vh}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:48px;background:var(--card);border-bottom:1px solid var(--card-border);flex-shrink:0}
-.topbar h1{font-size:1rem;font-weight:700;color:var(--cyan);letter-spacing:.5px}
-.topbar .meta{font-size:.75rem;color:var(--text-muted)}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:52px;background:var(--card);border-bottom:1px solid var(--card-border);flex-shrink:0;gap:12px}
+.topbar h1{font-size:1rem;font-weight:700;color:var(--cyan);letter-spacing:.5px;white-space:nowrap}
+.topbar .meta{font-size:.72rem;color:var(--text-muted);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.refresh-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Search */
+.search-box{flex:1;max-width:360px;position:relative}
+.search-box input{width:100%;padding:7px 12px 7px 32px;border-radius:6px;border:1px solid var(--card-border);background:var(--bg);color:var(--text);font-size:.78rem;outline:none;transition:var(--transition)}
+.search-box input:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(0,212,212,.15)}
+.search-box::before{content:'⌕';position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:.85rem}
+.search-results{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--card-border);border-radius:8px;margin-top:4px;max-height:400px;overflow-y:auto;z-index:200;display:none;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.search-results.open{display:block}
+.sr-item{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;font-size:.78rem;transition:var(--transition)}
+.sr-item:hover{background:var(--card-hover)}
+.sr-item .sr-type{font-size:.6rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:.5px}
+.sr-item .sr-title{font-weight:600;margin-top:2px}
+
+/* Tabs */
 .tabs{display:flex;gap:0;background:var(--bg);border-bottom:1px solid var(--card-border);flex-shrink:0;overflow-x:auto}
-.tab{padding:10px 20px;font-size:.8rem;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;min-height:44px;display:flex;align-items:center}
+.tab{padding:10px 20px;font-size:.8rem;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;min-height:44px;display:flex;align-items:center;gap:6px;transition:var(--transition);user-select:none}
 .tab:hover{color:var(--text)}
 .tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+.tab-badge{background:rgba(0,212,212,.15);color:var(--cyan);font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center}
+
+/* Main */
 .main-area{display:flex;flex:1;overflow:hidden}
-.content{flex:1;overflow-y:auto;padding:16px}
-.sidebar{width:320px;border-left:1px solid var(--card-border);overflow-y:auto;padding:16px;flex-shrink:0;background:var(--card)}
+.content{flex:1;overflow-y:auto;padding:20px}
+.sidebar{width:340px;border-left:1px solid var(--card-border);overflow-y:auto;padding:16px;flex-shrink:0;background:var(--card)}
 
 /* Cards */
-.card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:16px;margin-bottom:12px;backdrop-filter:blur(8px)}
-.card h3{font-size:.85rem;font-weight:700;margin-bottom:8px;color:var(--text)}
-.card h4{font-size:.75rem;font-weight:600;margin-bottom:6px;color:var(--text-dim)}
-.section-title{font-size:.95rem;font-weight:700;margin-bottom:12px;color:var(--text);border-bottom:1px solid var(--card-border);padding-bottom:8px}
-
-/* KPI Bar */
-.kpi-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
-.kpi{background:var(--card);border:1px solid var(--card-border);border-radius:8px;padding:12px;text-align:center}
-.kpi .value{font-size:1.4rem;font-weight:800;color:var(--cyan)}
-.kpi .label{font-size:.7rem;color:var(--text-muted);margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.section-title{font-size:.95rem;font-weight:700;margin-bottom:14px;color:var(--text);border-bottom:1px solid var(--card-border);padding-bottom:8px}
 
 /* Badges */
 .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
@@ -48,89 +60,219 @@ a:hover{text-decoration:underline}
 .badge-red{background:rgba(239,68,68,.15);color:var(--red)}
 .badge-amber{background:rgba(245,158,11,.15);color:var(--amber)}
 .badge-cyan{background:rgba(0,212,212,.15);color:var(--cyan)}
+.badge-blue{background:rgba(59,130,246,.15);color:var(--blue)}
 .badge-dim{background:rgba(100,116,139,.15);color:var(--text-muted)}
 
-/* RAG dot */
+/* RAG dots */
 .rag{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
 .rag-green{background:var(--green)}.rag-red{background:var(--red)}.rag-amber{background:var(--amber)}
-
-/* Status lights */
-.status-light{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.sl{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
 .sl-connected{background:var(--green)}.sl-unknown{background:var(--amber)}.sl-disconnected{background:var(--red)}
 
-/* Product cards */
+/* KPI Bar */
+.kpi-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:16px;text-align:center}
+.kpi .value{font-size:2rem;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums}
+.kpi .label{font-size:.68rem;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+
+/* Progress bar */
+.progress-bar{height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.progress-bar .fill{height:100%;border-radius:2px;background:var(--cyan);transition:width .6s ease}
+
+/* Product grid */
 .product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
-.product-card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:16px}
-.product-card .pc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
-.product-card .pc-name{font-size:.95rem;font-weight:700}
-.product-card .pc-url{font-size:.7rem;color:var(--text-muted)}
+.product-card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:var(--transition)}
+.product-card:hover{border-color:var(--cyan);transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,212,212,.08)}
+.pc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.pc-name{font-size:.95rem;font-weight:700}
+.pc-url{font-size:.7rem;color:var(--text-muted)}
 .pc-row{display:flex;justify-content:space-between;font-size:.75rem;margin-bottom:4px;color:var(--text-dim)}
 .pc-row .label{color:var(--text-muted)}
-.progress-bar{height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin:8px 0;overflow:hidden}
-.progress-bar .fill{height:100%;border-radius:2px;background:var(--cyan);transition:width .3s}
-.weekly-bet{background:rgba(0,212,212,.05);border:1px solid rgba(0,212,212,.15);border-radius:6px;padding:10px;margin-top:8px;font-size:.73rem;color:var(--text-dim)}
+.weekly-bet{background:rgba(0,212,212,.04);border:1px solid rgba(0,212,212,.12);border-radius:6px;padding:10px;margin-top:10px;font-size:.73rem;color:var(--text-dim)}
 .weekly-bet strong{color:var(--cyan)}
+
+/* Product Detail Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;backdrop-filter:blur(4px);overflow-y:auto;padding:20px}
+.modal-overlay.open{display:flex;justify-content:center;align-items:flex-start}
+.modal{background:var(--bg);border:1px solid var(--card-border);border-radius:12px;width:100%;max-width:800px;margin:40px auto;animation:modalIn .25s ease}
+@keyframes modalIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--card-border)}
+.modal-header h2{font-size:1.1rem;font-weight:700}
+.modal-close{width:36px;height:36px;border-radius:8px;border:1px solid var(--card-border);background:transparent;color:var(--text);font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--transition)}
+.modal-close:hover{background:var(--card);border-color:var(--red);color:var(--red)}
+.modal-body{padding:24px}
+.modal-section{margin-bottom:20px}
+.modal-section h4{font-size:.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--card-border)}
+.link-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.link-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;border-radius:6px;border:1px solid var(--card-border);background:var(--card);color:var(--cyan);font-size:.73rem;font-weight:600;text-decoration:none;transition:var(--transition)}
+.link-btn:hover{background:rgba(0,212,212,.1);border-color:var(--cyan);text-decoration:none}
+.decision-item{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.78rem}
+.decision-item .d-date{color:var(--text-muted);font-size:.68rem}
+.decision-item .d-text{color:var(--text);font-weight:600;margin:2px 0}
+.decision-item .d-context{color:var(--text-dim)}
+
+/* Kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kanban-col{min-width:0}
+.kanban-col-header{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:8px 12px;border-radius:8px 8px 0 0;margin-bottom:8px;text-align:center}
+.kc-blocked .kanban-col-header{background:rgba(239,68,68,.1);color:var(--red)}
+.kc-in-progress .kanban-col-header{background:rgba(245,158,11,.1);color:var(--amber)}
+.kc-queued .kanban-col-header{background:rgba(59,130,246,.1);color:var(--blue)}
+.kc-done .kanban-col-header{background:rgba(34,197,94,.1);color:var(--green)}
+.kanban-card{background:var(--card);border:1px solid var(--card-border);border-radius:8px;padding:12px;margin-bottom:8px;font-size:.78rem;transition:var(--transition)}
+.kanban-card:hover{border-color:rgba(255,255,255,.15)}
+.kc-blocked .kanban-card{border-left:3px solid var(--red)}
+.kc-in-progress .kanban-card{border-left:3px solid var(--amber)}
+.kc-queued .kanban-card{border-left:3px solid var(--blue)}
+.kc-done .kanban-card{border-left:3px solid var(--green)}
+.kanban-card .kc-title{font-weight:700;margin-bottom:6px;color:var(--text)}
+.kanban-card .kc-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.owner-badge{padding:1px 6px;border-radius:3px;font-size:.6rem;font-weight:700}
+.owner-ed{background:rgba(0,212,212,.15);color:var(--cyan)}
+.owner-david{background:rgba(34,197,94,.15);color:var(--green)}
+.product-tag{padding:1px 6px;border-radius:3px;font-size:.6rem;font-weight:600;background:rgba(255,255,255,.06);color:var(--text-muted)}
+.kanban-card .kc-action{color:var(--text-dim);font-size:.72rem;margin-top:4px}
+
+/* Content kanban */
+.content-kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.ck-col-header{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:6px 10px;border-radius:6px;margin-bottom:8px;text-align:center;background:rgba(255,255,255,.05);color:var(--text-muted)}
+.ck-card{background:var(--card);border:1px solid var(--card-border);border-radius:6px;padding:10px;margin-bottom:6px;font-size:.73rem;color:var(--text-dim)}
+
+/* Research news cards */
+.research-card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:20px;margin-bottom:14px;transition:var(--transition)}
+.research-card:hover{border-color:rgba(255,255,255,.12)}
+.rc-title{font-size:1.05rem;font-weight:700;margin-bottom:8px;line-height:1.3}
+.rc-source{font-size:.72rem;color:var(--text-muted);margin-bottom:10px}
+.rc-why{font-size:.82rem;color:var(--text-dim);line-height:1.5;margin-bottom:12px}
+.rc-box{border-radius:8px;padding:12px;margin-bottom:10px;font-size:.78rem;font-weight:600}
+.rc-sowhat{background:rgba(0,212,212,.08);border:1px solid rgba(0,212,212,.2);color:var(--cyan)}
+.rc-donext{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);color:var(--green)}
+.rc-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.rc-tag{padding:2px 8px;border-radius:4px;font-size:.65rem;font-weight:600;background:rgba(255,255,255,.06);color:var(--text-muted)}
+.pipeline-stages{display:flex;gap:2px;margin:10px 0}
+.pipeline-stage{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.06);position:relative}
+.pipeline-stage.active{background:var(--cyan)}
+.pipeline-stage.done{background:rgba(0,212,212,.4)}
+.pipeline-labels{display:flex;justify-content:space-between;font-size:.58rem;color:var(--text-muted);margin-bottom:10px}
+.confidence-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.65rem;font-weight:700;text-transform:uppercase}
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);font-size:.72rem;font-weight:600;cursor:pointer;transition:var(--transition)}
+.filter-btn:hover,.filter-btn.active{background:rgba(0,212,212,.1);border-color:var(--cyan);color:var(--cyan)}
+
+/* Brief */
+.brief-card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:24px;margin-bottom:20px;position:relative}
+.brief-section{margin-bottom:16px}
+.brief-section h4{font-size:.78rem;font-weight:700;color:var(--cyan);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center}
+.brief-list{list-style:none;padding:0}
+.brief-list li{padding:6px 0 6px 18px;font-size:.82rem;color:var(--text-dim);position:relative;line-height:1.4}
+.brief-list li::before{content:'›';position:absolute;left:0;color:var(--cyan);font-weight:700;font-size:1rem}
+.copy-btn{padding:3px 10px;border-radius:4px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);font-size:.65rem;font-weight:600;cursor:pointer;transition:var(--transition)}
+.copy-btn:hover{background:var(--cyan);color:var(--bg);border-color:var(--cyan)}
+.copy-btn.copied{background:var(--green);color:var(--bg);border-color:var(--green)}
+.copy-all-btn{position:absolute;top:16px;right:16px;padding:6px 14px;border-radius:6px;border:1px solid var(--cyan);background:transparent;color:var(--cyan);font-size:.72rem;font-weight:700;cursor:pointer;transition:var(--transition)}
+.copy-all-btn:hover{background:var(--cyan);color:var(--bg)}
+
+/* Dept scorecards */
+.dept-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:20px}
+.dept-card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:var(--transition)}
+.dept-card:hover{border-color:rgba(255,255,255,.15)}
+.dept-card h3{font-size:.85rem;font-weight:700;margin-bottom:8px}
+.dept-detail{max-height:0;overflow:hidden;transition:max-height .3s ease;font-size:.78rem;color:var(--text-dim);line-height:1.5}
+.dept-card.expanded .dept-detail{max-height:200px;margin-top:10px;padding-top:10px;border-top:1px solid var(--card-border)}
+
+/* Audit timeline */
+.audit-timeline{position:relative;padding-left:24px}
+.audit-timeline::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:2px;background:var(--card-border)}
+.audit-dot{position:absolute;left:0;width:16px;height:16px;border-radius:50%;border:2px solid var(--card-border);background:var(--bg);display:flex;align-items:center;justify-content:center}
+.audit-dot.actor-ed{border-color:var(--cyan)}.audit-dot.actor-david{border-color:var(--green)}.audit-dot.actor-system{border-color:var(--amber)}
+.audit-dot::after{content:'';width:6px;height:6px;border-radius:50%}
+.audit-dot.actor-ed::after{background:var(--cyan)}.audit-dot.actor-david::after{background:var(--green)}.audit-dot.actor-system::after{background:var(--amber)}
+.audit-entry{position:relative;padding:8px 0 16px 10px;font-size:.75rem}
+.audit-entry .ae-time{color:var(--text-muted);font-size:.68rem}
+.audit-entry .ae-action{color:var(--text);font-weight:600;margin:2px 0}
+.audit-entry .ae-detail{color:var(--text-dim)}
+
+/* Integrations grid */
+.integrations-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:20px}
+.int-card{background:var(--card);border:1px solid var(--card-border);border-radius:8px;padding:12px;font-size:.78rem}
+.int-card .int-name{font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.int-card .int-time{font-size:.65rem;color:var(--text-muted)}
+
+/* Social account cards */
+.social-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:20px}
+.social-card{background:var(--card);border:1px solid var(--card-border);border-radius:8px;padding:14px}
+.social-card .sc-platform{font-weight:700;font-size:.85rem;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.social-card .sc-account{font-size:.78rem;color:var(--cyan);margin-bottom:2px}
+.social-card .sc-purpose{font-size:.72rem;color:var(--text-muted)}
+
+/* Account RAG table */
+.rag-indicator{display:inline-block;width:8px;height:8px;border-radius:50%}
+.rag-yes{background:var(--green)}.rag-no{background:var(--red)}.rag-unknown{background:var(--amber)}
 
 /* Table */
 .tbl{width:100%;border-collapse:collapse;font-size:.75rem}
 .tbl th{text-align:left;padding:8px 10px;color:var(--text-muted);border-bottom:1px solid var(--card-border);font-weight:600;text-transform:uppercase;font-size:.65rem;letter-spacing:.5px}
 .tbl td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text-dim);vertical-align:top}
-.tbl tr:hover td{background:rgba(255,255,255,.02)}
 
-/* Audit */
-.audit-item{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.73rem}
-.audit-item .time{color:var(--text-muted);white-space:nowrap;min-width:50px}
-.audit-item .actor{color:var(--cyan);font-weight:600;min-width:50px}
-.audit-item .desc{color:var(--text-dim)}
-
-/* Research */
-.research-card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px;margin-bottom:10px}
-.research-card .rc-title{font-size:.85rem;font-weight:700;margin-bottom:6px}
-.pipeline-stages{display:flex;gap:4px;margin:8px 0}
-.pipeline-stage{padding:3px 8px;border-radius:3px;font-size:.6rem;font-weight:700;text-transform:uppercase;background:rgba(255,255,255,.05);color:var(--text-muted)}
-.pipeline-stage.active{background:rgba(0,212,212,.2);color:var(--cyan)}
-
-/* Sidebar */
-.sidebar h3{font-size:.8rem;font-weight:700;color:var(--cyan);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
-.sidebar-item{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.73rem;color:var(--text-dim)}
-.sidebar-item .impact{font-weight:700;margin-left:4px}
-.impact-high{color:var(--red)}.impact-medium{color:var(--amber)}.impact-low{color:var(--text-muted)}
-.activity-current{color:var(--cyan);font-weight:600}
-
-/* Tab panels */
-.tab-panel{display:none}.tab-panel.active{display:block}
-
-/* Brief card */
-.brief-section{margin-bottom:12px}
-.brief-section h4{font-size:.75rem;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase}
-.brief-list{list-style:none;padding:0}
-.brief-list li{padding:4px 0;font-size:.78rem;color:var(--text-dim);padding-left:16px;position:relative}
-.brief-list li::before{content:'›';position:absolute;left:0;color:var(--cyan);font-weight:700}
-
-/* Model router */
-.router-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+/* Router */
+.router-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:16px}
 .router-card{background:rgba(0,212,212,.03);border:1px solid rgba(0,212,212,.1);border-radius:8px;padding:12px;font-size:.73rem}
 .router-card .rc-type{font-weight:700;color:var(--cyan);margin-bottom:6px;font-size:.78rem}
 .router-card .rc-row{display:flex;justify-content:space-between;margin-bottom:3px;color:var(--text-dim)}
 .router-card .rc-row .lbl{color:var(--text-muted)}
 
-/* Dept scorecards */
-.dept-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:16px}
+/* Sidebar */
+.sidebar h3{font-size:.78rem;font-weight:700;color:var(--cyan);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.ed-current{background:rgba(0,212,212,.08);border:1px solid rgba(0,212,212,.15);border-radius:8px;padding:12px;margin-bottom:12px;font-size:.82rem;font-weight:600;color:var(--cyan);display:flex;align-items:center;gap:8px}
+.pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);animation:pulse 1.5s infinite;flex-shrink:0}
+.sidebar-item{padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.73rem;color:var(--text-dim)}
+.sidebar-item .timestamp{font-size:.65rem;color:var(--text-muted)}
 
-/* Marketing */
-.acct-inventory{overflow-x:auto}
+/* David actions - interactive */
+.action-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.78rem;transition:var(--transition)}
+.action-item.done{opacity:.4}
+.action-item.done .action-text{text-decoration:line-through}
+.action-check{width:20px;height:20px;border-radius:4px;border:2px solid var(--card-border);background:transparent;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:var(--transition);color:transparent;font-size:.7rem;margin-top:1px}
+.action-check:hover{border-color:var(--cyan)}
+.action-check.checked{background:var(--cyan);border-color:var(--cyan);color:var(--bg)}
+.action-text{flex:1}
+.action-product{font-size:.65rem;color:var(--text-muted)}
+.impact-high{color:var(--red)}.impact-medium{color:var(--amber)}.impact-low{color:var(--text-muted)}
+.action-counter{font-size:.7rem;color:var(--text-muted);margin-bottom:8px}
+
+/* Tab panels */
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* Print */
+@media print{
+  .topbar,.tabs,.sidebar,.mob-toggle,.overlay,.search-box,.filter-bar,.copy-btn,.copy-all-btn{display:none!important}
+  .main-area{display:block!important}
+  .content{padding:0!important;overflow:visible!important}
+  .shell{height:auto!important}
+  .card,.product-card,.research-card,.brief-card{break-inside:avoid;border:1px solid #ccc!important;background:#fff!important;color:#000!important}
+  :root{--text:#000;--text-dim:#333;--text-muted:#666;--cyan:#0088aa;--bg:#fff;--card:#fff;--card-border:#ddd}
+  .badge{border:1px solid currentColor}
+}
 
 /* Mobile */
+@media(max-width:900px){
+  .kanban{grid-template-columns:1fr!important}
+  .content-kanban{grid-template-columns:repeat(2,1fr)}
+}
 @media(max-width:768px){
   .sidebar{display:none;position:fixed;top:0;right:0;bottom:0;width:85%;z-index:100;border-left:1px solid var(--card-border)}
   .sidebar.open{display:block}
   .product-grid{grid-template-columns:1fr}
   .kpi-bar{grid-template-columns:repeat(2,1fr)}
   .router-grid{grid-template-columns:1fr}
-  .tab{padding:10px 14px}
+  .tab{padding:10px 12px;font-size:.75rem}
   .mob-toggle{display:block!important}
+  .search-box{max-width:200px}
+  .kanban{grid-template-columns:1fr}
+  .content-kanban{grid-template-columns:1fr}
+  .modal{margin:10px;border-radius:10px}
 }
-.mob-toggle{display:none;position:fixed;bottom:16px;right:16px;z-index:101;width:44px;height:44px;border-radius:50%;background:var(--cyan);color:var(--bg);border:none;font-size:1.2rem;font-weight:700;cursor:pointer}
+.mob-toggle{display:none;position:fixed;bottom:16px;right:16px;z-index:101;width:48px;height:48px;border-radius:50%;background:var(--cyan);color:var(--bg);border:none;font-size:1.2rem;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,212,212,.3)}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
 .overlay.open{display:block}
 </style>
@@ -139,269 +281,482 @@ a:hover{text-decoration:underline}
 <div class="shell">
   <div class="topbar">
     <h1>⌘ MISSION CONTROL</h1>
-    <div class="meta">Last updated: <span id="lastUpdated">—</span></div>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Search products, jobs, research… (/)">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+    <div class="meta">
+      <span class="refresh-dot"></span>
+      <span id="lastUpdated">—</span>
+    </div>
   </div>
-  <div class="tabs" id="tabs">
-    <div class="tab active" data-tab="company">Company</div>
-    <div class="tab" data-tab="products">Products</div>
-    <div class="tab" data-tab="jobs">Jobs</div>
-    <div class="tab" data-tab="research">Research</div>
-    <div class="tab" data-tab="marketing">Marketing Ops</div>
-  </div>
+  <div class="tabs" id="tabs"></div>
   <div class="main-area">
     <div class="content" id="content">
-      <!-- COMPANY TAB -->
-      <div class="tab-panel active" id="panel-company">
-        <div class="kpi-bar" id="kpiBar"></div>
-        <div class="section-title">Department Scorecards</div>
-        <div class="dept-grid" id="deptGrid"></div>
-        <div class="section-title">Autonomy Mode</div>
-        <div class="card" id="autonomyCard"></div>
-        <div class="section-title">Integrations</div>
-        <div class="card" id="integrationsCard"></div>
-        <div class="section-title">Models &amp; Spend</div>
-        <div class="router-grid" id="routerGrid"></div>
-        <div class="section-title" style="margin-top:16px">Audit Timeline</div>
-        <div class="card" id="auditCard"></div>
-      </div>
-      <!-- PRODUCTS TAB -->
-      <div class="tab-panel" id="panel-products">
-        <div class="section-title">Product Board</div>
-        <div class="product-grid" id="productGrid"></div>
-      </div>
-      <!-- JOBS TAB -->
-      <div class="tab-panel" id="panel-jobs">
-        <div class="section-title">Work Queue</div>
-        <div class="card" style="padding:0;overflow-x:auto">
-          <table class="tbl" id="jobsTable">
-            <thead><tr><th>Job</th><th>Product</th><th>Owner</th><th>Status</th><th>Dependency</th><th>Next Action</th><th>Due</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-      <!-- RESEARCH TAB -->
-      <div class="tab-panel" id="panel-research">
-        <div class="section-title">Daily Brief — <span id="briefDate"></span></div>
-        <div class="card" id="dailyBriefCard"></div>
-        <div class="section-title" style="margin-top:16px">Opportunity Pipeline</div>
-        <div id="researchList"></div>
-      </div>
-      <!-- MARKETING TAB -->
-      <div class="tab-panel" id="panel-marketing">
-        <div class="section-title">Social Accounts</div>
-        <div class="card" id="socialCard"></div>
-        <div class="section-title">Content Pipeline</div>
-        <div class="card" id="contentCard"></div>
-        <div class="section-title">Campaigns</div>
-        <div class="card" id="campaignCard"></div>
-        <div class="section-title">Account Inventory</div>
-        <div class="card acct-inventory" style="padding:0;overflow-x:auto">
-          <table class="tbl" id="acctTable">
-            <thead><tr><th>Platform</th><th>Account</th><th>Purpose</th><th>Verified</th><th>2FA</th><th>Recovery</th><th>Notes</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
+      <div class="tab-panel active" id="panel-company"></div>
+      <div class="tab-panel" id="panel-products"></div>
+      <div class="tab-panel" id="panel-jobs"></div>
+      <div class="tab-panel" id="panel-research"></div>
+      <div class="tab-panel" id="panel-marketing"></div>
     </div>
-    <div class="sidebar" id="sidebar">
-      <h3>🤖 Ed Activity</h3>
-      <div id="edActivity"></div>
-      <h3 style="margin-top:20px">🎯 David Action Items</h3>
-      <div id="davidActions"></div>
-    </div>
+    <div class="sidebar" id="sidebar"></div>
   </div>
 </div>
+
+<div class="modal-overlay" id="productModal">
+  <div class="modal" id="modalContent"></div>
+</div>
+
 <button class="mob-toggle" id="mobToggle">☰</button>
 <div class="overlay" id="overlay"></div>
 
 <script>
-const STAGES = ['Idea','Evidence','Test Plan','Build','Ship'];
+const STAGES=['Idea','Evidence','Test Plan','Build','Ship'];
+const STAGE_MAP={'idea':0,'evidence':1,'test-plan':2,'build':3,'ship':4};
+let DATA=null;
+let completedActions=JSON.parse(localStorage.getItem('mc-done-actions')||'{}');
+let activeFilter={category:'all',product:'all'};
 
+// Helpers
 function statusBadge(s){
-  const m={'BLOCKED':'badge-red','IN PROGRESS':'badge-cyan','READY TO SHIP':'badge-amber','LIVE':'badge-green','PAUSED':'badge-dim','QUEUED':'badge-dim'};
-  return `<span class="badge ${m[s]||'badge-dim'}">${s}</span>`;
+  const n=s.replace(/-/g,' ').toUpperCase();
+  const m={'BLOCKED':'badge-red','IN-PROGRESS':'badge-cyan','IN PROGRESS':'badge-cyan','READY-TO-SHIP':'badge-amber','READY TO SHIP':'badge-amber','LIVE':'badge-green','PAUSED':'badge-dim','QUEUED':'badge-blue','DONE':'badge-green','DRAFTED':'badge-dim','SCHEDULED':'badge-amber','PUBLISHED':'badge-green','EVALUATING':'badge-amber','ACTIONED':'badge-green','NEW':'badge-cyan','PROPOSED':'badge-amber'};
+  return `<span class="badge ${m[n]||'badge-dim'}">${n}</span>`;
 }
-function ragClass(r){return 'rag-'+(r||'amber');}
-function slClass(s){return 'sl-'+(s||'unknown');}
 function confidenceBadge(c){
-  const m={'High':'badge-green','Medium':'badge-amber','Low':'badge-red'};
-  return `<span class="badge ${m[c]||'badge-dim'}">${c}</span>`;
+  const m={'high':'badge-green','medium':'badge-amber','low':'badge-red'};
+  return `<span class="confidence-badge badge ${m[c]||'badge-dim'}">${c}</span>`;
 }
-function impactClass(i){return 'impact-'+(i||'LOW').toLowerCase();}
 function relTime(iso){
   if(!iso)return '—';
-  const d=new Date(iso),now=new Date(),diff=now-d,mins=Math.floor(diff/60000);
-  if(mins<60)return mins+'m ago';
-  const hrs=Math.floor(mins/60);if(hrs<24)return hrs+'h ago';
-  const days=Math.floor(hrs/24);return days+'d ago';
+  const diff=Date.now()-new Date(iso).getTime(),s=Math.floor(diff/1000),m=Math.floor(s/60),h=Math.floor(m/60),d=Math.floor(h/24);
+  if(s<60)return s+'s ago';if(m<60)return m+'m ago';if(h<24)return h+'h ago';if(d<7)return d+'d ago';return new Date(iso).toLocaleDateString('en-GB');
 }
-function fmtTime(iso){
-  if(!iso)return '';
-  const d=new Date(iso);
-  return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+function fmtTime(iso){return iso?new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):''}
+function escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function productName(id){if(!DATA)return id;const p=DATA.products.find(x=>x.id===id);return p?p.name:id}
+
+// Count-up animation
+function animateValue(el,start,end,duration){
+  const range=end-start;if(!range){el.textContent=end;return}
+  let startTime=null;
+  function step(ts){
+    if(!startTime)startTime=ts;
+    const p=Math.min((ts-startTime)/duration,1);
+    el.textContent=Math.floor(p*range+start);
+    if(p<1)requestAnimationFrame(step);
+    else el.textContent=end;
+  }
+  requestAnimationFrame(step);
 }
 
-let DATA=null;
+// Copy to clipboard
+function copyText(text,btn){
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.classList.add('copied');btn.textContent='Copied!';
+    setTimeout(()=>{btn.classList.remove('copied');btn.textContent='Copy'},1500);
+  });
+}
 
+// Render everything
 function render(d){
   DATA=d;
-  document.getElementById('lastUpdated').textContent=relTime(d.lastUpdatedAt);
+  document.getElementById('lastUpdated').textContent='Updated '+relTime(d.meta.lastUpdatedAt);
 
-  // KPIs
-  const k=d.kpis;
-  document.getElementById('kpiBar').innerHTML=
-    `<div class="kpi"><div class="value">${k.mrr}</div><div class="label">MRR</div></div>`+
-    `<div class="kpi"><div class="value">${k.activeUsers7d}</div><div class="label">Active Users (7d)</div></div>`+
-    `<div class="kpi"><div class="value">${k.leadsThisWeek}</div><div class="label">Leads This Week</div></div>`+
-    `<div class="kpi"><div class="value">${k.productsLive}</div><div class="label">Products Live</div></div>`;
+  renderTabs(d);
+  renderCompany(d);
+  renderProducts(d);
+  renderJobs(d);
+  renderResearch(d);
+  renderMarketing(d);
+  renderSidebar(d);
+}
 
-  // Departments
-  document.getElementById('deptGrid').innerHTML=d.departments.map(dep=>`
+function renderTabs(d){
+  const counts={
+    company:d.departments.length,
+    products:d.products.length,
+    jobs:d.jobs.length,
+    research:d.opportunities.length,
+    marketing:d.marketingOps.contentPipeline.length
+  };
+  const labels={company:'Company',products:'Products',jobs:'Jobs',research:'Research',marketing:'Marketing Ops'};
+  const el=document.getElementById('tabs');
+  el.innerHTML=Object.entries(labels).map(([k,v],i)=>`
+    <div class="tab${i===0?' active':''}" data-tab="${k}">
+      ${v}<span class="tab-badge">${counts[k]}</span>
+      <span style="font-size:.6rem;color:var(--text-muted);margin-left:2px">${i+1}</span>
+    </div>`).join('');
+}
+
+function renderCompany(d){
+  const rev=d.revenue;
+  const panel=document.getElementById('panel-company');
+  panel.innerHTML=`
+    <div class="kpi-bar">
+      <div class="kpi"><div class="value" data-count="${rev.mrr}">0</div><div class="label">MRR (£)</div></div>
+      <div class="kpi"><div class="value" data-count="${rev.activeUsers7d}">0</div><div class="label">Active Users (7d)</div></div>
+      <div class="kpi"><div class="value" data-count="${rev.leadsThisWeek}">0</div><div class="label">Leads This Week</div></div>
+      <div class="kpi"><div class="value" data-count="${rev.productsLive}">0</div><div class="label">Products Live</div></div>
+      <div class="kpi"><div class="value" data-count="${rev.daysBuilding}">0</div><div class="label">Days Building</div></div>
+    </div>
+    <div class="section-title">Department Scorecards</div>
+    <div class="dept-grid">${d.departments.map(dep=>`
+      <div class="dept-card" onclick="this.classList.toggle('expanded')">
+        <h3><span class="rag rag-${dep.rag}"></span>${dep.name}</h3>
+        <div class="pc-row"><span class="label">Owner</span><span>${dep.owner}</span></div>
+        <div class="pc-row"><span class="label">Top Metric</span><span>${dep.topMetric}</span></div>
+        <div class="pc-row"><span class="label">Priority</span><span>${dep.topPriority}</span></div>
+        <div class="pc-row"><span class="label">Blocker</span><span>${dep.blocker||'None'}</span></div>
+        <div class="dept-detail">${dep.detail||''}</div>
+      </div>`).join('')}</div>
+
+    <div class="section-title">Autonomy Mode</div>
     <div class="card">
-      <h3><span class="rag ${ragClass(dep.rag)}"></span>${dep.name}</h3>
-      <div class="pc-row"><span class="label">Owner</span><span>${dep.owner} (${dep.role})</span></div>
-      <div class="pc-row"><span class="label">Top Metric</span><span>${dep.topMetric}</span></div>
-      <div class="pc-row"><span class="label">Priority</span><span>${dep.topPriority}</span></div>
-      <div class="pc-row"><span class="label">Blocker</span><span>${dep.blocker||'None'}</span></div>
-    </div>`).join('');
+      <div class="pc-row"><span class="label">Mode</span><span class="badge badge-cyan">${d.meta.autonomyMode}</span></div>
+      <div style="font-size:.73rem;color:var(--text-dim);margin-top:8px">${d.meta.autonomyDescription[d.meta.autonomyMode]}</div>
+    </div>
 
-  // Autonomy
-  document.getElementById('autonomyCard').innerHTML=`
-    <div class="pc-row"><span class="label">Mode</span><span class="badge badge-cyan">${d.autonomy.mode}</span></div>
-    <h4 style="margin-top:10px;color:var(--green)">✓ Can Do</h4>
-    <ul style="list-style:none;padding:0">${d.autonomy.canDo.map(x=>`<li style="font-size:.73rem;color:var(--text-dim);padding:2px 0">› ${x}</li>`).join('')}</ul>
-    <h4 style="margin-top:8px;color:var(--red)">✗ Cannot Do</h4>
-    <ul style="list-style:none;padding:0">${d.autonomy.cannotDo.map(x=>`<li style="font-size:.73rem;color:var(--text-dim);padding:2px 0">› ${x}</li>`).join('')}</ul>`;
+    <div class="section-title">Integrations</div>
+    <div class="integrations-grid">${d.integrations.map(i=>`
+      <div class="int-card">
+        <div class="int-name"><span class="sl sl-${i.status}"></span>${i.name}</div>
+        ${i.note?`<div style="font-size:.68rem;color:var(--text-muted)">${i.note}</div>`:''}
+        <div class="int-time">${i.lastChecked?relTime(i.lastChecked):'Never checked'}</div>
+      </div>`).join('')}</div>
 
-  // Integrations
-  document.getElementById('integrationsCard').innerHTML=d.integrations.map(i=>`
-    <span style="display:inline-flex;align-items:center;margin:4px 12px 4px 0;font-size:.75rem">
-      <span class="status-light ${slClass(i.status)}"></span>${i.name}
-      <span style="color:var(--text-muted);margin-left:4px;font-size:.65rem">${i.note?'('+i.note+')':''}</span>
-    </span>`).join('');
+    <div class="section-title">Models &amp; Spend</div>
+    <div class="router-grid">${d.modelRouter.tasks.map(r=>`
+      <div class="router-card">
+        <div class="rc-type">${r.type}</div>
+        <div class="rc-row"><span class="lbl">Primary</span><span>${r.defaultModel}</span></div>
+        <div class="rc-row"><span class="lbl">Fallback</span><span>${r.fallbackModel}</span></div>
+        <div class="rc-row"><span class="lbl">Cost</span><span>${r.costCap}</span></div>
+      </div>`).join('')}</div>
+    ${d.modelRouter.proposals.length?`<div style="font-size:.73rem;color:var(--amber);margin-bottom:16px">⚠ ${d.modelRouter.proposals.length} pending model proposal(s)</div>`:''}
 
-  // Model Router
-  document.getElementById('routerGrid').innerHTML=d.modelRouter.routes.map(r=>`
-    <div class="router-card">
-      <div class="rc-type">${r.taskType}</div>
-      <div class="rc-row"><span class="lbl">Primary</span><span>${r.primary}</span></div>
-      <div class="rc-row"><span class="lbl">Fallback</span><span>${r.fallback}</span></div>
-      <div class="rc-row"><span class="lbl">Cost Cap</span><span>${r.costCap}</span></div>
-      <div class="rc-row"><span class="lbl">Quality</span><span>${r.qualityGate}</span></div>
-    </div>`).join('')+
-    (d.modelRouter.proposals.length?'<div style="margin-top:8px;font-size:.73rem;color:var(--amber)">⚠ '+d.modelRouter.proposals.length+' pending proposal(s)</div>':'');
+    <div class="section-title">Audit Timeline</div>
+    <div class="audit-timeline">${d.auditTrail.slice(0,20).map(a=>`
+      <div class="audit-entry">
+        <div class="audit-dot actor-${a.actor}"></div>
+        <div class="ae-time">${relTime(a.timestamp)} · ${a.actor}</div>
+        <div class="ae-action">${escHtml(a.action)}</div>
+        <div class="ae-detail">${escHtml(a.detail||'')}</div>
+      </div>`).join('')}</div>
+  `;
 
-  // Audit
-  document.getElementById('auditCard').innerHTML=d.audit.slice(0,20).map(a=>`
-    <div class="audit-item">
-      <span class="time">${fmtTime(a.timestamp)}</span>
-      <span class="actor">${a.actor}</span>
-      <span class="desc">${a.action}</span>
-    </div>`).join('');
+  // Animate KPI numbers
+  panel.querySelectorAll('[data-count]').forEach(el=>{
+    animateValue(el,0,parseInt(el.dataset.count),800);
+  });
+}
 
-  // Products
-  document.getElementById('productGrid').innerHTML=d.products.map(p=>{
-    const links=Object.entries(p.links||{}).map(([k,v])=>`<a href="${v}" target="_blank">${k}</a>`).join(' · ');
-    return `<div class="product-card">
-      <div class="pc-header">
-        <div><div class="pc-name">${p.name}</div>${p.url?`<div class="pc-url">${p.url}</div>`:''}</div>
-        <div>${statusBadge(p.status)}</div>
+function renderProducts(d){
+  document.getElementById('panel-products').innerHTML=`
+    <div class="section-title">Product Board</div>
+    <div class="product-grid">${d.products.map(p=>`
+      <div class="product-card" onclick="openProduct('${p.id}')">
+        <div class="pc-header">
+          <div><div class="pc-name">${p.name}</div>${p.url?`<div class="pc-url">${p.url}</div>`:''}</div>
+          <div>${statusBadge(p.status)}</div>
+        </div>
+        <div class="progress-bar" style="margin:8px 0"><div class="fill" style="width:${p.percentComplete}%"></div></div>
+        <div class="pc-row"><span class="label">Progress</span><span>${p.percentComplete}%</span></div>
+        <div class="pc-row"><span class="label">Confidence</span>${confidenceBadge(p.confidence)}</div>
+        <div class="pc-row"><span class="label">Blocker</span><span>${p.blocker||'None'}</span></div>
+        <div class="pc-row"><span class="label">Next</span><span>${p.nextAction}</span></div>
+        <div class="pc-row"><span class="label">Last Touched</span><span>${relTime(p.lastTouched)}</span></div>
+        <div class="weekly-bet">
+          <strong>Bet:</strong> ${escHtml(p.weeklyBet.feature)}
+        </div>
+      </div>`).join('')}</div>
+  `;
+}
+
+function openProduct(id){
+  const p=DATA.products.find(x=>x.id===id);if(!p)return;
+  const audit=DATA.auditTrail.filter(a=>a.target===id);
+  const jobs=DATA.jobs.filter(j=>j.product===id);
+  const research=DATA.opportunities.filter(o=>o.affectedProducts.includes(id));
+  const links=[];
+  if(p.links.repo)links.push({label:'GitHub Repo',url:p.links.repo});
+  if(p.links.preview)links.push({label:'Live Preview',url:p.links.preview});
+  if(p.links.store)links.push({label:'App Store',url:p.links.store});
+  if(p.notionUrl)links.push({label:'Notion Spec',url:p.notionUrl});
+  if(p.links.spec&&p.links.spec.startsWith('http'))links.push({label:'Spec',url:p.links.spec});
+
+  document.getElementById('modalContent').innerHTML=`
+    <div class="modal-header">
+      <h2>${p.name} ${p.url?`<span style="font-size:.75rem;color:var(--text-muted);font-weight:400;margin-left:8px">${p.url}</span>`:''}</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        ${statusBadge(p.status)} ${confidenceBadge(p.confidence)}
+        <span style="font-size:.75rem;color:var(--text-muted)">Owner: ${p.owner}</span>
       </div>
-      <div class="progress-bar"><div class="fill" style="width:${p.percentComplete}%"></div></div>
-      <div class="pc-row"><span class="label">Progress</span><span>${p.percentComplete}%</span></div>
-      <div class="pc-row"><span class="label">Confidence</span>${confidenceBadge(p.confidence)}</div>
-      <div class="pc-row"><span class="label">Blocker</span><span>${p.blocker||'None'}</span></div>
-      <div class="pc-row"><span class="label">Current</span><span>${p.currentWork}</span></div>
-      <div class="pc-row"><span class="label">Last Touched</span><span>${relTime(p.lastTouched)}</span></div>
-      ${links?`<div class="pc-row"><span class="label">Links</span><span>${links}</span></div>`:''}
-      <div class="weekly-bet">
-        <strong>Weekly Bet:</strong> ${p.weeklyBet.feature}<br>
-        <strong>Distribution:</strong> ${p.weeklyBet.distribution}<br>
-        <strong>Target:</strong> ${p.weeklyBet.metricTarget}
+      <div class="progress-bar" style="margin-bottom:4px"><div class="fill" style="width:${p.percentComplete}%"></div></div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin-bottom:16px">${p.percentComplete}% complete</div>
+
+      <div class="modal-section">
+        <h4>Description</h4>
+        <p style="font-size:.85rem;color:var(--text-dim);line-height:1.6">${escHtml(p.description||'No description yet.')}</p>
       </div>
-    </div>`;
-  }).join('');
 
-  // Jobs
-  const pMap=Object.fromEntries(d.products.map(p=>[p.id,p.name]));
-  document.querySelector('#jobsTable tbody').innerHTML=d.jobs.map(j=>`
-    <tr>
-      <td style="font-weight:600;color:var(--text)">${j.title}</td>
-      <td>${pMap[j.product]||'—'}</td>
-      <td>${j.owner}</td>
-      <td>${statusBadge(j.status)}</td>
-      <td>${j.dependency||'—'}</td>
-      <td>${j.nextAction}</td>
-      <td>${j.dueDate||'—'}</td>
-    </tr>`).join('');
+      ${links.length?`<div class="modal-section"><h4>Links</h4><div class="link-buttons">${links.map(l=>`<a class="link-btn" href="${l.url}" target="_blank">${l.label} ↗</a>`).join('')}</div></div>`:''}
 
-  // Daily Brief
-  const b=d.dailyBrief;
-  document.getElementById('briefDate').textContent=b.date;
-  document.getElementById('dailyBriefCard').innerHTML=`
-    <div class="brief-section"><h4>Top 3 Opportunities</h4><ul class="brief-list">${b.topOpportunities.map(x=>`<li>${x}</li>`).join('')}</ul></div>
-    <div class="brief-section"><h4>Top 3 Risks</h4><ul class="brief-list">${b.topRisks.map(x=>`<li>${x}</li>`).join('')}</ul></div>
-    <div class="brief-section"><h4>Today's Focus</h4><ul class="brief-list"><li>${b.todaysFocus}</li></ul></div>`;
+      ${p.blocker?`<div class="modal-section"><h4>Blocker</h4>
+        <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:8px;padding:12px;font-size:.82rem">
+          <div style="color:var(--red);font-weight:600">${escHtml(p.blocker)}</div>
+          <div style="color:var(--text-muted);margin-top:4px">Owner: ${p.blockerOwner||'Unknown'} · Next: ${escHtml(p.nextAction)}</div>
+        </div>
+      </div>`:''}
 
-  // Research
-  document.getElementById('researchList').innerHTML=d.research.map(r=>{
-    const typeB=r.type==='threat'?'badge-red':'badge-green';
+      <div class="modal-section">
+        <h4>Weekly Bet</h4>
+        <div class="weekly-bet" style="margin-top:0">
+          <strong>Feature:</strong> ${escHtml(p.weeklyBet.feature)}<br>
+          <strong>Distribution:</strong> ${escHtml(p.weeklyBet.distribution)}<br>
+          <strong>Target:</strong> ${escHtml(p.weeklyBet.metricTarget)}
+        </div>
+      </div>
+
+      ${p.decisions&&p.decisions.length?`<div class="modal-section"><h4>Decisions Made</h4>
+        ${p.decisions.map(dc=>`<div class="decision-item">
+          <div class="d-date">${dc.date}</div>
+          <div class="d-text">${escHtml(dc.decision)}</div>
+          <div class="d-context">${escHtml(dc.context)}</div>
+        </div>`).join('')}
+      </div>`:''}
+
+      ${jobs.length?`<div class="modal-section"><h4>Related Jobs (${jobs.length})</h4>
+        ${jobs.map(j=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.78rem">
+          <span style="font-weight:600">${escHtml(j.title)}</span>
+          ${statusBadge(j.status)}
+        </div>`).join('')}
+      </div>`:''}
+
+      ${research.length?`<div class="modal-section"><h4>Related Research (${research.length})</h4>
+        ${research.map(r=>`<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.78rem">
+          <span style="font-weight:600">${escHtml(r.title)}</span> ${statusBadge(r.category)}
+        </div>`).join('')}
+      </div>`:''}
+
+      ${audit.length?`<div class="modal-section"><h4>Timeline (${audit.length})</h4>
+        <div class="audit-timeline">${audit.map(a=>`
+          <div class="audit-entry">
+            <div class="audit-dot actor-${a.actor}"></div>
+            <div class="ae-time">${relTime(a.timestamp)} · ${a.actor}</div>
+            <div class="ae-action">${escHtml(a.action)}</div>
+          </div>`).join('')}</div>
+      </div>`:''}
+    </div>
+  `;
+  document.getElementById('productModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeModal(){
+  document.getElementById('productModal').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+function renderJobs(d){
+  const cols={blocked:[],['in-progress']:[],queued:[],done:[]};
+  d.jobs.forEach(j=>{
+    const s=j.status.toLowerCase().replace(/ /g,'-');
+    if(cols[s])cols[s].push(j);else if(cols['in-progress']&&s==='in-progress')cols['in-progress'].push(j);
+  });
+  const colNames={blocked:'Blocked','in-progress':'In Progress',queued:'Queued',done:'Done'};
+  document.getElementById('panel-jobs').innerHTML=`
+    <div class="section-title">Work Queue</div>
+    <div class="kanban">${Object.entries(colNames).map(([k,label])=>`
+      <div class="kanban-col kc-${k}">
+        <div class="kanban-col-header">${label} (${(cols[k]||[]).length})</div>
+        ${(cols[k]||[]).map(j=>`
+          <div class="kanban-card">
+            <div class="kc-title">${escHtml(j.title)}</div>
+            <div class="kc-meta">
+              <span class="owner-badge owner-${j.owner.toLowerCase()}">${j.owner}</span>
+              ${j.product?`<span class="product-tag">${productName(j.product)}</span>`:''}
+              ${j.dueDate?`<span style="font-size:.6rem;color:var(--amber)">Due ${j.dueDate}</span>`:''}
+            </div>
+            <div class="kc-action">${escHtml(j.nextAction)}</div>
+          </div>`).join('')}
+      </div>`).join('')}</div>
+  `;
+}
+
+function renderResearch(d){
+  const brief=d.dailyBrief;
+  const categories=[...new Set(d.opportunities.map(o=>o.category))];
+  const products=[...new Set(d.opportunities.flatMap(o=>o.affectedProducts))];
+
+  let html=`
+    <div class="section-title">Daily Brief — ${brief.date}</div>
+    <div class="brief-card">
+      <button class="copy-all-btn" onclick="copyBrief(this)">📋 Copy All</button>
+      <div class="brief-section">
+        <h4>Headlines <button class="copy-btn" onclick="event.stopPropagation();copySection(this,'headlines')">Copy</button></h4>
+        <ul class="brief-list">${brief.headlines.map(h=>`<li>${escHtml(h)}</li>`).join('')}</ul>
+      </div>
+      <div class="brief-section">
+        <h4>Risks <button class="copy-btn" onclick="event.stopPropagation();copySection(this,'risks')">Copy</button></h4>
+        <ul class="brief-list">${brief.risks.map(r=>`<li>${escHtml(r)}</li>`).join('')}</ul>
+      </div>
+      <div class="brief-section">
+        <h4>Today's Focus</h4>
+        <p style="font-size:.85rem;color:var(--cyan);font-weight:600">${escHtml(brief.todaysFocus)}</p>
+      </div>
+      <div class="brief-section">
+        <h4>Next Actions <button class="copy-btn" onclick="event.stopPropagation();copySection(this,'nextActions')">Copy</button></h4>
+        <ul class="brief-list">${brief.nextActions.map(a=>`<li>${escHtml(a)}</li>`).join('')}</ul>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:20px">Opportunity Pipeline</div>
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="category" data-val="all" onclick="setFilter('category','all')">All</button>
+      ${categories.map(c=>`<button class="filter-btn" data-filter="category" data-val="${c}" onclick="setFilter('category','${c}')">${c}</button>`).join('')}
+    </div>
+    <div id="researchCards"></div>
+  `;
+  document.getElementById('panel-research').innerHTML=html;
+  renderResearchCards(d);
+}
+
+function renderResearchCards(d){
+  const filtered=d.opportunities.filter(o=>{
+    if(activeFilter.category!=='all'&&o.category!==activeFilter.category)return false;
+    if(activeFilter.product!=='all'&&!o.affectedProducts.includes(activeFilter.product))return false;
+    return true;
+  });
+  document.getElementById('researchCards').innerHTML=filtered.map(r=>{
+    const stageIdx=STAGE_MAP[r.pipelineStage]??-1;
+    const catBadge=r.category==='threat'?'badge-red':r.category==='opportunity'?'badge-green':r.category==='validation'?'badge-blue':'badge-amber';
     return `<div class="research-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div class="rc-title">${r.title}</div>
-        <span class="badge ${typeB}">${r.type}</span>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <div class="rc-title">${escHtml(r.title)}</div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <span class="badge ${catBadge}">${r.category}</span>
+          ${confidenceBadge(r.confidence)}
+        </div>
       </div>
-      <div class="pipeline-stages">${STAGES.map(s=>`<span class="pipeline-stage${s===r.stage?' active':''}">${s}</span>`).join('')}</div>
-      <div class="pc-row"><span class="label">Source</span><a href="${r.sourceUrl}" target="_blank">${r.source}</a></div>
-      <div class="pc-row"><span class="label">Why it matters</span><span>${r.whyItMatters}</span></div>
-      <div class="pc-row"><span class="label">Confidence</span>${confidenceBadge(r.confidence)}</div>
-      <div class="pc-row"><span class="label">Next Action</span><span>${r.nextAction}</span></div>
-      <div class="pc-row"><span class="label">Affects</span><span>${r.affectedProducts.map(x=>pMap[x]||x).join(', ')}</span></div>
+      <div class="rc-source"><a href="${r.sourceUrl}" target="_blank">${escHtml(r.source)} ↗</a> · ${statusBadge(r.status)}</div>
+      <div class="pipeline-stages">${STAGES.map((s,i)=>`<div class="pipeline-stage${i<=stageIdx?' done':''}${i===stageIdx?' active':''}"></div>`).join('')}</div>
+      <div class="pipeline-labels">${STAGES.map(s=>`<span>${s}</span>`).join('')}</div>
+      <div class="rc-why">${escHtml(r.whyItMatters)}</div>
+      <div class="rc-box rc-sowhat">💡 So What? ${escHtml(r.whyItMatters)}</div>
+      <div class="rc-box rc-donext">🎯 Do This Next: ${escHtml(r.recommendedAction)}</div>
+      <div class="rc-tags">${r.affectedProducts.map(p=>`<span class="rc-tag">${productName(p)}</span>`).join('')}</div>
     </div>`;
-  }).join('');
+  }).join('')||'<div style="font-size:.82rem;color:var(--text-muted);padding:20px">No matches for current filters.</div>';
+}
 
-  // Marketing
-  document.getElementById('socialCard').innerHTML=d.marketing.accounts.map(a=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:.75rem">
-      <span class="status-light ${a.accountName==='Unknown'?'sl-unknown':'sl-connected'}"></span>
-      <strong>${a.platform}</strong>
-      <span style="color:var(--text-dim)">${a.accountName}</span>
-    </div>`).join('');
+function setFilter(type,val){
+  activeFilter[type]=val;
+  document.querySelectorAll(`.filter-btn[data-filter="${type}"]`).forEach(b=>b.classList.toggle('active',b.dataset.val===val));
+  renderResearchCards(DATA);
+}
 
-  document.getElementById('contentCard').innerHTML=`<table class="tbl"><thead><tr><th>Type</th><th>Status</th><th>Count</th><th>Note</th></tr></thead><tbody>`+
-    d.marketing.contentPipeline.map(c=>`<tr><td>${c.type}</td><td>${statusBadge(c.status.toUpperCase())}</td><td>${c.count}</td><td style="color:var(--text-muted)">${c.note}</td></tr>`).join('')+
-    '</tbody></table>';
+function copyBrief(btn){
+  const b=DATA.dailyBrief;
+  const text=`DAILY BRIEF — ${b.date}\n\nHEADLINES\n${b.headlines.map((h,i)=>`${i+1}. ${h}`).join('\n')}\n\nRISKS\n${b.risks.map((r,i)=>`${i+1}. ${r}`).join('\n')}\n\nTODAY'S FOCUS\n${b.todaysFocus}\n\nNEXT ACTIONS\n${b.nextActions.map((a,i)=>`${i+1}. ${a}`).join('\n')}`;
+  copyText(text,btn);
+}
 
-  document.getElementById('campaignCard').innerHTML=d.marketing.campaigns.length?
-    d.marketing.campaigns.map(c=>`<div>${c.name}</div>`).join(''):
-    '<div style="font-size:.75rem;color:var(--text-muted);padding:8px 0">No active campaigns</div>';
+function copySection(btn,section){
+  const b=DATA.dailyBrief;
+  const items=b[section];
+  const text=items.map((x,i)=>`${i+1}. ${x}`).join('\n');
+  copyText(text,btn);
+}
 
-  document.querySelector('#acctTable tbody').innerHTML=d.marketing.accounts.map(a=>`
-    <tr>
-      <td style="font-weight:600">${a.platform}</td>
-      <td>${a.accountName}</td>
-      <td>${a.purpose}</td>
-      <td>${a.verification}</td>
-      <td>${a.twoFactor}</td>
-      <td>${a.recoveryStored}</td>
-      <td style="color:var(--text-muted)">${a.notes}</td>
-    </tr>`).join('');
+function renderMarketing(d){
+  const mops=d.marketingOps;
+  const contentStatuses=['drafted','queued','scheduled','published'];
+  const contentCols={drafted:[],queued:[],scheduled:[],published:[]};
+  mops.contentPipeline.forEach(c=>{
+    const s=c.status.toLowerCase();
+    if(contentCols[s])contentCols[s].push(c);
+  });
 
-  // Sidebar
+  document.getElementById('panel-marketing').innerHTML=`
+    <div class="section-title">Content Pipeline</div>
+    <div class="content-kanban">${contentStatuses.map(s=>`
+      <div>
+        <div class="ck-col-header">${s} (${contentCols[s].length})</div>
+        ${contentCols[s].map(c=>`<div class="ck-card"><strong>${escHtml(c.item)}</strong><div style="margin-top:4px;font-size:.65rem;color:var(--text-muted)">${c.platform}${c.scheduledDate?' · '+c.scheduledDate:''}</div></div>`).join('')}
+      </div>`).join('')}</div>
+
+    <div class="section-title">Social Accounts</div>
+    <div class="social-grid">${mops.socialAccounts.map(a=>`
+      <div class="social-card">
+        <div class="sc-platform"><span class="sl sl-${a.accountName==='Unknown'?'unknown':'connected'}"></span>${a.platform}</div>
+        <div class="sc-account">${a.accountName}</div>
+        <div class="sc-purpose">${a.purpose}</div>
+      </div>`).join('')}</div>
+
+    <div class="section-title">Account Inventory</div>
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>Platform</th><th>Account</th><th>Purpose</th><th>Verified</th><th>2FA</th><th>Recovery</th><th>Notes</th></tr></thead>
+        <tbody>${mops.socialAccounts.map(a=>`
+          <tr>
+            <td style="font-weight:600">${a.platform}</td>
+            <td>${a.accountName}</td>
+            <td>${a.purpose}</td>
+            <td><span class="rag-indicator ${a.verified?'rag-yes':'rag-no'}"></span></td>
+            <td><span class="rag-indicator ${a.twoFa?'rag-yes':'rag-no'}"></span></td>
+            <td><span class="rag-indicator ${a.recoveryStored?'rag-yes':'rag-no'}"></span></td>
+            <td style="color:var(--text-muted)">${a.notes}</td>
+          </tr>`).join('')}</tbody>
+      </table>
+    </div>
+
+    <div class="section-title" style="margin-top:16px">Campaigns</div>
+    <div class="card"><div style="font-size:.78rem;color:var(--text-muted)">No active campaigns</div></div>
+  `;
+}
+
+function renderSidebar(d){
   const ea=d.edActivity;
-  document.getElementById('edActivity').innerHTML=`
-    <div class="sidebar-item activity-current">▶ ${ea.current}</div>
-    <div style="font-size:.65rem;color:var(--text-muted);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px">Completed</div>
-    ${ea.completed.map(x=>`<div class="sidebar-item">✓ ${x}</div>`).join('')}
-    <div style="font-size:.65rem;color:var(--text-muted);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px">Queue</div>
-    ${ea.queue.map(x=>`<div class="sidebar-item">◻ ${x}</div>`).join('')}`;
+  const actions=d.davidActions.slice().sort((a,b)=>{
+    const aDone=completedActions[a.id]?1:0,bDone=completedActions[b.id]?1:0;
+    if(aDone!==bDone)return aDone-bDone;
+    const impOrd={high:0,medium:1,low:2};
+    return (impOrd[a.revenueImpact]||2)-(impOrd[b.revenueImpact]||2);
+  });
+  const doneCount=actions.filter(a=>completedActions[a.id]).length;
 
-  document.getElementById('davidActions').innerHTML=d.davidActions.map(a=>`
-    <div class="sidebar-item">
-      ${a.action}<br>
-      <span style="font-size:.65rem;color:var(--text-muted)">${a.why}</span>
-      <span class="impact ${impactClass(a.impact)}">${a.impact}</span>
-    </div>`).join('');
+  document.getElementById('sidebar').innerHTML=`
+    <h3>🤖 Ed Activity</h3>
+    <div class="ed-current"><span class="pulse-dot"></span>${escHtml(ea.current)}</div>
+    <div style="font-size:.65rem;color:var(--text-muted);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px">Completed</div>
+    ${ea.completed.map(x=>`<div class="sidebar-item">✓ ${escHtml(x.task)}<div class="timestamp">${relTime(x.timestamp)}</div></div>`).join('')}
+    <div style="font-size:.65rem;color:var(--text-muted);margin:12px 0 4px;text-transform:uppercase;letter-spacing:.5px">Queue</div>
+    ${ea.queue.map((x,i)=>`<div class="sidebar-item">${i+1}. ${escHtml(x)}</div>`).join('')}
+
+    <h3 style="margin-top:24px">🎯 David Actions</h3>
+    <div class="action-counter">${doneCount} of ${actions.length} done</div>
+    ${actions.map(a=>{
+      const done=completedActions[a.id];
+      return `<div class="action-item${done?' done':''}">
+        <button class="action-check${done?' checked':''}" onclick="toggleAction('${a.id}',this)">${done?'✓':''}</button>
+        <div>
+          <div class="action-text">${escHtml(a.action)}</div>
+          <div class="action-product">${productName(a.product)} · <span class="impact-${a.revenueImpact}">${a.revenueImpact} impact</span></div>
+        </div>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+function toggleAction(id,btn){
+  if(completedActions[id])delete completedActions[id];
+  else completedActions[id]=Date.now();
+  localStorage.setItem('mc-done-actions',JSON.stringify(completedActions));
+  renderSidebar(DATA);
 }
 
 // Tabs
@@ -413,19 +768,50 @@ document.getElementById('tabs').addEventListener('click',e=>{
   document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
 });
 
+// Keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  const num=parseInt(e.key);
+  if(num>=1&&num<=5){
+    const tabs=document.querySelectorAll('.tab');
+    if(tabs[num-1])tabs[num-1].click();
+  }
+  if(e.key==='/'){e.preventDefault();document.getElementById('searchInput').focus();}
+  if(e.key==='Escape'){closeModal();document.getElementById('searchInput').blur();document.getElementById('searchResults').classList.remove('open');}
+});
+
+// Search
+const searchInput=document.getElementById('searchInput');
+const searchResults=document.getElementById('searchResults');
+searchInput.addEventListener('input',()=>{
+  const q=searchInput.value.toLowerCase().trim();
+  if(!q||!DATA){searchResults.classList.remove('open');return;}
+  const results=[];
+  DATA.products.forEach(p=>{if((p.name+' '+p.description+' '+(p.url||'')).toLowerCase().includes(q))results.push({type:'Product',title:p.name,action:()=>{openProduct(p.id);searchResults.classList.remove('open');searchInput.value='';}});});
+  DATA.jobs.forEach(j=>{if((j.title+' '+j.nextAction).toLowerCase().includes(q))results.push({type:'Job',title:j.title,action:()=>{document.querySelector('[data-tab="jobs"]').click();searchResults.classList.remove('open');searchInput.value='';}});});
+  DATA.opportunities.forEach(o=>{if((o.title+' '+o.whyItMatters).toLowerCase().includes(q))results.push({type:'Research',title:o.title,action:()=>{document.querySelector('[data-tab="research"]').click();searchResults.classList.remove('open');searchInput.value='';}});});
+  DATA.auditTrail.forEach(a=>{if((a.action+' '+a.detail).toLowerCase().includes(q))results.push({type:'Audit',title:a.action,action:()=>{document.querySelector('[data-tab="company"]').click();searchResults.classList.remove('open');searchInput.value='';}});});
+  if(results.length){
+    searchResults.innerHTML=results.slice(0,10).map((r,i)=>`<div class="sr-item" data-idx="${i}"><div class="sr-type">${r.type}</div><div class="sr-title">${escHtml(r.title)}</div></div>`).join('');
+    searchResults.classList.add('open');
+    searchResults.querySelectorAll('.sr-item').forEach((el,i)=>el.addEventListener('click',()=>results[i].action()));
+  }else{searchResults.innerHTML='<div class="sr-item"><div class="sr-type">No results</div></div>';searchResults.classList.add('open');}
+});
+searchInput.addEventListener('blur',()=>setTimeout(()=>searchResults.classList.remove('open'),200));
+
 // Mobile sidebar
-const mobToggle=document.getElementById('mobToggle');
-const sidebar=document.getElementById('sidebar');
-const overlay=document.getElementById('overlay');
-mobToggle.addEventListener('click',()=>{sidebar.classList.toggle('open');overlay.classList.toggle('open');});
-overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');});
+document.getElementById('mobToggle').addEventListener('click',()=>{document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('open');});
+document.getElementById('overlay').addEventListener('click',()=>{document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('open');});
+
+// Modal close on overlay click
+document.getElementById('productModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
 
 // Fetch + poll
-function load(){
-  fetch('data.json?t='+Date.now()).then(r=>r.json()).then(render).catch(e=>console.error('Fetch error:',e));
-}
+function load(){fetch('data.json?t='+Date.now()).then(r=>r.json()).then(render).catch(e=>console.error('Fetch error:',e));}
 load();
 setInterval(load,60000);
+// Update relative times every 30s
+setInterval(()=>{if(DATA)document.getElementById('lastUpdated').textContent='Updated '+relTime(DATA.meta.lastUpdatedAt);},30000);
 </script>
 </body>
 </html>
