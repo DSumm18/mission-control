@@ -1,6 +1,6 @@
 {
   "meta": {
-    "lastUpdatedAt": "2026-02-20T10:30:00Z",
+    "lastUpdatedAt": "2026-02-20T14:30:00Z",
     "autonomyMode": "ship-with-gates",
     "autonomyDescription": {
       "observe": "Ed monitors, reports, suggests. No actions taken.",
@@ -8,7 +8,7 @@
       "ship-with-gates": "Ed builds and ships with David approval gates on: spending, public posts, external emails, App Store submissions, DNS changes.",
       "full-execute": "Ed acts autonomously. David reviews async."
     },
-    "edStatus": "Building Mission Control v2.1",
+    "edStatus": "Polishing Mission Control + running education research",
     "version": "2.1.0"
   },
   "revenue": {
@@ -82,8 +82,16 @@
         "metricTarget": "First 10 paid credit purchases"
       },
       "decisions": [
-        { "date": "2026-02-19", "decision": "Split security work into Phase 1 (auth middleware) and Phase 2 (server-side credits)", "context": "Phase 1 shipped — withAuth() on generate endpoints. Phase 2 needs David approval to proceed." },
-        { "date": "2026-02-15", "decision": "Use Stripe for credit pack payments", "context": "Stripe connected, checkout flow built. Credits stored in localStorage (Phase 1) → server-side (Phase 2)." }
+        {
+          "date": "2026-02-19",
+          "decision": "Split security work into Phase 1 (auth middleware) and Phase 2 (server-side credits)",
+          "context": "Phase 1 shipped — withAuth() on generate endpoints. Phase 2 needs David approval to proceed."
+        },
+        {
+          "date": "2026-02-15",
+          "decision": "Use Stripe for credit pack payments",
+          "context": "Stripe connected, checkout flow built. Credits stored in localStorage (Phase 1) → server-side (Phase 2)."
+        }
       ]
     },
     {
@@ -112,7 +120,11 @@
         "metricTarget": "First working song generation"
       },
       "decisions": [
-        { "date": "2026-02-20", "decision": "Must differentiate from Google Lyria 3 (free AI music)", "context": "Google launched free music gen for all Gemini users. MySongs needs pro features Google won't offer." }
+        {
+          "date": "2026-02-20",
+          "decision": "Must differentiate from Google Lyria 3 (free AI music)",
+          "context": "Google launched free music gen for all Gemini users. MySongs needs pro features Google won't offer."
+        }
       ]
     },
     {
@@ -141,7 +153,11 @@
         "metricTarget": "One working singing video end-to-end"
       },
       "decisions": [
-        { "date": "2026-02-19", "decision": "Use Sync.so for lip-sync, not D-ID", "context": "Sync.so offers better singing support. Must validate with actual singing audio before committing." }
+        {
+          "date": "2026-02-19",
+          "decision": "Use Sync.so for lip-sync, not D-ID",
+          "context": "Sync.so offers better singing support. Must validate with actual singing audio before committing."
+        }
       ]
     },
     {
@@ -170,7 +186,11 @@
         "metricTarget": "App Store approval"
       },
       "decisions": [
-        { "date": "2026-02-18", "decision": "Use Fish Audio for character TTS voices", "context": "Fish Audio provides natural-sounding character voices (SpongeBob, Patrick etc). Flask API backend handles voice routing." }
+        {
+          "date": "2026-02-18",
+          "decision": "Use Fish Audio for character TTS voices",
+          "context": "Fish Audio provides natural-sounding character voices (SpongeBob, Patrick etc). Flask API backend handles voice routing."
+        }
       ]
     },
     {
@@ -226,7 +246,11 @@
         "metricTarget": "Working feed with 3 match threads"
       },
       "decisions": [
-        { "date": "2026-02-19", "decision": "Use Expo + Supabase stack", "context": "Expo for cross-platform mobile, Supabase for real-time social feed. Targeting IPL 2026 season start." }
+        {
+          "date": "2026-02-19",
+          "decision": "Use Expo + Supabase stack",
+          "context": "Expo for cross-platform mobile, Supabase for real-time social feed. Targeting IPL 2026 season start."
+        }
       ]
     },
     {
@@ -255,7 +279,11 @@
         "metricTarget": "100 unique tool users in first week"
       },
       "decisions": [
-        { "date": "2026-02-19", "decision": "Deploy all tools to GitHub Pages as standalone HTML", "context": "Zero hosting cost, instant deployment, embeddable in Substack via iframes." }
+        {
+          "date": "2026-02-19",
+          "decision": "Deploy all tools to GitHub Pages as standalone HTML",
+          "context": "Zero hosting cost, instant deployment, embeddable in Substack via iframes."
+        }
       ]
     },
     {
@@ -284,8 +312,16 @@
         "metricTarget": "50 free subscribers, 5 paid (£49.95 MRR)"
       },
       "decisions": [
-        { "date": "2026-02-19", "decision": "Three-tier pricing: Free / Member £9.99 / Pro £29.99", "context": "Matches Substack 2026 best practice — membership products beat paywalled articles." },
-        { "date": "2026-02-19", "decision": "Embed interactive tools in newsletters", "context": "Schoolgle Toolbox tools embedded via iframe. Free tools drive upgrades to paid tiers." }
+        {
+          "date": "2026-02-19",
+          "decision": "Three-tier pricing: Free / Member £9.99 / Pro £29.99",
+          "context": "Matches Substack 2026 best practice — membership products beat paywalled articles."
+        },
+        {
+          "date": "2026-02-19",
+          "decision": "Embed interactive tools in newsletters",
+          "context": "Schoolgle Toolbox tools embedded via iframe. Free tools drive upgrades to paid tiers."
+        }
       ]
     },
     {
@@ -317,25 +353,87 @@
     }
   ],
   "davidActions": [
-    { "id": "da1", "action": "Create Substack account for Staff Room", "product": "staff-room", "revenueImpact": "high", "status": "pending" },
-    { "id": "da2", "action": "Approve MyMeme Phase 2 security work", "product": "mymeme", "revenueImpact": "high", "status": "pending" },
-    { "id": "da3", "action": "Submit ClawPhone to App Store", "product": "clawphone", "revenueImpact": "high", "status": "pending" },
-    { "id": "da4", "action": "Create MyShow Supabase project", "product": "myshow", "revenueImpact": "medium", "status": "pending" },
-    { "id": "da5", "action": "Create DealFind Supabase project", "product": "dealfind", "revenueImpact": "medium", "status": "pending" },
-    { "id": "da6", "action": "Provide CricBook Supabase service-role key", "product": "cricbook", "revenueImpact": "low", "status": "pending" }
+    {
+      "id": "da1",
+      "action": "Create Substack account for Staff Room",
+      "product": "staff-room",
+      "revenueImpact": "high",
+      "status": "pending"
+    },
+    {
+      "id": "da2",
+      "action": "Approve MyMeme Phase 2 security work",
+      "product": "mymeme",
+      "revenueImpact": "high",
+      "status": "pending"
+    },
+    {
+      "id": "da3",
+      "action": "Submit ClawPhone to App Store",
+      "product": "clawphone",
+      "revenueImpact": "high",
+      "status": "pending"
+    },
+    {
+      "id": "da4",
+      "action": "Create MyShow Supabase project",
+      "product": "myshow",
+      "revenueImpact": "medium",
+      "status": "pending"
+    },
+    {
+      "id": "da5",
+      "action": "Create DealFind Supabase project",
+      "product": "dealfind",
+      "revenueImpact": "medium",
+      "status": "pending"
+    },
+    {
+      "id": "da6",
+      "action": "Provide CricBook Supabase service-role key",
+      "product": "cricbook",
+      "revenueImpact": "low",
+      "status": "pending"
+    }
   ],
   "edActivity": {
-    "current": "Building Mission Control v2.1",
+    "current": "Polishing Mission Control + education research complete",
     "completed": [
-      { "task": "Installed Last 30 Days skill from ClawHub", "timestamp": "2026-02-20T08:00:00Z" },
-      { "task": "Ran education pain point research (5 findings)", "timestamp": "2026-02-20T08:26:00Z" },
-      { "task": "Researched Antigravity proxy (abandoned — ban risk)", "timestamp": "2026-02-20T09:30:00Z" },
-      { "task": "Published Mission Control spec to Notion", "timestamp": "2026-02-20T09:50:00Z" },
-      { "task": "Built 6 toolbox tools + 10 snippets overnight", "timestamp": "2026-02-20T00:00:00Z" }
+      {
+        "task": "Installed Last 30 Days skill from ClawHub",
+        "timestamp": "2026-02-20T08:00:00Z"
+      },
+      {
+        "task": "Ran education pain point research (5 findings)",
+        "timestamp": "2026-02-20T08:26:00Z"
+      },
+      {
+        "task": "Researched Antigravity proxy (abandoned — ban risk)",
+        "timestamp": "2026-02-20T09:30:00Z"
+      },
+      {
+        "task": "Published Mission Control spec to Notion",
+        "timestamp": "2026-02-20T09:50:00Z"
+      },
+      {
+        "task": "Built 6 toolbox tools + 10 snippets overnight",
+        "timestamp": "2026-02-20T00:00:00Z"
+      },
+      {
+        "task": "Run Last 30 Days education scan with API keys",
+        "timestamp": "2026-02-20T12:28:00Z"
+      },
+      {
+        "task": "Humanise remaining 9 newsletters",
+        "timestamp": "2026-02-20T12:27:00Z",
+        "note": "All 10 already humanised and publication-ready"
+      },
+      {
+        "task": "Education research scan — found AI parent complaints as #1 story",
+        "timestamp": "2026-02-20T12:28:00Z"
+      }
     ],
     "queue": [
-      "Run Last 30 Days education scan with API keys",
-      "Humanise remaining 9 newsletters",
       "MyMeme Phase 2 security (when David approves)",
       "Build Schoolgle OS spec",
       "Set up Staff Room Substack (when David creates account)"
@@ -373,7 +471,9 @@
       "whyItMatters": "Free music generation for billions of Gemini users. Direct competition to MySongs.",
       "confidence": "high",
       "recommendedAction": "Differentiate MySongs on longer tracks, pro controls, niche features Google won't touch",
-      "affectedProducts": ["mysongs"],
+      "affectedProducts": [
+        "mysongs"
+      ],
       "pipelineStage": "evidence",
       "status": "evaluating"
     },
@@ -386,7 +486,9 @@
       "whyItMatters": "$2/M input vs $4+ for competitors. Could reduce our model costs significantly.",
       "confidence": "high",
       "recommendedAction": "Test as fallback model for sub-agents and overnight cron tasks",
-      "affectedProducts": ["all"],
+      "affectedProducts": [
+        "all"
+      ],
       "pipelineStage": "evidence",
       "status": "evaluating"
     },
@@ -399,7 +501,10 @@
       "whyItMatters": "Schools cutting TAs and resources. Validates demand for free/cheap tools like Schoolgle Toolbox.",
       "confidence": "high",
       "recommendedAction": "Use in Staff Room Issue #1 — lead with funding data, cross-sell toolbox",
-      "affectedProducts": ["staff-room", "schoolgle-toolbox"],
+      "affectedProducts": [
+        "staff-room",
+        "schoolgle-toolbox"
+      ],
       "pipelineStage": "evidence",
       "status": "actioned"
     },
@@ -412,7 +517,9 @@
       "whyItMatters": "Emotive story for newsletter — SEND staff can't compete with Aldi wages. Schools suffering.",
       "confidence": "medium",
       "recommendedAction": "Write Staff Room deep dive on SEND staffing crisis",
-      "affectedProducts": ["staff-room"],
+      "affectedProducts": [
+        "staff-room"
+      ],
       "pipelineStage": "idea",
       "status": "new"
     },
@@ -425,7 +532,9 @@
       "whyItMatters": "Staff Room's 3-tier model (free/member/pro) with interactive tools is exactly what's winning in 2026.",
       "confidence": "high",
       "recommendedAction": "Launch Staff Room with confidence — our model matches the winning pattern",
-      "affectedProducts": ["staff-room"],
+      "affectedProducts": [
+        "staff-room"
+      ],
       "pipelineStage": "evidence",
       "status": "actioned"
     }
@@ -491,29 +600,122 @@
     ]
   },
   "integrations": [
-    { "name": "GitHub", "status": "connected", "lastChecked": "2026-02-20T10:00:00Z" },
-    { "name": "Supabase", "status": "connected", "lastChecked": "2026-02-20T10:00:00Z", "note": "Schoolgle DfE warehouse only" },
-    { "name": "Notion", "status": "connected", "lastChecked": "2026-02-20T09:50:00Z" },
-    { "name": "X / Twitter", "status": "connected", "lastChecked": "2026-02-20T08:00:00Z", "note": "bird + x-api skills" },
-    { "name": "LinkedIn", "status": "unknown", "lastChecked": null },
-    { "name": "Facebook", "status": "unknown", "lastChecked": null },
-    { "name": "App Store Connect", "status": "unknown", "lastChecked": null },
-    { "name": "Stripe", "status": "connected", "lastChecked": "2026-02-19T14:00:00Z", "note": "MyMeme only" },
-    { "name": "Vercel", "status": "unknown", "lastChecked": null },
-    { "name": "Fish Audio", "status": "connected", "lastChecked": "2026-02-18T10:00:00Z", "note": "ClawPhone TTS" }
+    {
+      "name": "GitHub",
+      "status": "connected",
+      "lastChecked": "2026-02-20T10:00:00Z"
+    },
+    {
+      "name": "Supabase",
+      "status": "connected",
+      "lastChecked": "2026-02-20T10:00:00Z",
+      "note": "Schoolgle DfE warehouse only"
+    },
+    {
+      "name": "Notion",
+      "status": "connected",
+      "lastChecked": "2026-02-20T09:50:00Z"
+    },
+    {
+      "name": "X / Twitter",
+      "status": "connected",
+      "lastChecked": "2026-02-20T08:00:00Z",
+      "note": "bird + x-api skills"
+    },
+    {
+      "name": "LinkedIn",
+      "status": "unknown",
+      "lastChecked": null
+    },
+    {
+      "name": "Facebook",
+      "status": "unknown",
+      "lastChecked": null
+    },
+    {
+      "name": "App Store Connect",
+      "status": "unknown",
+      "lastChecked": null
+    },
+    {
+      "name": "Stripe",
+      "status": "connected",
+      "lastChecked": "2026-02-19T14:00:00Z",
+      "note": "MyMeme only"
+    },
+    {
+      "name": "Vercel",
+      "status": "unknown",
+      "lastChecked": null
+    },
+    {
+      "name": "Fish Audio",
+      "status": "connected",
+      "lastChecked": "2026-02-18T10:00:00Z",
+      "note": "ClawPhone TTS"
+    }
   ],
   "marketingOps": {
     "socialAccounts": [
-      { "platform": "X / Twitter", "accountName": "@schoolaboratory", "purpose": "Schoolgle brand + Staff Room promotion", "verified": false, "twoFa": false, "recoveryStored": false, "notes": "Connected via bird CLI" },
-      { "platform": "LinkedIn", "accountName": "Unknown", "purpose": "B2B school leader outreach", "verified": false, "twoFa": false, "recoveryStored": false, "notes": "Not yet set up" },
-      { "platform": "Facebook", "accountName": "Unknown", "purpose": "Community + parent reach", "verified": false, "twoFa": false, "recoveryStored": false, "notes": "Not yet set up" }
+      {
+        "platform": "X / Twitter",
+        "accountName": "@schoolaboratory",
+        "purpose": "Schoolgle brand + Staff Room promotion",
+        "verified": false,
+        "twoFa": false,
+        "recoveryStored": false,
+        "notes": "Connected via bird CLI"
+      },
+      {
+        "platform": "LinkedIn",
+        "accountName": "Unknown",
+        "purpose": "B2B school leader outreach",
+        "verified": false,
+        "twoFa": false,
+        "recoveryStored": false,
+        "notes": "Not yet set up"
+      },
+      {
+        "platform": "Facebook",
+        "accountName": "Unknown",
+        "purpose": "Community + parent reach",
+        "verified": false,
+        "twoFa": false,
+        "recoveryStored": false,
+        "notes": "Not yet set up"
+      }
     ],
     "contentPipeline": [
-      { "item": "Staff Room Issue #1", "status": "drafted", "platform": "Substack", "scheduledDate": null },
-      { "item": "Staff Room Issues #2-10", "status": "drafted", "platform": "Substack", "scheduledDate": null },
-      { "item": "LinkedIn launch post", "status": "drafted", "platform": "LinkedIn", "scheduledDate": null },
-      { "item": "X launch thread", "status": "drafted", "platform": "X / Twitter", "scheduledDate": null },
-      { "item": "5 Remotion animation MP4s", "status": "drafted", "platform": "Multiple", "scheduledDate": null }
+      {
+        "item": "Staff Room Issue #1",
+        "status": "drafted",
+        "platform": "Substack",
+        "scheduledDate": null
+      },
+      {
+        "item": "Staff Room Issues #2-10",
+        "status": "drafted",
+        "platform": "Substack",
+        "scheduledDate": null
+      },
+      {
+        "item": "LinkedIn launch post",
+        "status": "drafted",
+        "platform": "LinkedIn",
+        "scheduledDate": null
+      },
+      {
+        "item": "X launch thread",
+        "status": "drafted",
+        "platform": "X / Twitter",
+        "scheduledDate": null
+      },
+      {
+        "item": "5 Remotion animation MP4s",
+        "status": "drafted",
+        "platform": "Multiple",
+        "scheduledDate": null
+      }
     ],
     "campaigns": []
   },
@@ -608,17 +810,112 @@
     }
   ],
   "auditTrail": [
-    { "timestamp": "2026-02-20T10:15:00Z", "actor": "david", "action": "Requested Mission Control v2 build", "target": "mission-control", "detail": "Full spec provided with 5 tabs, model router, marketing ops" },
-    { "timestamp": "2026-02-20T09:50:00Z", "actor": "ed", "action": "Published Mission Control spec to Notion", "target": "mission-control", "detail": "Page: Mission Control Dashboard — Spec v1" },
-    { "timestamp": "2026-02-20T09:36:00Z", "actor": "ed", "action": "Created Mission Control GitHub repo", "target": "mission-control", "detail": "https://github.com/DSumm18/mission-control" },
-    { "timestamp": "2026-02-20T09:30:00Z", "actor": "david", "action": "Decided against Antigravity proxy", "target": "infrastructure", "detail": "Google banning accounts that use proxy — too risky for Ed Google account" },
-    { "timestamp": "2026-02-20T08:01:00Z", "actor": "ed", "action": "Installed Last 30 Days skill", "target": "skills", "detail": "From ClawHub, web-only mode (no API keys yet)" },
-    { "timestamp": "2026-02-20T08:26:00Z", "actor": "ed", "action": "Ran education pain point research", "target": "research", "detail": "Found 5 key pain points: funding, SEND explosion, teacher shortages, absenteeism, outdated tech" },
-    { "timestamp": "2026-02-20T04:01:00Z", "actor": "system", "action": "Overnight AI monitor cron ran", "target": "cron", "detail": "Found: Gemini 3.1 Pro, Sonnet 4.6, ElevenLabs emotional speech, Qwen 3.5" },
-    { "timestamp": "2026-02-20T01:01:00Z", "actor": "system", "action": "Overnight AI monitor cron ran", "target": "cron", "detail": "Found: Google Lyria 3, Gemini 3.1 Pro launch" },
-    { "timestamp": "2026-02-19T22:00:00Z", "actor": "ed", "action": "Shipped 6 toolbox tools + 10 snippets", "target": "schoolgle-toolbox", "detail": "NI Calc, Breakfast Club, SEND Funding, KCSIE, Ofsted, SEND Placement — all live on GitHub Pages" },
-    { "timestamp": "2026-02-19T22:00:00Z", "actor": "ed", "action": "Rendered 5 Remotion animations", "target": "content", "detail": "EHCP Growth, NI Impact, SEND Placement, Ofsted Grades, Breakfast Club — MP4s ready" },
-    { "timestamp": "2026-02-19T21:00:00Z", "actor": "ed", "action": "Fixed SEND Explorer unicode bug", "target": "schoolgle-toolbox", "detail": "14 escaped unicode sequences converted to actual characters" },
-    { "timestamp": "2026-02-19T14:30:00Z", "actor": "ed", "action": "Completed MyMeme auth middleware (Phase 1)", "target": "mymeme", "detail": "Commit f2a7a32 — withAuth() on generate endpoints, 401 for unauthenticated" }
+    {
+      "timestamp": "2026-02-20T10:15:00Z",
+      "actor": "david",
+      "action": "Requested Mission Control v2 build",
+      "target": "mission-control",
+      "detail": "Full spec provided with 5 tabs, model router, marketing ops"
+    },
+    {
+      "timestamp": "2026-02-20T09:50:00Z",
+      "actor": "ed",
+      "action": "Published Mission Control spec to Notion",
+      "target": "mission-control",
+      "detail": "Page: Mission Control Dashboard — Spec v1"
+    },
+    {
+      "timestamp": "2026-02-20T09:36:00Z",
+      "actor": "ed",
+      "action": "Created Mission Control GitHub repo",
+      "target": "mission-control",
+      "detail": "https://github.com/DSumm18/mission-control"
+    },
+    {
+      "timestamp": "2026-02-20T09:30:00Z",
+      "actor": "david",
+      "action": "Decided against Antigravity proxy",
+      "target": "infrastructure",
+      "detail": "Google banning accounts that use proxy — too risky for Ed Google account"
+    },
+    {
+      "timestamp": "2026-02-20T08:01:00Z",
+      "actor": "ed",
+      "action": "Installed Last 30 Days skill",
+      "target": "skills",
+      "detail": "From ClawHub, web-only mode (no API keys yet)"
+    },
+    {
+      "timestamp": "2026-02-20T08:26:00Z",
+      "actor": "ed",
+      "action": "Ran education pain point research",
+      "target": "research",
+      "detail": "Found 5 key pain points: funding, SEND explosion, teacher shortages, absenteeism, outdated tech"
+    },
+    {
+      "timestamp": "2026-02-20T04:01:00Z",
+      "actor": "system",
+      "action": "Overnight AI monitor cron ran",
+      "target": "cron",
+      "detail": "Found: Gemini 3.1 Pro, Sonnet 4.6, ElevenLabs emotional speech, Qwen 3.5"
+    },
+    {
+      "timestamp": "2026-02-20T01:01:00Z",
+      "actor": "system",
+      "action": "Overnight AI monitor cron ran",
+      "target": "cron",
+      "detail": "Found: Google Lyria 3, Gemini 3.1 Pro launch"
+    },
+    {
+      "timestamp": "2026-02-19T22:00:00Z",
+      "actor": "ed",
+      "action": "Shipped 6 toolbox tools + 10 snippets",
+      "target": "schoolgle-toolbox",
+      "detail": "NI Calc, Breakfast Club, SEND Funding, KCSIE, Ofsted, SEND Placement — all live on GitHub Pages"
+    },
+    {
+      "timestamp": "2026-02-19T22:00:00Z",
+      "actor": "ed",
+      "action": "Rendered 5 Remotion animations",
+      "target": "content",
+      "detail": "EHCP Growth, NI Impact, SEND Placement, Ofsted Grades, Breakfast Club — MP4s ready"
+    },
+    {
+      "timestamp": "2026-02-19T21:00:00Z",
+      "actor": "ed",
+      "action": "Fixed SEND Explorer unicode bug",
+      "target": "schoolgle-toolbox",
+      "detail": "14 escaped unicode sequences converted to actual characters"
+    },
+    {
+      "timestamp": "2026-02-19T14:30:00Z",
+      "actor": "ed",
+      "action": "Completed MyMeme auth middleware (Phase 1)",
+      "target": "mymeme",
+      "detail": "Commit f2a7a32 — withAuth() on generate endpoints, 401 for unauthenticated"
+    }
+  ],
+  "auditLog": [
+    {
+      "timestamp": "2026-02-20T12:28:00Z",
+      "actor": "ed",
+      "action": "Completed education research scan",
+      "target": "research",
+      "detail": "#1 finding: parents using ChatGPT for legal-sounding complaints — 4/5 leaders report parental abuse"
+    },
+    {
+      "timestamp": "2026-02-20T12:27:00Z",
+      "actor": "ed",
+      "action": "Verified all 10 newsletters humanised",
+      "target": "staff-room",
+      "detail": "All V4 files pass QA — zero AI patterns, UK spelling, sourced stats, actionable callouts"
+    },
+    {
+      "timestamp": "2026-02-20T14:31:00Z",
+      "actor": "ed",
+      "action": "Installed Chrome on Mac Mini",
+      "target": "infrastructure",
+      "detail": "brew install --cask google-chrome for browser QA capability"
+    }
   ]
 }

@@ -165,7 +165,7 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 .brief-section h4{font-size:.78rem;font-weight:700;color:var(--cyan);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center}
 .brief-list{list-style:none;padding:0}
 .brief-list li{padding:6px 0 6px 18px;font-size:.82rem;color:var(--text-dim);position:relative;line-height:1.4}
-.brief-list li::before{content:'›';position:absolute;left:0;color:var(--cyan);font-weight:700;font-size:1rem}
+.brief-list li::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:4px;height:4px;border-radius:50%;background:var(--cyan)}
 .copy-btn{padding:3px 10px;border-radius:4px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);font-size:.65rem;font-weight:600;cursor:pointer;transition:var(--transition)}
 .copy-btn:hover{background:var(--cyan);color:var(--bg);border-color:var(--cyan)}
 .copy-btn.copied{background:var(--green);color:var(--bg);border-color:var(--green)}
@@ -725,7 +725,7 @@ function renderSidebar(d){
     const aDone=completedActions[a.id]?1:0,bDone=completedActions[b.id]?1:0;
     if(aDone!==bDone)return aDone-bDone;
     const impOrd={high:0,medium:1,low:2};
-    return (impOrd[a.revenueImpact]||2)-(impOrd[b.revenueImpact]||2);
+    return (impOrd[a.revenueImpact]??2)-(impOrd[b.revenueImpact]??2);
   });
   const doneCount=actions.filter(a=>completedActions[a.id]).length;
 
