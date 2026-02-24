@@ -10,7 +10,7 @@ type Job = {
   repo_path: string;
   prompt_text: string;
   output_dir: string;
-  status: 'queued' | 'running' | 'paused_human' | 'paused_quota' | 'done' | 'failed';
+  status: 'queued' | 'running' | 'paused_human' | 'paused_quota' | 'paused_proxy' | 'done' | 'failed';
   last_log_path?: string | null;
   last_error?: string | null;
 };
@@ -98,7 +98,7 @@ export default function JobsPage() {
             <tr key={job.id} style={{ borderTop: '1px solid #ddd' }}>
               <td>{job.title}</td>
               <td>{job.engine}</td>
-              <td>{job.status}</td>
+              <td>{job.status === 'paused_proxy' ? 'Paused (proxy)' : job.status}</td>
               <td>{new Date(job.created_at).toLocaleString()}</td>
               <td>
                 <button onClick={() => onRun(job.id)} disabled={runningId === job.id || job.status === 'running'}>
