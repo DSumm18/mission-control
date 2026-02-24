@@ -35,6 +35,68 @@ export async function POST(req: NextRequest) {
 
   const sb = supabaseAdmin();
 
+  const proxyError = 'AntiGravity proxy not running on :8080';
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    const health = await fetch('http://localhost:8080/health', {
+      method: 'GET',
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+    clearTimeout(timer);
+
+    if (!health.ok) {
+      const { data: queuedForPause } = await sb
+        .from('mc_jobs')
+        .select('id')
+        .eq('status', 'queued')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (queuedForPause?.id) {
+        await sb
+          .from('mc_jobs')
+          .update({
+            status: 'paused_proxy',
+            error: proxyError,
+            completed_at: new Date().toISOString(),
+            last_error: proxyError,
+            last_log_path: LOG_PATH,
+          })
+          .eq('id', queuedForPause.id);
+      }
+
+      await appendRunnerLog(`run-paused-proxy reason=health-status-${health.status}`);
+      return NextResponse.json({ ok: true, status: 'paused_proxy', error: proxyError, code: 20 });
+    }
+  } catch {
+    const { data: queuedForPause } = await sb
+      .from('mc_jobs')
+      .select('id')
+      .eq('status', 'queued')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (queuedForPause?.id) {
+      await sb
+        .from('mc_jobs')
+        .update({
+          status: 'paused_proxy',
+          error: proxyError,
+          completed_at: new Date().toISOString(),
+          last_error: proxyError,
+          last_log_path: LOG_PATH,
+        })
+        .eq('id', queuedForPause.id);
+    }
+
+    await appendRunnerLog('run-paused-proxy reason=health-check-failed');
+    return NextResponse.json({ ok: true, status: 'paused_proxy', error: proxyError, code: 20 });
+  }
+
   const { data: queued, error: qErr } = await sb
     .from('mc_jobs')
     .select('*')
@@ -76,45 +138,6 @@ export async function POST(req: NextRequest) {
     '--args', JSON.stringify(claimed.args || []),
   ];
 
-  const doneTs = new Date().toISOString();
-  const proxyError = 'AntiGravity proxy not running on :8080';
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 2000);
-    const health = await fetch('http://localhost:8080/health', { method: 'GET', signal: controller.signal, cache: 'no-store' });
-    clearTimeout(timer);
-
-    if (!health.ok) {
-      await sb
-        .from('mc_jobs')
-        .update({
-          status: 'paused_proxy',
-          error: proxyError,
-          completed_at: doneTs,
-          last_error: proxyError,
-          last_log_path: LOG_PATH,
-        })
-        .eq('id', claimed.id);
-
-      await appendRunnerLog(`run-paused-proxy job=${claimed.id} http_status=${health.status}`);
-      return NextResponse.json({ ok: false, job_id: claimed.id, status: 'paused_proxy', error: proxyError, log_path: LOG_PATH });
-    }
-  } catch {
-    await sb
-      .from('mc_jobs')
-      .update({
-        status: 'paused_proxy',
-        error: proxyError,
-        completed_at: doneTs,
-        last_error: proxyError,
-        last_log_path: LOG_PATH,
-      })
-      .eq('id', claimed.id);
-
-    await appendRunnerLog(`run-paused-proxy job=${claimed.id} reason=health-check-failed`);
-    return NextResponse.json({ ok: false, job_id: claimed.id, status: 'paused_proxy', error: proxyError, log_path: LOG_PATH });
-  }
-
   await appendRunnerLog(`run-start job=${claimed.id} engine=${claimed.engine} repo=${claimed.repo_path}`);
 
   const proc = await runProcess(runner, args);
@@ -127,7 +150,7 @@ export async function POST(req: NextRequest) {
     parsed = { ok: false, error: `parse-failed`, raw: raw.slice(0, 1000), stderr: proc.stderr.slice(0, 1000) };
   }
 
-  const doneTs2 = new Date().toISOString();
+  const doneTs = new Date().toISOString();
   const status = parsed.ok ? 'done' : (proc.code === 10 ? 'paused_quota' : proc.code === 20 ? 'paused_human' : 'failed');
   const result = typeof parsed.result === 'string' ? parsed.result : JSON.stringify(parsed.result || null);
   const error = parsed.ok ? null : (parsed.error || proc.stderr || `exit=${proc.code}`);
@@ -138,7 +161,7 @@ export async function POST(req: NextRequest) {
       status,
       result,
       error,
-      completed_at: doneTs2,
+      completed_at: doneTs,
       last_run_json: parsed,
       last_error: error,
       last_log_path: LOG_PATH,

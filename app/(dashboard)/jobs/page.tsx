@@ -15,6 +15,10 @@ type Job = {
   last_error?: string | null;
 };
 
+function formatStatus(status: Job['status']) {
+  return status === 'paused_proxy' ? 'Paused (proxy)' : status;
+}
+
 export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
@@ -98,7 +102,7 @@ export default function JobsPage() {
             <tr key={job.id} style={{ borderTop: '1px solid #ddd' }}>
               <td>{job.title}</td>
               <td>{job.engine}</td>
-              <td>{job.status === 'paused_proxy' ? 'Paused (proxy)' : job.status}</td>
+              <td>{formatStatus(job.status)}</td>
               <td>{new Date(job.created_at).toLocaleString()}</td>
               <td>
                 <button onClick={() => onRun(job.id)} disabled={runningId === job.id || job.status === 'running'}>
