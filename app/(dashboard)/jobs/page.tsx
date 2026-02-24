@@ -13,10 +13,18 @@ type Job = {
   status: 'queued' | 'running' | 'paused_human' | 'paused_quota' | 'paused_proxy' | 'done' | 'failed';
   last_log_path?: string | null;
   last_error?: string | null;
+  verified_at?: string | null;
+  evidence_log_path?: string | null;
+  evidence_sha256?: string | null;
 };
 
 function formatStatus(status: Job['status']) {
   return status === 'paused_proxy' ? 'Paused (proxy)' : status;
+}
+
+function shortText(v?: string | null, n = 18) {
+  if (!v) return '';
+  return v.length > n ? `${v.slice(0, n)}…` : v;
 }
 
 export default function JobsPage() {
@@ -93,6 +101,9 @@ export default function JobsPage() {
             <th align="left">Status</th>
             <th align="left">Created</th>
             <th align="left">Run</th>
+            <th align="left">Verified</th>
+            <th align="left">Evidence Log</th>
+            <th align="left">Evidence SHA</th>
             <th align="left">Last Error</th>
             <th align="left">Last Log Path</th>
           </tr>
@@ -108,6 +119,30 @@ export default function JobsPage() {
                 <button onClick={() => onRun(job.id)} disabled={runningId === job.id || job.status === 'running'}>
                   {runningId === job.id ? 'Running...' : 'Run'}
                 </button>
+              </td>
+              <td>
+                {job.verified_at ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ display: 'inline-block', background: '#e7f7ef', color: '#0f5132', borderRadius: 12, padding: '2px 8px', fontSize: 12 }}>Verified</span>
+                    <span style={{ fontSize: 12 }}>{new Date(job.verified_at).toLocaleString()}</span>
+                  </div>
+                ) : ''}
+              </td>
+              <td style={{ maxWidth: 280, overflowWrap: 'anywhere' }}>
+                {job.evidence_log_path ? (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span title={job.evidence_log_path}>{shortText(job.evidence_log_path, 32)}</span>
+                    <button type="button" onClick={() => navigator.clipboard.writeText(job.evidence_log_path || '')}>Copy</button>
+                  </div>
+                ) : ''}
+              </td>
+              <td style={{ maxWidth: 220, overflowWrap: 'anywhere' }}>
+                {job.evidence_sha256 ? (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span title={job.evidence_sha256}>{shortText(job.evidence_sha256, 20)}</span>
+                    <button type="button" onClick={() => navigator.clipboard.writeText(job.evidence_sha256 || '')}>Copy</button>
+                  </div>
+                ) : ''}
               </td>
               <td style={{ maxWidth: 320, whiteSpace: 'pre-wrap' }}>{job.last_error || ''}</td>
               <td style={{ maxWidth: 320, overflowWrap: 'anywhere' }}>{job.last_log_path || ''}</td>

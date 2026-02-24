@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/db/supabase-server';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 export const runtime = 'nodejs';
 
@@ -23,6 +24,15 @@ function runProcess(cmd: string, args: string[]) {
     child.on('close', (code) => resolve({ stdout, stderr, code: code ?? 30 }));
     child.on('error', (err) => resolve({ stdout, stderr: `${stderr}\n${err.message}`, code: 30 }));
   });
+}
+
+async function getLogSha256OrNull(filePath: string): Promise<string | null> {
+  try {
+    const buf = await fs.readFile(filePath);
+    return createHash('sha256').update(buf).digest('hex');
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -56,14 +66,19 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (queuedForPause?.id) {
+        const now = new Date().toISOString();
+        const evidenceSha = await getLogSha256OrNull(LOG_PATH);
         await sb
           .from('mc_jobs')
           .update({
             status: 'paused_proxy',
             error: proxyError,
-            completed_at: new Date().toISOString(),
+            completed_at: now,
             last_error: proxyError,
             last_log_path: LOG_PATH,
+            verified_at: now,
+            evidence_log_path: LOG_PATH,
+            evidence_sha256: evidenceSha,
           })
           .eq('id', queuedForPause.id);
       }
@@ -81,14 +96,19 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (queuedForPause?.id) {
+      const now = new Date().toISOString();
+      const evidenceSha = await getLogSha256OrNull(LOG_PATH);
       await sb
         .from('mc_jobs')
         .update({
           status: 'paused_proxy',
           error: proxyError,
-          completed_at: new Date().toISOString(),
+          completed_at: now,
           last_error: proxyError,
           last_log_path: LOG_PATH,
+          verified_at: now,
+          evidence_log_path: LOG_PATH,
+          evidence_sha256: evidenceSha,
         })
         .eq('id', queuedForPause.id);
     }
@@ -154,6 +174,7 @@ export async function POST(req: NextRequest) {
   const status = parsed.ok ? 'done' : (proc.code === 10 ? 'paused_quota' : proc.code === 20 ? 'paused_human' : 'failed');
   const result = typeof parsed.result === 'string' ? parsed.result : JSON.stringify(parsed.result || null);
   const error = parsed.ok ? null : (parsed.error || proc.stderr || `exit=${proc.code}`);
+  const evidenceSha = status === 'done' ? await getLogSha256OrNull(LOG_PATH) : null;
 
   const { error: uErr } = await sb
     .from('mc_jobs')
@@ -165,6 +186,9 @@ export async function POST(req: NextRequest) {
       last_run_json: parsed,
       last_error: error,
       last_log_path: LOG_PATH,
+      verified_at: status === 'done' ? doneTs : null,
+      evidence_log_path: status === 'done' ? LOG_PATH : null,
+      evidence_sha256: status === 'done' ? evidenceSha : null,
     })
     .eq('id', claimed.id);
 
