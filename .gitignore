@@ -2,3 +2,16 @@ node_modules
 .next
 .env.local
 .vercel
+# local env
+.env.*.local
+# logs
+logs/
+*.log
+# next build
+.next/
+out/
+.vercel/
+# mac
+.DS_Store
+# temp
+tmp/
