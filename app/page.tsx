@@ -10,6 +10,7 @@ export default function HomePage() {
         <li><Link href="/decisions">Decisions Inbox</Link></li>
         <li><Link href="/activity">Activity Log</Link></li>
         <li><Link href="/creative-studio">Creative Studio</Link></li>
+        <li><Link href="/jobs">Jobs</Link></li>
       </ul>
     </main>
   );
