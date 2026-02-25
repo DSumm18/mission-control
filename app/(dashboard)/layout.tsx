@@ -9,6 +9,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav className="nav">
           <Link href="/">Overview</Link>
           <Link href="/projects">Projects</Link>
+          <Link href="/agents">Agents</Link>
+          <Link href="/skills">Skills</Link>
+          <Link href="/runs">Runs</Link>
           <Link href="/decisions">Decisions</Link>
           <Link href="/activity">Activity</Link>
           <Link href="/creative-studio">Creative Studio</Link>
