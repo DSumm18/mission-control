@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 type Job = {
   id: string;
@@ -19,7 +19,14 @@ type Job = {
 };
 
 function formatStatus(status: Job['status']) {
-  return status === 'paused_proxy' ? 'Paused (proxy)' : status;
+  if (status === 'paused_proxy') return 'Paused (proxy)';
+  return status;
+}
+
+function badgeClass(status: Job['status']) {
+  if (status === 'done') return 'badge good';
+  if (status.includes('paused') || status === 'queued' || status === 'running') return 'badge warn';
+  return 'badge bad';
 }
 
 function shortText(v?: string | null, n = 18) {
@@ -49,6 +56,14 @@ export default function JobsPage() {
     loadJobs();
   }, []);
 
+  const stats = useMemo(() => {
+    const total = jobs.length;
+    const running = jobs.filter((j) => j.status === 'running').length;
+    const done = jobs.filter((j) => j.status === 'done').length;
+    const failed = jobs.filter((j) => j.status === 'failed').length;
+    return { total, running, done, failed };
+  }, [jobs]);
+
   async function onCreate(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -76,80 +91,72 @@ export default function JobsPage() {
   }
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Jobs</h1>
+    <div>
+      <h1 className="page-title">Jobs Runner</h1>
+      <p className="page-sub">Create execution jobs, run them through engines, and keep evidence for every outcome.</p>
 
-      <form onSubmit={onCreate} style={{ display: 'grid', gap: 8, maxWidth: 900, marginBottom: 24 }}>
-        <input placeholder="Title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} required />
-        <select value={form.engine} onChange={(e) => setForm((f) => ({ ...f, engine: e.target.value as any }))}>
-          <option value="shell">shell</option>
-          <option value="claude">claude</option>
-          <option value="gemini">gemini</option>
-          <option value="openai">openai</option>
-        </select>
-        <input placeholder="Repo Path" value={form.repo_path} onChange={(e) => setForm((f) => ({ ...f, repo_path: e.target.value }))} required />
-        <input placeholder="Output Dir" value={form.output_dir} onChange={(e) => setForm((f) => ({ ...f, output_dir: e.target.value }))} required />
-        <textarea placeholder="Prompt text" value={form.prompt_text} onChange={(e) => setForm((f) => ({ ...f, prompt_text: e.target.value }))} rows={6} required />
-        <button disabled={loading} type="submit">{loading ? 'Creating...' : 'New Job'}</button>
-      </form>
+      <section className="grid" style={{ marginBottom: 14 }}>
+        <article className="card" style={{ gridColumn: 'span 3' }}><div className="muted">Total Jobs</div><div className="kpi">{stats.total}</div></article>
+        <article className="card" style={{ gridColumn: 'span 3' }}><div className="muted">Running</div><div className="kpi">{stats.running}</div></article>
+        <article className="card" style={{ gridColumn: 'span 3' }}><div className="muted">Done</div><div className="kpi">{stats.done}</div></article>
+        <article className="card" style={{ gridColumn: 'span 3' }}><div className="muted">Failed</div><div className="kpi">{stats.failed}</div></article>
+      </section>
 
-      <table cellPadding={8} style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th align="left">Title</th>
-            <th align="left">Engine</th>
-            <th align="left">Status</th>
-            <th align="left">Created</th>
-            <th align="left">Run</th>
-            <th align="left">Verified</th>
-            <th align="left">Evidence Log</th>
-            <th align="left">Evidence SHA</th>
-            <th align="left">Last Error</th>
-            <th align="left">Last Log Path</th>
-          </tr>
-        </thead>
-        <tbody>
-          {jobs.map((job) => (
-            <tr key={job.id} style={{ borderTop: '1px solid #ddd' }}>
-              <td>{job.title}</td>
-              <td>{job.engine}</td>
-              <td>{formatStatus(job.status)}</td>
-              <td>{new Date(job.created_at).toLocaleString()}</td>
-              <td>
-                <button onClick={() => onRun(job.id)} disabled={runningId === job.id || job.status === 'running'}>
-                  {runningId === job.id ? 'Running...' : 'Run'}
-                </button>
-              </td>
-              <td>
-                {job.verified_at ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <span style={{ display: 'inline-block', background: '#e7f7ef', color: '#0f5132', borderRadius: 12, padding: '2px 8px', fontSize: 12 }}>Verified</span>
-                    <span style={{ fontSize: 12 }}>{new Date(job.verified_at).toLocaleString()}</span>
-                  </div>
-                ) : ''}
-              </td>
-              <td style={{ maxWidth: 280, overflowWrap: 'anywhere' }}>
-                {job.evidence_log_path ? (
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span title={job.evidence_log_path}>{shortText(job.evidence_log_path, 32)}</span>
-                    <button type="button" onClick={() => navigator.clipboard.writeText(job.evidence_log_path || '')}>Copy</button>
-                  </div>
-                ) : ''}
-              </td>
-              <td style={{ maxWidth: 220, overflowWrap: 'anywhere' }}>
-                {job.evidence_sha256 ? (
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span title={job.evidence_sha256}>{shortText(job.evidence_sha256, 20)}</span>
-                    <button type="button" onClick={() => navigator.clipboard.writeText(job.evidence_sha256 || '')}>Copy</button>
-                  </div>
-                ) : ''}
-              </td>
-              <td style={{ maxWidth: 320, whiteSpace: 'pre-wrap' }}>{job.last_error || ''}</td>
-              <td style={{ maxWidth: 320, overflowWrap: 'anywhere' }}>{job.last_log_path || ''}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </main>
+      <section className="grid" style={{ marginBottom: 14 }}>
+        <article className="card" style={{ gridColumn: 'span 5' }}>
+          <h3 style={{ marginTop: 0 }}>New Job</h3>
+          <form onSubmit={onCreate} style={{ display: 'grid', gap: 8 }}>
+            <input placeholder="Title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} required />
+            <select value={form.engine} onChange={(e) => setForm((f) => ({ ...f, engine: e.target.value as any }))}>
+              <option value="shell">shell</option>
+              <option value="claude">claude</option>
+              <option value="gemini">gemini</option>
+              <option value="openai">openai</option>
+            </select>
+            <input placeholder="Repo Path" value={form.repo_path} onChange={(e) => setForm((f) => ({ ...f, repo_path: e.target.value }))} required />
+            <input placeholder="Output Dir" value={form.output_dir} onChange={(e) => setForm((f) => ({ ...f, output_dir: e.target.value }))} required />
+            <textarea placeholder="Prompt text" value={form.prompt_text} onChange={(e) => setForm((f) => ({ ...f, prompt_text: e.target.value }))} rows={6} required />
+            <button disabled={loading} type="submit">{loading ? 'Creating…' : 'Create Job'}</button>
+          </form>
+        </article>
+
+        <article className="card" style={{ gridColumn: 'span 7' }}>
+          <h3 style={{ marginTop: 0 }}>Execution Queue</h3>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Title</th><th>Engine</th><th>Status</th><th>Created</th><th>Run</th><th>Evidence</th><th>Error</th>
+                </tr>
+              </thead>
+              <tbody>
+                {jobs.map((job) => (
+                  <tr key={job.id}>
+                    <td>{job.title}</td>
+                    <td>{job.engine}</td>
+                    <td><span className={badgeClass(job.status)}>{formatStatus(job.status)}</span></td>
+                    <td>{new Date(job.created_at).toLocaleString()}</td>
+                    <td>
+                      <button onClick={() => onRun(job.id)} disabled={runningId === job.id || job.status === 'running'}>
+                        {runningId === job.id ? 'Running…' : 'Run'}
+                      </button>
+                    </td>
+                    <td style={{ maxWidth: 260, overflowWrap: 'anywhere' }}>
+                      {job.evidence_log_path ? (
+                        <div style={{ display: 'grid', gap: 4 }}>
+                          <span title={job.evidence_log_path}>{shortText(job.evidence_log_path, 34)}</span>
+                          {job.evidence_sha256 && <span className="muted" title={job.evidence_sha256}>{shortText(job.evidence_sha256, 24)}</span>}
+                        </div>
+                      ) : '—'}
+                    </td>
+                    <td style={{ maxWidth: 320, whiteSpace: 'pre-wrap' }}>{job.last_error || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </div>
   );
 }
