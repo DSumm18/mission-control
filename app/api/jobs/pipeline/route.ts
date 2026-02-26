@@ -3,11 +3,12 @@ import { supabaseAdmin } from '@/lib/db/supabase-server';
 
 export async function GET() {
   const sb = supabaseAdmin();
+
   const { data, error } = await sb
-    .from('mc_agents')
-    .select('*, mc_departments(id, name, slug)')
-    .order('created_at', { ascending: true });
+    .from('mc_v_job_pipeline')
+    .select('*')
+    .limit(200);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ agents: data || [] });
+  return NextResponse.json({ jobs: data || [] });
 }

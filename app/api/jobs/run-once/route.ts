@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
+import { routeJob } from '@/lib/org/agent-router';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -200,5 +201,92 @@ export async function POST(req: NextRequest) {
   }
 
   await appendRunnerLog(`run-finish job=${claimed.id} status=${status} code=${proc.code}`);
+
+  // --- Post-execution: Agent routing + QA trigger ---
+  if (status === 'done') {
+    try {
+      // 1. If job has no agent_id, assign one
+      if (!claimed.agent_id) {
+        const route = await routeJob(claimed.id);
+        if (route) {
+          await sb
+            .from('mc_jobs')
+            .update({ agent_id: route.agent_id })
+            .eq('id', claimed.id);
+          await appendRunnerLog(`agent-assigned job=${claimed.id} agent=${route.agent_name}`);
+        }
+      }
+
+      // 2. Set status to 'reviewing', create review job for Inspector
+      await sb
+        .from('mc_jobs')
+        .update({ status: 'reviewing' })
+        .eq('id', claimed.id);
+
+      const { data: inspector } = await sb
+        .from('mc_agents')
+        .select('id')
+        .eq('name', 'Inspector')
+        .single();
+
+      if (inspector) {
+        await sb.from('mc_jobs').insert({
+          title: `QA Review: ${claimed.title}`,
+          engine: 'claude',
+          repo_path: claimed.repo_path,
+          prompt_text: `Review the output of job "${claimed.title}" and score on 5 dimensions (completeness, accuracy, actionability, revenue_relevance, evidence) each 1-10. Result: ${(result || '').slice(0, 2000)}`,
+          output_dir: claimed.output_dir,
+          status: 'queued',
+          parent_job_id: claimed.id,
+          agent_id: inspector.id,
+          job_type: 'review',
+          source: 'orchestrator',
+          priority: 2,
+        });
+        await appendRunnerLog(`review-queued job=${claimed.id}`);
+      }
+
+      // 3. Check parent completion: if all sibling sub-tasks done
+      if (claimed.parent_job_id) {
+        const { data: siblings } = await sb
+          .from('mc_jobs')
+          .select('id, status')
+          .eq('parent_job_id', claimed.parent_job_id)
+          .neq('job_type', 'review');
+
+        const allDone = siblings?.every((s) =>
+          s.status === 'done' || s.status === 'reviewing'
+        );
+
+        if (allDone && siblings && siblings.length > 0) {
+          const { data: ed } = await sb
+            .from('mc_agents')
+            .select('id')
+            .eq('name', 'Ed')
+            .single();
+
+          if (ed) {
+            await sb.from('mc_jobs').insert({
+              title: `Integration: merge results from parent ${claimed.parent_job_id}`,
+              engine: 'claude',
+              repo_path: claimed.repo_path,
+              prompt_text: `All sub-tasks for parent job ${claimed.parent_job_id} are complete. Review and integrate the results.`,
+              output_dir: claimed.output_dir,
+              status: 'queued',
+              parent_job_id: claimed.parent_job_id,
+              agent_id: ed.id,
+              job_type: 'integration',
+              source: 'orchestrator',
+              priority: 3,
+            });
+            await appendRunnerLog(`integration-queued parent=${claimed.parent_job_id}`);
+          }
+        }
+      }
+    } catch (postErr) {
+      await appendRunnerLog(`post-exec-error job=${claimed.id} err=${postErr}`);
+    }
+  }
+
   return NextResponse.json({ ok: true, job_id: claimed.id, status, result, error, log_path: LOG_PATH, raw: parsed });
 }

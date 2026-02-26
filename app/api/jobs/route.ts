@@ -8,6 +8,12 @@ const CreateBody = z.object({
   repo_path: z.string().min(1),
   prompt_text: z.string().min(1),
   output_dir: z.string().min(1),
+  agent_id: z.string().uuid().nullable().optional(),
+  parent_job_id: z.string().uuid().nullable().optional(),
+  project_id: z.string().uuid().nullable().optional(),
+  priority: z.number().int().min(1).max(10).optional(),
+  job_type: z.enum(['task', 'decomposition', 'review', 'integration', 'pm']).optional(),
+  source: z.enum(['dashboard', 'telegram', 'cron', 'orchestrator', 'api']).optional(),
 });
 
 export async function GET() {
@@ -37,6 +43,12 @@ export async function POST(req: NextRequest) {
         prompt_text: body.prompt_text,
         output_dir: body.output_dir,
         status: 'queued',
+        ...(body.agent_id && { agent_id: body.agent_id }),
+        ...(body.parent_job_id && { parent_job_id: body.parent_job_id }),
+        ...(body.project_id && { project_id: body.project_id }),
+        ...(body.priority && { priority: body.priority }),
+        ...(body.job_type && { job_type: body.job_type }),
+        ...(body.source && { source: body.source }),
       })
       .select('*')
       .single();

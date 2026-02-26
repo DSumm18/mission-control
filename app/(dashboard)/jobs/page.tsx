@@ -10,21 +10,28 @@ type Job = {
   repo_path: string;
   prompt_text: string;
   output_dir: string;
-  status: 'queued' | 'running' | 'paused_human' | 'paused_quota' | 'paused_proxy' | 'done' | 'failed';
+  status: string;
   last_log_path?: string | null;
   last_error?: string | null;
   verified_at?: string | null;
   evidence_log_path?: string | null;
   evidence_sha256?: string | null;
+  agent_id?: string | null;
+  priority?: number;
+  job_type?: string;
+  quality_score?: number | null;
+  project_id?: string | null;
+  source?: string;
 };
 
-function formatStatus(status: Job['status']) {
+function formatStatus(status: string) {
   if (status === 'paused_proxy') return 'Paused (proxy)';
   return status;
 }
 
-function badgeClass(status: Job['status']) {
+function badgeClass(status: string) {
   if (status === 'done') return 'badge good';
+  if (status === 'reviewing' || status === 'assigned') return 'badge warn';
   if (status.includes('paused') || status === 'queued' || status === 'running') return 'badge warn';
   return 'badge bad';
 }
@@ -61,7 +68,8 @@ export default function JobsPage() {
     const running = jobs.filter((j) => j.status === 'running').length;
     const done = jobs.filter((j) => j.status === 'done').length;
     const failed = jobs.filter((j) => j.status === 'failed').length;
-    return { total, running, done, failed };
+    const reviewing = jobs.filter((j) => j.status === 'reviewing').length;
+    return { total, running, done, failed, reviewing };
   }, [jobs]);
 
   async function onCreate(e: FormEvent) {
@@ -96,8 +104,9 @@ export default function JobsPage() {
       <p className="page-sub">Create execution jobs, run them through engines, and keep evidence for every outcome.</p>
 
       <section className="grid" style={{ marginBottom: 14 }}>
-        <article className="card" style={{ gridColumn: 'span 3' }}><div className="muted">Total Jobs</div><div className="kpi">{stats.total}</div></article>
-        <article className="card" style={{ gridColumn: 'span 3' }}><div className="muted">Running</div><div className="kpi">{stats.running}</div></article>
+        <article className="card" style={{ gridColumn: 'span 2' }}><div className="muted">Total</div><div className="kpi">{stats.total}</div></article>
+        <article className="card" style={{ gridColumn: 'span 2' }}><div className="muted">Running</div><div className="kpi">{stats.running}</div></article>
+        <article className="card" style={{ gridColumn: 'span 2' }}><div className="muted">Reviewing</div><div className="kpi">{stats.reviewing}</div></article>
         <article className="card" style={{ gridColumn: 'span 3' }}><div className="muted">Done</div><div className="kpi">{stats.done}</div></article>
         <article className="card" style={{ gridColumn: 'span 3' }}><div className="muted">Failed</div><div className="kpi">{stats.failed}</div></article>
       </section>
@@ -107,7 +116,7 @@ export default function JobsPage() {
           <h3 style={{ marginTop: 0 }}>New Job</h3>
           <form onSubmit={onCreate} style={{ display: 'grid', gap: 8 }}>
             <input placeholder="Title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} required />
-            <select value={form.engine} onChange={(e) => setForm((f) => ({ ...f, engine: e.target.value as any }))}>
+            <select value={form.engine} onChange={(e) => setForm((f) => ({ ...f, engine: e.target.value as Job['engine'] }))}>
               <option value="shell">shell</option>
               <option value="claude">claude</option>
               <option value="gemini">gemini</option>
@@ -126,7 +135,7 @@ export default function JobsPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Title</th><th>Engine</th><th>Status</th><th>Created</th><th>Run</th><th>Evidence</th><th>Error</th>
+                  <th>Title</th><th>Engine</th><th>Type</th><th>P</th><th>Status</th><th>QA</th><th>Source</th><th>Created</th><th>Run</th><th>Error</th>
                 </tr>
               </thead>
               <tbody>
@@ -134,20 +143,22 @@ export default function JobsPage() {
                   <tr key={job.id}>
                     <td>{job.title}</td>
                     <td>{job.engine}</td>
+                    <td>{job.job_type || 'task'}</td>
+                    <td>{job.priority || 5}</td>
                     <td><span className={badgeClass(job.status)}>{formatStatus(job.status)}</span></td>
+                    <td>
+                      {job.quality_score != null ? (
+                        <span className={`badge ${job.quality_score >= 35 ? 'good' : 'bad'}`}>
+                          {job.quality_score}/50
+                        </span>
+                      ) : '—'}
+                    </td>
+                    <td>{job.source || 'dashboard'}</td>
                     <td>{new Date(job.created_at).toLocaleString()}</td>
                     <td>
                       <button onClick={() => onRun(job.id)} disabled={runningId === job.id || job.status === 'running'}>
                         {runningId === job.id ? 'Running…' : 'Run'}
                       </button>
-                    </td>
-                    <td style={{ maxWidth: 260, overflowWrap: 'anywhere' }}>
-                      {job.evidence_log_path ? (
-                        <div style={{ display: 'grid', gap: 4 }}>
-                          <span title={job.evidence_log_path}>{shortText(job.evidence_log_path, 34)}</span>
-                          {job.evidence_sha256 && <span className="muted" title={job.evidence_sha256}>{shortText(job.evidence_sha256, 24)}</span>}
-                        </div>
-                      ) : '—'}
                     </td>
                     <td style={{ maxWidth: 320, whiteSpace: 'pre-wrap' }}>{job.last_error || '—'}</td>
                   </tr>

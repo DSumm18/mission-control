@@ -8,8 +8,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="sub">Operator Console • Anti-Gravity</div>
         <nav className="nav">
           <Link href="/">Overview</Link>
+          <Link href="/org-chart">Org Chart</Link>
+          <Link href="/pipeline">Pipeline</Link>
           <Link href="/projects">Projects</Link>
           <Link href="/agents">Agents</Link>
+          <Link href="/jobs">Jobs Runner</Link>
           <Link href="/skills">Skills</Link>
           <Link href="/runs">Runs</Link>
           <Link href="/sources">Sources</Link>
@@ -17,7 +20,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/decisions">Decisions</Link>
           <Link href="/activity">Activity</Link>
           <Link href="/creative-studio">Creative Studio</Link>
-          <Link href="/jobs">Jobs Runner</Link>
         </nav>
       </aside>
       <main className="main">{children}</main>
