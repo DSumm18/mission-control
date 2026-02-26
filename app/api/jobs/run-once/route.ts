@@ -49,78 +49,7 @@ export async function POST(req: NextRequest) {
 
   const sb = supabaseAdmin();
 
-  const proxyError = 'AntiGravity proxy not running on :8080';
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 2000);
-    const health = await fetch('http://localhost:8080/health', {
-      method: 'GET',
-      signal: controller.signal,
-      cache: 'no-store',
-    });
-    clearTimeout(timer);
-
-    if (!health.ok) {
-      const { data: queuedForPause } = await sb
-        .from('mc_jobs')
-        .select('id')
-        .eq('status', 'queued')
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      if (queuedForPause?.id) {
-        const now = new Date().toISOString();
-        const evidenceSha = await getLogSha256OrNull(LOG_PATH);
-        await sb
-          .from('mc_jobs')
-          .update({
-            status: 'paused_proxy',
-            error: proxyError,
-            completed_at: now,
-            last_error: proxyError,
-            last_log_path: LOG_PATH,
-            verified_at: now,
-            evidence_log_path: LOG_PATH,
-            evidence_sha256: evidenceSha,
-          })
-          .eq('id', queuedForPause.id);
-      }
-
-      await appendRunnerLog(`run-paused-proxy reason=health-status-${health.status}`);
-      return NextResponse.json({ ok: true, status: 'paused_proxy', error: proxyError, code: 20 });
-    }
-  } catch {
-    const { data: queuedForPause } = await sb
-      .from('mc_jobs')
-      .select('id')
-      .eq('status', 'queued')
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (queuedForPause?.id) {
-      const now = new Date().toISOString();
-      const evidenceSha = await getLogSha256OrNull(LOG_PATH);
-      await sb
-        .from('mc_jobs')
-        .update({
-          status: 'paused_proxy',
-          error: proxyError,
-          completed_at: now,
-          last_error: proxyError,
-          last_log_path: LOG_PATH,
-          verified_at: now,
-          evidence_log_path: LOG_PATH,
-          evidence_sha256: evidenceSha,
-        })
-        .eq('id', queuedForPause.id);
-    }
-
-    await appendRunnerLog('run-paused-proxy reason=health-check-failed');
-    return NextResponse.json({ ok: true, status: 'paused_proxy', error: proxyError, code: 20 });
-  }
-
+  // Proxy check removed — ag_run.sh handles fallback to direct CLI
   const { data: queued, error: qErr } = await sb
     .from('mc_jobs')
     .select('*')
@@ -237,7 +166,7 @@ export async function POST(req: NextRequest) {
   }
 
   const doneTs = new Date().toISOString();
-  const status = parsed.ok ? 'done' : (proc.code === 10 ? 'paused_quota' : proc.code === 20 ? 'paused_human' : 'failed');
+  const status = parsed.ok ? 'done' : (proc.code === 20 ? 'paused_human' : 'failed');
   const result = typeof parsed.result === 'string' ? parsed.result : JSON.stringify(parsed.result || null);
   const error = parsed.ok ? null : ((parsed.error as string) || proc.stderr || `exit=${proc.code}`);
   const evidenceSha = status === 'done' ? await getLogSha256OrNull(LOG_PATH) : null;

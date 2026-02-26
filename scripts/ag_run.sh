@@ -65,14 +65,6 @@ PY
     ;;
 
   claude)
-    if ! curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
-      python3 - <<'PY'
-import json
-print(json.dumps({"ok": False, "engine": "claude", "error": "AntiGravity proxy not running on :8080"}))
-PY
-      exit 10
-    fi
-
     PROMPT="$COMMAND_TEXT"
     if [[ -n "$ARGS_JOINED" ]]; then
       PROMPT="$PROMPT\n\nArgs: $ARGS_JOINED"
@@ -102,7 +94,16 @@ PY
       SYSTEM_FLAGS+=(--system-prompt "$SYSTEM_PROMPT")
     fi
 
-    OUT="$(ANTHROPIC_BASE_URL="http://localhost:8080" ANTHROPIC_AUTH_TOKEN="test" claude -p --permission-mode bypassPermissions "${MODEL_FLAGS[@]}" "${SYSTEM_FLAGS[@]}" "${MCP_FLAGS[@]}" "$PROMPT" 2>&1 || true)"
+    # Allow nested CLI calls (e.g. from launchd services)
+    unset CLAUDECODE 2>/dev/null || true
+
+    # Try AntiGravity proxy first, fall back to direct CLI
+    if curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
+      OUT="$(ANTHROPIC_BASE_URL="http://localhost:8080" ANTHROPIC_AUTH_TOKEN="test" claude -p --permission-mode bypassPermissions "${MODEL_FLAGS[@]}" "${SYSTEM_FLAGS[@]}" "${MCP_FLAGS[@]}" "$PROMPT" 2>&1 || true)"
+    else
+      # Direct CLI mode — uses Claude's own authenticated session
+      OUT="$(claude -p --permission-mode bypassPermissions "${MODEL_FLAGS[@]}" "${SYSTEM_FLAGS[@]}" "${MCP_FLAGS[@]}" "$PROMPT" 2>&1 || true)"
+    fi
 
     if echo "$OUT" | grep -qi "Not logged in"; then
       python3 - <<'PY'
