@@ -20,7 +20,7 @@ const NAV = [
   { divider: true },
   { href: '/runs', label: 'Runs', icon: Activity },
   { href: '/sources', label: 'Sources', icon: Radio },
-  { href: '/newsletters', label: 'Newsletters QA', icon: Newspaper },
+  { href: '/newsletters', label: 'Newsletter Pipeline', icon: Newspaper },
   { href: '/decisions', label: 'Decisions', icon: Scale },
   { href: '/activity', label: 'Activity', icon: ListTodo },
   { href: '/creative-studio', label: 'Creative Studio', icon: Palette },
