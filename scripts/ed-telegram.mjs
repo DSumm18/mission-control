@@ -4,15 +4,15 @@
  * Ed Telegram Bridge
  *
  * Ed is the orchestrator agent for Mission Control.
- * This script polls mc_telegram_messages for pending messages from Telegram,
- * processes them through Claude CLI as Ed, executes any MC actions,
- * and sends responses back via Telegram.
+ * Polls Telegram directly via getUpdates (long polling), processes messages
+ * through Claude CLI as Ed, executes MC actions, responds on Telegram,
+ * and stores conversation history in mc_telegram_messages.
  *
  * Managed by launchd: com.missioncontrol.ed-telegram
  *
  * Architecture:
- *   Telegram → Vercel webhook → mc_telegram_messages (status=pending)
- *   This script → polls pending → Claude CLI → actions + response → Telegram
+ *   Telegram getUpdates → this script → Claude CLI → actions + response → Telegram
+ *   All messages stored in mc_telegram_messages for audit + conversation context
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -22,11 +22,10 @@ import { spawn } from 'node:child_process';
 
 // ── Config ──────────────────────────────────────────────────────────────
 
-const ENV_PATH      = resolve(process.cwd(), '.env.local');
-const POLL_MS       = 2000;           // check for new messages every 2s
-const MAX_HISTORY   = 20;             // messages to include in conversation context
-const CLAUDE_CLI    = '/opt/homebrew/bin/claude';
-const CLAUDE_TIMEOUT = 90_000;        // 90s max per response
+const ENV_PATH       = resolve(process.cwd(), '.env.local');
+const MAX_HISTORY    = 20;             // messages to include in conversation context
+const CLAUDE_CLI     = '/opt/homebrew/bin/claude';
+const CLAUDE_TIMEOUT = 90_000;         // 90s max per response
 
 // ── Load .env.local ─────────────────────────────────────────────────────
 
@@ -70,6 +69,9 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 let running = true;
 let processing = false;
+let lastUpdateId = 0;  // Telegram update offset for getUpdates
+
+const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -218,8 +220,11 @@ function formatHistory(history) {
 function callClaude(systemPrompt, userMessage) {
   return new Promise((resolve, reject) => {
     const args = ['-p', '--system-prompt', systemPrompt];
+    // Unset CLAUDECODE to allow nested CLI calls from launchd
+    const env = { ...process.env };
+    delete env.CLAUDECODE;
     const proc = spawn(CLAUDE_CLI, args, {
-      env: { ...process.env },
+      env,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
@@ -626,52 +631,104 @@ async function checkCompletedJobs() {
   }
 }
 
-// ── Main Loop ───────────────────────────────────────────────────────────
+// ── Telegram Polling ────────────────────────────────────────────────────
 
-async function tick() {
-  if (processing) return; // Don't overlap
+async function getUpdates() {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 35_000);
 
-  // Poll for pending messages
-  const { data: messages, error } = await sb
-    .from('mc_telegram_messages')
-    .select('*')
-    .eq('status', 'pending')
-    .eq('role', 'user')
-    .order('created_at', { ascending: true })
-    .limit(3);
+    const res = await fetch(`${TG_API}/getUpdates?offset=${lastUpdateId + 1}&timeout=30&allowed_updates=["message"]`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
 
-  if (error) {
-    log(`ERROR polling: ${error.message}`);
-    return;
-  }
-
-  if (messages?.length) {
-    processing = true;
-    try {
-      for (const msg of messages) {
-        await processMessage(msg);
-      }
-    } finally {
-      processing = false;
+    if (!res.ok) {
+      log(`getUpdates HTTP ${res.status}`);
+      return [];
     }
-  }
 
-  // Also check for completed jobs to notify David
-  await checkCompletedJobs();
+    const body = await res.json();
+    if (!body.ok) return [];
+
+    return body.result || [];
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      log(`getUpdates error: ${err.message}`);
+    }
+    return [];
+  }
 }
 
+function extractMessage(update) {
+  const message = update.message;
+  if (!message) return null;
+
+  const text = message.text?.trim() || message.caption?.trim() || '';
+  const from = message.from?.first_name || 'david';
+  const chatId = message.chat.id;
+
+  // Extract metadata
+  const metadata = {};
+  const urls = text.match(/https?:\/\/[^\s]+/g);
+  if (urls) metadata.urls = urls;
+  if (message.photo?.length > 0) {
+    metadata.photo = message.photo[message.photo.length - 1];
+  }
+  if (message.document) metadata.document = message.document;
+
+  return {
+    chat_id: chatId,
+    message_id: message.message_id,
+    from_name: from.toLowerCase(),
+    content: text,
+    photo_file_id: message.photo?.[message.photo.length - 1]?.file_id || null,
+    metadata,
+  };
+}
+
+// ── Main Loop ───────────────────────────────────────────────────────────
+
 async function loop() {
-  log('started — Ed Telegram bridge is live');
-  log(`polling mc_telegram_messages every ${POLL_MS / 1000}s`);
+  log('started — Ed Telegram bridge is live (direct polling)');
   log(`Claude CLI: ${CLAUDE_CLI}`);
 
   while (running) {
     try {
-      await tick();
+      // 1. Long-poll Telegram for new messages
+      const updates = await getUpdates();
+
+      for (const update of updates) {
+        lastUpdateId = update.update_id;
+
+        const msg = extractMessage(update);
+        if (!msg || !msg.content) continue;
+
+        // 2. Store incoming message in DB for audit + history
+        const { data: stored } = await sb.from('mc_telegram_messages').insert({
+          chat_id: msg.chat_id,
+          message_id: msg.message_id,
+          from_name: msg.from_name,
+          role: 'user',
+          content: msg.content,
+          photo_file_id: msg.photo_file_id,
+          status: 'pending',
+          metadata: msg.metadata,
+        }).select('id, chat_id, content, from_name, photo_file_id, metadata').single();
+
+        if (!stored) continue;
+
+        // 3. Process through Ed
+        await processMessage(stored);
+      }
+
+      // 4. Check for completed jobs to proactively notify David
+      await checkCompletedJobs();
+
     } catch (err) {
-      log(`TICK ERROR: ${err.message}`);
+      log(`LOOP ERROR: ${err.message}`);
+      await new Promise((r) => setTimeout(r, 5000)); // back off on error
     }
-    await new Promise((r) => setTimeout(r, POLL_MS));
   }
 
   log('stopped');
