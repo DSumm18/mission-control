@@ -150,12 +150,14 @@ export async function POST(req: NextRequest) {
   }
 
   const runner = path.join(process.cwd(), 'scripts', 'ag_run.sh');
+  const mcpServers: string[] = claimed.mcp_servers || [];
   const args = [
     '--job-id', claimed.id,
     '--engine', claimed.engine,
     '--repo', claimed.repo_path,
     '--command', claimed.command || claimed.prompt_text,
     '--args', JSON.stringify(claimed.args || []),
+    ...(mcpServers.length > 0 ? ['--mcp-servers', mcpServers.join(',')] : []),
   ];
 
   await appendRunnerLog(`run-start job=${claimed.id} engine=${claimed.engine} repo=${claimed.repo_path}`);

@@ -9,6 +9,7 @@ ENGINE=""
 REPO=""
 COMMAND_TEXT=""
 ARGS_JSON='[]'
+MCP_SERVERS=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -17,6 +18,7 @@ while [[ $# -gt 0 ]]; do
     --repo) REPO="$2"; shift 2 ;;
     --command) COMMAND_TEXT="$2"; shift 2 ;;
     --args) ARGS_JSON="$2"; shift 2 ;;
+    --mcp-servers) MCP_SERVERS="$2"; shift 2 ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -72,7 +74,19 @@ PY
       PROMPT="$PROMPT\n\nArgs: $ARGS_JOINED"
     fi
 
-    OUT="$(ANTHROPIC_BASE_URL="http://localhost:8080" ANTHROPIC_AUTH_TOKEN="test" claude -p --permission-mode bypassPermissions "$PROMPT" 2>&1 || true)"
+    # Build --mcp-server flags from comma-separated list
+    MCP_FLAGS=()
+    if [[ -n "$MCP_SERVERS" ]]; then
+      IFS=',' read -ra MCP_ARRAY <<< "$MCP_SERVERS"
+      for srv in "${MCP_ARRAY[@]}"; do
+        srv="$(echo "$srv" | xargs)"  # trim whitespace
+        if [[ -n "$srv" ]]; then
+          MCP_FLAGS+=(--mcp-server "$srv")
+        fi
+      done
+    fi
+
+    OUT="$(ANTHROPIC_BASE_URL="http://localhost:8080" ANTHROPIC_AUTH_TOKEN="test" claude -p --permission-mode bypassPermissions "${MCP_FLAGS[@]}" "$PROMPT" 2>&1 || true)"
 
     if echo "$OUT" | grep -qi "Not logged in"; then
       python3 - <<'PY'
