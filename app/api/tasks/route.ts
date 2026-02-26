@@ -1,27 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
-import { requireRoleFromBearer } from '@/lib/auth/require-role';
 
-const Body = z.object({ projectId: z.string().uuid().optional(), title: z.string().min(1), description: z.string().optional() });
+export async function GET(req: NextRequest) {
+  const sb = supabaseAdmin();
+  const url = new URL(req.url);
+  const status = url.searchParams.get('status');
+  const projectId = url.searchParams.get('project_id');
+
+  let query = sb
+    .from('mc_tasks')
+    .select('*, mc_projects(name)')
+    .order('priority', { ascending: true })
+    .order('created_at', { ascending: false });
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+  if (projectId) {
+    query = query.eq('project_id', projectId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ tasks: data || [] });
+}
+
+const CreateBody = z.object({
+  title: z.string().min(1),
+  description: z.string().optional(),
+  project_id: z.string().uuid().optional(),
+  status: z.enum(['todo', 'in_progress', 'blocked', 'done']).default('todo'),
+  priority: z.number().int().min(1).max(10).default(5),
+  due_date: z.string().optional(),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireRoleFromBearer(req.headers.get('authorization'), ['owner','admin','editor']);
-    const body = Body.parse(await req.json());
+    const body = CreateBody.parse(await req.json());
     const sb = supabaseAdmin();
-    const { data } = await sb.from('tasks').insert({
-      project_id: body.projectId || null,
-      title: body.title,
-      description: body.description || null,
-      status: 'queued',
-      created_by: auth.userId
-    }).select('*').single();
 
-    await sb.from('activity_logs').insert({ actor_user_id: auth.userId, entity_type: 'task', entity_id: data.id, action: 'created', payload: {} });
+    const { data, error } = await sb
+      .from('mc_tasks')
+      .insert({
+        title: body.title,
+        description: body.description || null,
+        project_id: body.project_id || null,
+        status: body.status,
+        priority: body.priority,
+        due_date: body.due_date || null,
+      })
+      .select('*')
+      .single();
 
-    return NextResponse.json({ ok: true, task: data });
-  } catch (e:any) {
-    return NextResponse.json({ error: e.message }, { status: e.message === 'Unauthorized' ? 401 : 403 });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ task: data }, { status: 201 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Invalid request';
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

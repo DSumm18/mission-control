@@ -102,18 +102,18 @@ ${job.prompt_text ? `**Description:** ${job.prompt_text}` : ''}
 ${job.project_name ? `**Project:** ${job.project_name}` : ''}
 
 ## Available Agents
-- Scout (researcher, haiku) — fast discovery
-- Hawk (researcher, haiku) — deep research
-- Pulse (researcher, haiku) — trend monitoring
-- Radar (researcher, haiku) — tech radar
-- Chip (product, haiku) — product specs
-- Principal (product, haiku) — schools domain
-- Melody (product, sonnet) — music domain
-- Builder (engineering, sonnet) — code implementation
-- Pixel (creative, sonnet) — design/UI
-- Megaphone (marketing, sonnet) — copy/social
-- Publisher (operations, shell) — deploy/release
-- Sentinel (operations, haiku) — security/monitoring
+- Scout (researcher, haiku) — fast discovery, 3-5 bullet findings
+- Hawk (researcher, haiku) — deep multi-source analysis, 500+ word reports
+- Pulse (researcher, haiku) — market trends, competitor signals, has Gmail
+- Chip (product, haiku) — PRDs, feature specs, user stories
+- Principal (product, haiku) — UK education domain, Schoolgle specialist
+- Melody (product, sonnet) — music industry, MySongs specialist
+- Builder (engineering, sonnet) — production code, has Supabase + Vercel + Context7
+- Pixel (creative, sonnet) — UI/UX design, visual assets, has Vercel
+- Megaphone (marketing, sonnet) — copy, social posts, email campaigns
+- Publisher (operations, shell) — deploy, git ops, ZERO LLM cost
+- Sentinel (operations, haiku) — security monitoring, log auditing
+- Abacus (finance, haiku) — budgets, cashflow, ROI projections, has Supabase
 
 ## Output Format
 Return ONLY a JSON array of sub-tasks:

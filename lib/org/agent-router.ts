@@ -85,6 +85,22 @@ export async function routeJob(jobId: string): Promise<RouteResult | null> {
     }
   }
 
+  // Keyword-based routing for specialist agents
+  const titleLower = (job.title || '').toLowerCase();
+  const keywordRoutes: { keywords: string[]; role: string; reason: string }[] = [
+    { keywords: ['budget', 'cashflow', 'revenue', 'roi', 'finance', 'cost', 'projection', 'reconcil'], role: 'analyst', reason: 'Finance keyword match' },
+    { keywords: ['security', 'audit', 'vulnerab', 'monitor', 'breach', 'rls', 'permission'], role: 'ops', reason: 'Security keyword match' },
+  ];
+
+  for (const route of keywordRoutes) {
+    if (route.keywords.some((kw) => titleLower.includes(kw))) {
+      const match = agents.find((a) => a.role === route.role);
+      if (match) {
+        return { agent_id: match.id, agent_name: match.name, reason: route.reason };
+      }
+    }
+  }
+
   const costOrder: Record<string, number> = { free: 0, low: 1, medium: 2, high: 3 };
 
   // Score each agent

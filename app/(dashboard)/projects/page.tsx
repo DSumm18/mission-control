@@ -32,10 +32,36 @@ export default function ProjectsPage() {
       .then((d) => setProjects(d.projects || []));
   }, []);
 
+  const activeProjects = projects.filter(p => p.status === 'active');
+  const totalRevTarget = activeProjects.reduce((s, p) => s + (p.revenue_target_monthly || 0), 0);
+  const totalActiveJobs = projects.reduce((s, p) => s + (p.active_jobs || 0), 0);
+  const totalDoneJobs = projects.reduce((s, p) => s + (p.done_jobs || 0), 0);
+
   return (
     <div>
       <h1 className="page-title">Projects</h1>
       <p className="page-sub">Portfolio view with delivery plans, revenue targets, and PM assignments.</p>
+
+      {/* Business Summary */}
+      <section className="grid" style={{ marginBottom: 14 }}>
+        <article className="card card-glow" style={{ gridColumn: 'span 3' }}>
+          <div className="muted">Revenue Target</div>
+          <div className="kpi">{totalRevTarget > 0 ? `£${totalRevTarget.toLocaleString()}` : '—'}</div>
+          <div className="muted">per month (active)</div>
+        </article>
+        <article className="card card-glow" style={{ gridColumn: 'span 3' }}>
+          <div className="muted">Active Projects</div>
+          <div className="kpi">{activeProjects.length}</div>
+        </article>
+        <article className="card card-glow" style={{ gridColumn: 'span 3' }}>
+          <div className="muted">Active Jobs</div>
+          <div className="kpi">{totalActiveJobs}</div>
+        </article>
+        <article className="card card-glow" style={{ gridColumn: 'span 3' }}>
+          <div className="muted">Completed Jobs</div>
+          <div className="kpi">{totalDoneJobs}</div>
+        </article>
+      </section>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 14 }}>
         {projects.map((p) => {

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
 import { routeJob } from '@/lib/org/agent-router';
+import { composePrompt, getAgentMCPServers } from '@/lib/org/prompt-composer';
+import { scoreJob, type QAScores } from '@/lib/org/quality-scorer';
+import { decomposeJob } from '@/lib/org/decomposer';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -122,6 +125,7 @@ export async function POST(req: NextRequest) {
     .from('mc_jobs')
     .select('*')
     .eq('status', 'queued')
+    .order('priority', { ascending: true })
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -150,33 +154,92 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, message: 'claim failed' }, { status: 409 });
   }
 
+  // --- Agent routing: assign agent if not set ---
+  let agentId = claimed.agent_id;
+  let modelId: string | null = null;
+  let agentSystemPrompt: string | null = null;
+
+  if (!agentId) {
+    const route = await routeJob(claimed.id);
+    if (route) {
+      agentId = route.agent_id;
+      await sb.from('mc_jobs').update({ agent_id: route.agent_id }).eq('id', claimed.id);
+      await appendRunnerLog(`agent-assigned job=${claimed.id} agent=${route.agent_name}`);
+    }
+  }
+
+  // --- Load agent details for model + system prompt ---
+  if (agentId) {
+    const { data: agent } = await sb
+      .from('mc_agents')
+      .select('model_id, system_prompt')
+      .eq('id', agentId)
+      .single();
+    if (agent) {
+      modelId = agent.model_id || null;
+      agentSystemPrompt = agent.system_prompt || null;
+    }
+  }
+
+  // --- Compose prompt using prompt-composer ---
+  let composedPrompt: string | null = null;
+  if (agentId) {
+    try {
+      composedPrompt = await composePrompt(claimed.id, agentId);
+    } catch (err) {
+      await appendRunnerLog(`compose-prompt-error job=${claimed.id} err=${err}`);
+    }
+  }
+
+  // --- Get agent's MCP servers from skill assignments ---
+  let agentMcpServers = '';
+  if (agentId) {
+    try {
+      agentMcpServers = await getAgentMCPServers(agentId);
+    } catch {
+      // Fall back to job-level MCP servers
+    }
+  }
+
+  // Use composed prompt if available, fall back to raw job prompt
+  const commandText = composedPrompt || claimed.command || claimed.prompt_text;
+
+  // Merge MCP servers: agent skills + job-level
+  const jobMcpServers: string[] = claimed.mcp_servers || [];
+  const allMcpServers = new Set<string>([
+    ...agentMcpServers.split(',').filter(Boolean),
+    ...jobMcpServers,
+  ]);
+  const mcpServersStr = [...allMcpServers].join(',');
+
   const runner = path.join(process.cwd(), 'scripts', 'ag_run.sh');
-  const mcpServers: string[] = claimed.mcp_servers || [];
   const args = [
     '--job-id', claimed.id,
     '--engine', claimed.engine,
     '--repo', claimed.repo_path,
-    '--command', claimed.command || claimed.prompt_text,
+    '--command', commandText,
     '--args', JSON.stringify(claimed.args || []),
-    ...(mcpServers.length > 0 ? ['--mcp-servers', mcpServers.join(',')] : []),
+    ...(mcpServersStr ? ['--mcp-servers', mcpServersStr] : []),
+    ...(modelId && claimed.engine === 'claude' ? ['--model', modelId] : []),
+    ...(agentSystemPrompt && claimed.engine === 'claude' ? ['--system-prompt', agentSystemPrompt] : []),
   ];
 
-  await appendRunnerLog(`run-start job=${claimed.id} engine=${claimed.engine} repo=${claimed.repo_path}`);
+  await appendRunnerLog(`run-start job=${claimed.id} engine=${claimed.engine} agent=${agentId || 'none'} model=${modelId || 'default'} repo=${claimed.repo_path}`);
 
   const proc = await runProcess(runner, args);
   const raw = proc.stdout.trim();
 
-  let parsed: any = null;
+  let parsed: Record<string, unknown> = {};
   try {
     parsed = JSON.parse(raw.split('\n').filter(Boolean).pop() || '{}');
   } catch {
-    parsed = { ok: false, error: `parse-failed`, raw: raw.slice(0, 1000), stderr: proc.stderr.slice(0, 1000) };
+    parsed = { ok: false, error: 'parse-failed', raw: raw.slice(0, 1000), stderr: proc.stderr.slice(0, 1000) };
   }
 
   const doneTs = new Date().toISOString();
   const status = parsed.ok ? 'done' : (proc.code === 10 ? 'paused_quota' : proc.code === 20 ? 'paused_human' : 'failed');
   const result = typeof parsed.result === 'string' ? parsed.result : JSON.stringify(parsed.result || null);
-  const error = parsed.ok ? null : (parsed.error || proc.stderr || `exit=${proc.code}`);
+  const error = parsed.ok ? null : ((parsed.error as string) || proc.stderr || `exit=${proc.code}`);
   const evidenceSha = status === 'done' ? await getLogSha256OrNull(LOG_PATH) : null;
 
   const { error: uErr } = await sb
@@ -202,86 +265,20 @@ export async function POST(req: NextRequest) {
 
   await appendRunnerLog(`run-finish job=${claimed.id} status=${status} code=${proc.code}`);
 
-  // --- Post-execution: Agent routing + QA trigger ---
+  // --- Post-execution: QA pipeline ---
   if (status === 'done') {
     try {
-      // 1. If job has no agent_id, assign one
-      if (!claimed.agent_id) {
-        const route = await routeJob(claimed.id);
-        if (route) {
-          await sb
-            .from('mc_jobs')
-            .update({ agent_id: route.agent_id })
-            .eq('id', claimed.id);
-          await appendRunnerLog(`agent-assigned job=${claimed.id} agent=${route.agent_name}`);
-        }
+      // Handle review job results: auto-parse Inspector's JSON scores
+      if (claimed.job_type === 'review' && claimed.parent_job_id) {
+        await handleReviewResult(claimed, result);
       }
-
-      // 2. Set status to 'reviewing', create review job for Inspector
-      await sb
-        .from('mc_jobs')
-        .update({ status: 'reviewing' })
-        .eq('id', claimed.id);
-
-      const { data: inspector } = await sb
-        .from('mc_agents')
-        .select('id')
-        .eq('name', 'Inspector')
-        .single();
-
-      if (inspector) {
-        await sb.from('mc_jobs').insert({
-          title: `QA Review: ${claimed.title}`,
-          engine: 'claude',
-          repo_path: claimed.repo_path,
-          prompt_text: `Review the output of job "${claimed.title}" and score on 5 dimensions (completeness, accuracy, actionability, revenue_relevance, evidence) each 1-10. Result: ${(result || '').slice(0, 2000)}`,
-          output_dir: claimed.output_dir,
-          status: 'queued',
-          parent_job_id: claimed.id,
-          agent_id: inspector.id,
-          job_type: 'review',
-          source: 'orchestrator',
-          priority: 2,
-        });
-        await appendRunnerLog(`review-queued job=${claimed.id}`);
+      // Handle decomposition results: auto-parse Ed's JSON sub-tasks
+      else if (claimed.job_type === 'decomposition') {
+        await handleDecompositionResult(claimed, result);
       }
-
-      // 3. Check parent completion: if all sibling sub-tasks done
-      if (claimed.parent_job_id) {
-        const { data: siblings } = await sb
-          .from('mc_jobs')
-          .select('id, status')
-          .eq('parent_job_id', claimed.parent_job_id)
-          .neq('job_type', 'review');
-
-        const allDone = siblings?.every((s) =>
-          s.status === 'done' || s.status === 'reviewing'
-        );
-
-        if (allDone && siblings && siblings.length > 0) {
-          const { data: ed } = await sb
-            .from('mc_agents')
-            .select('id')
-            .eq('name', 'Ed')
-            .single();
-
-          if (ed) {
-            await sb.from('mc_jobs').insert({
-              title: `Integration: merge results from parent ${claimed.parent_job_id}`,
-              engine: 'claude',
-              repo_path: claimed.repo_path,
-              prompt_text: `All sub-tasks for parent job ${claimed.parent_job_id} are complete. Review and integrate the results.`,
-              output_dir: claimed.output_dir,
-              status: 'queued',
-              parent_job_id: claimed.parent_job_id,
-              agent_id: ed.id,
-              job_type: 'integration',
-              source: 'orchestrator',
-              priority: 3,
-            });
-            await appendRunnerLog(`integration-queued parent=${claimed.parent_job_id}`);
-          }
-        }
+      // Regular task: send to QA review
+      else if (claimed.job_type !== 'integration') {
+        await queueQAReview(claimed, result);
       }
     } catch (postErr) {
       await appendRunnerLog(`post-exec-error job=${claimed.id} err=${postErr}`);
@@ -289,4 +286,157 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, job_id: claimed.id, status, result, error, log_path: LOG_PATH, raw: parsed });
+}
+
+// --- Post-execution helpers ---
+
+async function handleReviewResult(
+  reviewJob: Record<string, unknown>,
+  result: string | null
+) {
+  const sb = supabaseAdmin();
+  const parentJobId = reviewJob.parent_job_id as string;
+
+  // Try to parse Inspector's JSON scores from the result
+  let scores: QAScores | null = null;
+  let feedback = '';
+
+  try {
+    // Find JSON in the result (Inspector might wrap it in text)
+    const jsonMatch = (result || '').match(/\{[\s\S]*"completeness"[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      scores = {
+        completeness: clampScore(parsed.completeness),
+        accuracy: clampScore(parsed.accuracy),
+        actionability: clampScore(parsed.actionability),
+        revenue_relevance: clampScore(parsed.revenue_relevance),
+        evidence: clampScore(parsed.evidence),
+      };
+      feedback = parsed.feedback || '';
+    }
+  } catch {
+    // Couldn't parse — fall back to manual review
+  }
+
+  if (scores) {
+    await scoreJob(
+      parentJobId,
+      reviewJob.agent_id as string | null,
+      scores,
+      feedback
+    );
+    await appendRunnerLog(`review-scored parent=${parentJobId} total=${scores.completeness + scores.accuracy + scores.actionability + scores.revenue_relevance + scores.evidence}`);
+  }
+}
+
+async function handleDecompositionResult(
+  decompJob: Record<string, unknown>,
+  result: string | null
+) {
+  // Try to parse Ed's JSON sub-task array from the result
+  try {
+    const jsonMatch = (result || '').match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const subTasks = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(subTasks) && subTasks.length > 0) {
+        const validTasks = subTasks
+          .filter((t: Record<string, unknown>) => t.title && t.suggested_agent)
+          .map((t: Record<string, unknown>) => ({
+            title: String(t.title),
+            suggested_agent: String(t.suggested_agent),
+            priority: Number(t.priority) || 5,
+            estimated_engine: String(t.estimated_engine || 'claude'),
+            prompt_text: String(t.prompt_text || t.title),
+          }));
+
+        if (validTasks.length > 0) {
+          const result = await decomposeJob(decompJob.id as string, validTasks);
+          await appendRunnerLog(`decomposition-created job=${decompJob.id} sub_tasks=${result.job_ids.length}`);
+        }
+      }
+    }
+  } catch {
+    // Couldn't parse — decomposition stays as-is
+  }
+}
+
+async function queueQAReview(
+  job: Record<string, unknown>,
+  result: string | null
+) {
+  const sb = supabaseAdmin();
+
+  // Set job status to 'reviewing'
+  await sb
+    .from('mc_jobs')
+    .update({ status: 'reviewing' })
+    .eq('id', job.id as string);
+
+  const { data: inspector } = await sb
+    .from('mc_agents')
+    .select('id')
+    .eq('name', 'Inspector')
+    .single();
+
+  if (inspector) {
+    await sb.from('mc_jobs').insert({
+      title: `QA Review: ${job.title}`,
+      engine: 'claude',
+      repo_path: job.repo_path,
+      prompt_text: `Review the output of job "${job.title}" and score on 5 dimensions (completeness, accuracy, actionability, revenue_relevance, evidence) each 1-10. Return ONLY JSON with those 5 scores plus total, passed (boolean, threshold 35/50), and feedback.\n\n## Job Output:\n${(result || '').slice(0, 4000)}`,
+      output_dir: job.output_dir,
+      status: 'queued',
+      parent_job_id: job.id,
+      agent_id: inspector.id,
+      job_type: 'review',
+      source: 'orchestrator',
+      priority: 2,
+    });
+    await appendRunnerLog(`review-queued job=${job.id}`);
+  }
+
+  // Check parent completion: if all sibling sub-tasks done
+  if (job.parent_job_id) {
+    const { data: siblings } = await sb
+      .from('mc_jobs')
+      .select('id, status')
+      .eq('parent_job_id', job.parent_job_id as string)
+      .neq('job_type', 'review');
+
+    const allDone = siblings?.every((s) =>
+      s.status === 'done' || s.status === 'reviewing'
+    );
+
+    if (allDone && siblings && siblings.length > 0) {
+      const { data: ed } = await sb
+        .from('mc_agents')
+        .select('id')
+        .eq('name', 'Ed')
+        .single();
+
+      if (ed) {
+        await sb.from('mc_jobs').insert({
+          title: `Integration: merge results from parent ${job.parent_job_id}`,
+          engine: 'claude',
+          repo_path: job.repo_path,
+          prompt_text: `All sub-tasks for parent job ${job.parent_job_id} are complete. Review and integrate the results.`,
+          output_dir: job.output_dir,
+          status: 'queued',
+          parent_job_id: job.parent_job_id,
+          agent_id: ed.id,
+          job_type: 'integration',
+          source: 'orchestrator',
+          priority: 3,
+        });
+        await appendRunnerLog(`integration-queued parent=${job.parent_job_id}`);
+      }
+    }
+  }
+}
+
+function clampScore(v: unknown): number {
+  const n = Number(v);
+  if (isNaN(n)) return 1;
+  return Math.max(1, Math.min(10, Math.round(n)));
 }

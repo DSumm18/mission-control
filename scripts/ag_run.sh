@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Usage:
-# ag_run.sh --job-id <id> --engine <claude|gemini|openai|shell> --repo <path> --command <text> [--args '<json-array>']
+# ag_run.sh --job-id <id> --engine <claude|gemini|openai|shell> --repo <path> --command <text> [--args '<json-array>'] [--model <model-id>] [--system-prompt <text>]
 
 JOB_ID=""
 ENGINE=""
@@ -10,6 +10,8 @@ REPO=""
 COMMAND_TEXT=""
 ARGS_JSON='[]'
 MCP_SERVERS=""
+MODEL=""
+SYSTEM_PROMPT=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -19,6 +21,8 @@ while [[ $# -gt 0 ]]; do
     --command) COMMAND_TEXT="$2"; shift 2 ;;
     --args) ARGS_JSON="$2"; shift 2 ;;
     --mcp-servers) MCP_SERVERS="$2"; shift 2 ;;
+    --model) MODEL="$2"; shift 2 ;;
+    --system-prompt) SYSTEM_PROMPT="$2"; shift 2 ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -86,7 +90,19 @@ PY
       done
     fi
 
-    OUT="$(ANTHROPIC_BASE_URL="http://localhost:8080" ANTHROPIC_AUTH_TOKEN="test" claude -p --permission-mode bypassPermissions "${MCP_FLAGS[@]}" "$PROMPT" 2>&1 || true)"
+    # Build --model flag
+    MODEL_FLAGS=()
+    if [[ -n "$MODEL" ]]; then
+      MODEL_FLAGS+=(--model "$MODEL")
+    fi
+
+    # Build --system-prompt flag
+    SYSTEM_FLAGS=()
+    if [[ -n "$SYSTEM_PROMPT" ]]; then
+      SYSTEM_FLAGS+=(--system-prompt "$SYSTEM_PROMPT")
+    fi
+
+    OUT="$(ANTHROPIC_BASE_URL="http://localhost:8080" ANTHROPIC_AUTH_TOKEN="test" claude -p --permission-mode bypassPermissions "${MODEL_FLAGS[@]}" "${SYSTEM_FLAGS[@]}" "${MCP_FLAGS[@]}" "$PROMPT" 2>&1 || true)"
 
     if echo "$OUT" | grep -qi "Not logged in"; then
       python3 - <<'PY'

@@ -97,3 +97,29 @@ export async function composePrompt(jobId: string, agentId: string): Promise<str
 
   return parts.join('\n');
 }
+
+/**
+ * Get MCP server names for an agent based on their assigned skills.
+ * Returns comma-separated string suitable for --mcp-servers flag.
+ */
+export async function getAgentMCPServers(agentId: string): Promise<string> {
+  const sb = supabaseAdmin();
+
+  const { data: agentSkills } = await sb
+    .from('mc_agent_skills')
+    .select('skill_id, mc_skills(mcp_server_name)')
+    .eq('agent_id', agentId)
+    .eq('allowed', true);
+
+  if (!agentSkills || agentSkills.length === 0) return '';
+
+  const servers = new Set<string>();
+  for (const as of agentSkills) {
+    const skill = as.mc_skills as unknown as { mcp_server_name: string | null };
+    if (skill?.mcp_server_name) {
+      servers.add(skill.mcp_server_name);
+    }
+  }
+
+  return [...servers].join(',');
+}

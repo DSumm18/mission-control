@@ -2,137 +2,312 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
+} from 'recharts';
+import {
+  DollarSign, Briefcase, Users, Star,
+  AlertTriangle, CheckCircle, Clock, FolderOpen,
+} from 'lucide-react';
+
+type Overview = {
+  total_revenue_target: number;
+  active_jobs: number;
+  active_agents: number;
+  total_agents: number;
+  avg_quality_7d: number | null;
+  projects_active: number;
+  tasks_todo: number;
+};
+
+type DailyStats = {
+  date: string;
+  done: number;
+  failed: number;
+  reviewing: number;
+  running: number;
+  queued: number;
+};
 
 type CostRow = {
-  engine: 'claude' | 'gemini' | 'openai' | 'shell' | string;
+  engine: string;
   runs: number;
   est_cost_usd: number;
-  avg_duration_ms: number | null;
 };
 
-type RunRow = {
+type TaskRow = {
   id: string;
-  created_at: string;
-  agent_name: string | null;
-  engine: string;
-  model_used: string | null;
+  title: string;
+  priority: number;
   status: string;
-  estimated_cost_usd: number | null;
+  due_date: string | null;
+  mc_projects: { name: string } | null;
 };
+
+type ProjectRow = {
+  id: string;
+  name: string;
+  status: string;
+  revenue_target_monthly: number | null;
+  active_jobs: number;
+  done_jobs: number;
+};
+
+type AlertAgent = {
+  id: string;
+  name: string;
+  avatar_emoji: string | null;
+  consecutive_failures: number;
+  quality_score_avg: number;
+};
+
+type FeedItem = {
+  id: string;
+  title: string;
+  status: string;
+  completed_at: string;
+  job_type: string;
+  quality_score: number | null;
+};
+
+const PIE_COLORS = ['#6ea8fe', '#3ddc97', '#f7c948', '#ff6b6b', '#c084fc'];
+
+function priorityBadge(p: number) {
+  if (p <= 2) return 'bad';
+  if (p <= 5) return 'warn';
+  return 'good';
+}
 
 export default function HomePage() {
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [daily, setDaily] = useState<DailyStats[]>([]);
   const [costs, setCosts] = useState<CostRow[]>([]);
-  const [runs, setRuns] = useState<RunRow[]>([]);
+  const [tasks, setTasks] = useState<TaskRow[]>([]);
+  const [projects, setProjects] = useState<ProjectRow[]>([]);
+  const [alerts, setAlerts] = useState<AlertAgent[]>([]);
+  const [feed, setFeed] = useState<FeedItem[]>([]);
 
   useEffect(() => {
-    fetch('/api/costs', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => setCosts(d.costs || []))
-      .catch(() => setCosts([]));
-
-    fetch('/api/runs', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => setRuns(d.runs || []))
-      .catch(() => setRuns([]));
+    const opts = { cache: 'no-store' as const };
+    fetch('/api/stats/overview', opts).then(r => r.json()).then(d => setOverview(d)).catch(() => {});
+    fetch('/api/stats/jobs-daily', opts).then(r => r.json()).then(d => setDaily(d.daily || [])).catch(() => {});
+    fetch('/api/costs', opts).then(r => r.json()).then(d => setCosts(d.costs || [])).catch(() => {});
+    fetch('/api/tasks?status=todo&limit=3', opts).then(r => r.json()).then(d => setTasks(d.tasks || [])).catch(() => {});
+    fetch('/api/projects', opts).then(r => r.json()).then(d => setProjects((d.projects || []).slice(0, 3))).catch(() => {});
+    fetch('/api/agents', opts).then(r => r.json()).then(d => {
+      const flagged = (d.agents || []).filter((a: AlertAgent) =>
+        a.consecutive_failures > 0 || (a.quality_score_avg > 0 && a.quality_score_avg < 25)
+      );
+      setAlerts(flagged);
+    }).catch(() => {});
+    fetch('/api/jobs/pipeline', opts).then(r => r.json()).then(d => {
+      const recent = (d.jobs || [])
+        .filter((j: FeedItem) => j.completed_at)
+        .sort((a: FeedItem, b: FeedItem) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())
+        .slice(0, 10);
+      setFeed(recent);
+    }).catch(() => {});
   }, []);
 
-  const totals = useMemo(() => {
-    const totalRuns = costs.reduce((a, c) => a + Number(c.runs || 0), 0);
-    const totalCost = costs.reduce((a, c) => a + Number(c.est_cost_usd || 0), 0);
-    const running = runs.filter((r) => r.status === 'running').length;
-    const failed = runs.filter((r) => r.status === 'failed').length;
-    return { totalRuns, totalCost, running, failed };
-  }, [costs, runs]);
+  const pieData = useMemo(() =>
+    costs.filter(c => c.est_cost_usd > 0).map(c => ({ name: c.engine, value: Number(c.est_cost_usd) })),
+    [costs]
+  );
 
   return (
     <div>
-      <h1 className="page-title">Mission Control v1</h1>
-      <p className="page-sub">Live orchestration snapshot: agents, model runs, and cost telemetry.</p>
+      <h1 className="page-title">Mission Control</h1>
+      <p className="page-sub">Business command center — agents, projects, quality, and costs at a glance.</p>
 
+      {/* Row 1: KPIs */}
       <section className="grid" style={{ marginBottom: 14 }}>
-        <article className="card" style={{ gridColumn: 'span 3' }}>
-          <div className="muted">Runs (7d)</div>
-          <div className="kpi">{totals.totalRuns}</div>
+        <article className="card card-glow" style={{ gridColumn: 'span 3' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <DollarSign size={18} color="var(--accent)" />
+            <span className="muted">Revenue Target</span>
+          </div>
+          <div className="kpi">{overview ? `£${Math.round(overview.total_revenue_target).toLocaleString()}` : '—'}</div>
+          <div className="muted">per month</div>
         </article>
-        <article className="card" style={{ gridColumn: 'span 3' }}>
-          <div className="muted">Estimated Cost (7d)</div>
-          <div className="kpi">${totals.totalCost.toFixed(4)}</div>
+        <article className="card card-glow" style={{ gridColumn: 'span 3' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Briefcase size={18} color="var(--accent)" />
+            <span className="muted">Active Jobs</span>
+          </div>
+          <div className="kpi">{overview?.active_jobs ?? '—'}</div>
+          <div className="muted">running / queued / assigned</div>
         </article>
-        <article className="card" style={{ gridColumn: 'span 3' }}>
-          <div className="muted">Currently Running</div>
-          <div className="kpi">{totals.running}</div>
+        <article className="card card-glow" style={{ gridColumn: 'span 3' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Users size={18} color="var(--accent)" />
+            <span className="muted">Agent Utilization</span>
+          </div>
+          <div className="kpi">
+            {overview ? `${overview.active_agents}/${overview.total_agents}` : '—'}
+          </div>
+          <div className="muted">agents with running jobs</div>
         </article>
-        <article className="card" style={{ gridColumn: 'span 3' }}>
-          <div className="muted">Failed (recent)</div>
-          <div className="kpi">{totals.failed}</div>
+        <article className="card card-glow" style={{ gridColumn: 'span 3' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Star size={18} color="var(--accent)" />
+            <span className="muted">Quality (7d)</span>
+          </div>
+          <div className="kpi">
+            {overview?.avg_quality_7d ? `${Math.round(overview.avg_quality_7d)}/50` : '—'}
+          </div>
+          <div className="muted">average review score</div>
         </article>
       </section>
 
+      {/* Row 2: Charts */}
       <section className="grid" style={{ marginBottom: 14 }}>
-        <article className="card" style={{ gridColumn: 'span 6' }}>
-          <h3 style={{ marginTop: 0 }}>Cost by Engine (7d)</h3>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Engine</th><th>Runs</th><th>Est. Cost</th><th>Avg Duration</th></tr>
-              </thead>
-              <tbody>
-                {costs.length === 0 && (
-                  <tr><td colSpan={4} className="muted">No run cost data yet.</td></tr>
-                )}
-                {costs.map((c) => (
-                  <tr key={c.engine}>
-                    <td>{c.engine}</td>
-                    <td>{c.runs}</td>
-                    <td>${Number(c.est_cost_usd || 0).toFixed(4)}</td>
-                    <td>{c.avg_duration_ms ? `${Math.round(Number(c.avg_duration_ms) / 1000)}s` : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <article className="card" style={{ gridColumn: 'span 7' }}>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Jobs by Status (7 days)</h3>
+          <div className="chart-wrap">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={daily} barCategoryGap="20%">
+                <XAxis dataKey="date" tick={{ fill: '#9fb0d9', fontSize: 11 }} tickFormatter={v => v.slice(5)} />
+                <YAxis tick={{ fill: '#9fb0d9', fontSize: 11 }} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ background: '#1a2440', border: '1px solid #2a3559', borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: '#eef3ff' }}
+                />
+                <Bar dataKey="done" stackId="a" fill="#3ddc97" radius={[0,0,0,0]} />
+                <Bar dataKey="reviewing" stackId="a" fill="#f7c948" />
+                <Bar dataKey="failed" stackId="a" fill="#ff6b6b" />
+                <Bar dataKey="running" stackId="a" fill="#6ea8fe" />
+                <Bar dataKey="queued" stackId="a" fill="#2a3559" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </article>
-
-        <article className="card" style={{ gridColumn: 'span 6' }}>
-          <h3 style={{ marginTop: 0 }}>Recent Runs</h3>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Time</th><th>Agent</th><th>Engine</th><th>Status</th><th>Cost</th></tr>
-              </thead>
-              <tbody>
-                {runs.slice(0, 8).map((r) => (
-                  <tr key={r.id}>
-                    <td>{new Date(r.created_at).toLocaleTimeString()}</td>
-                    <td>{r.agent_name || '—'}</td>
-                    <td>{r.engine}</td>
-                    <td>
-                      <span className={`badge ${r.status === 'done' ? 'good' : r.status.includes('paused') || r.status === 'running' || r.status === 'queued' ? 'warn' : 'bad'}`}>
-                        {r.status}
-                      </span>
-                    </td>
-                    <td>{typeof r.estimated_cost_usd === 'number' ? `$${r.estimated_cost_usd.toFixed(4)}` : '—'}</td>
-                  </tr>
-                ))}
-                {runs.length === 0 && (
-                  <tr><td colSpan={5} className="muted">No runs recorded yet.</td></tr>
-                )}
-              </tbody>
-            </table>
+        <article className="card" style={{ gridColumn: 'span 5' }}>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Cost by Engine (7d)</h3>
+          <div className="chart-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {pieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2}>
+                    {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: '#1a2440', border: '1px solid #2a3559', borderRadius: 8, fontSize: 12 }}
+                    formatter={(v) => [`$${Number(v).toFixed(4)}`, 'Cost']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="muted" style={{ textAlign: 'center', padding: 40 }}>No cost data yet</div>
+            )}
           </div>
+          {pieData.length > 0 && (
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', fontSize: 12 }}>
+              {pieData.map((d, i) => (
+                <span key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                  {d.name}: ${d.value.toFixed(4)}
+                </span>
+              ))}
+            </div>
+          )}
         </article>
       </section>
 
-      <section className="grid">
-        <article className="card" style={{ gridColumn: 'span 12' }}>
-          <h3 style={{ marginTop: 0 }}>Quick Actions</h3>
-          <ul>
-            <li><Link href="/agents">Agents</Link> — role/mode ownership</li>
-            <li><Link href="/skills">Skills</Link> — tool inventory and posture</li>
-            <li><Link href="/runs">Runs</Link> — model/agent/cost audit trail</li>
-            <li><Link href="/jobs">Jobs</Link> — queue execution</li>
-          </ul>
+      {/* Row 3: Tasks, Projects, Alerts */}
+      <section className="grid" style={{ marginBottom: 14 }}>
+        <article className="card" style={{ gridColumn: 'span 4' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <h3 style={{ margin: 0, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <CheckCircle size={16} color="var(--accent)" /> My Tasks
+            </h3>
+            <Link href="/tasks" style={{ fontSize: 12 }}>View All</Link>
+          </div>
+          {tasks.length === 0 ? (
+            <div className="muted" style={{ padding: 16, textAlign: 'center' }}>No tasks yet</div>
+          ) : tasks.map(t => (
+            <div key={t.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--line)', fontSize: 13 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 500 }}>{t.title}</span>
+                <span className={`badge ${priorityBadge(t.priority)}`}>P{t.priority}</span>
+              </div>
+              {t.mc_projects && <div className="muted" style={{ fontSize: 11 }}>{t.mc_projects.name}</div>}
+              {t.due_date && <div className="muted" style={{ fontSize: 11 }}>Due: {t.due_date}</div>}
+            </div>
+          ))}
         </article>
+
+        <article className="card" style={{ gridColumn: 'span 4' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <h3 style={{ margin: 0, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <FolderOpen size={16} color="var(--accent)" /> Active Projects
+            </h3>
+            <Link href="/projects" style={{ fontSize: 12 }}>View All</Link>
+          </div>
+          {projects.length === 0 ? (
+            <div className="muted" style={{ padding: 16, textAlign: 'center' }}>No projects</div>
+          ) : projects.map(p => (
+            <Link key={p.id} href={`/projects/${p.id}`} style={{ display: 'block', padding: '8px 0', borderBottom: '1px solid var(--line)', color: 'inherit', textDecoration: 'none', fontSize: 13 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 500 }}>{p.name}</span>
+                <span className={`badge ${p.status === 'active' ? 'good' : 'warn'}`}>{p.status}</span>
+              </div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
+                {p.revenue_target_monthly ? `£${p.revenue_target_monthly.toLocaleString()}/mo` : '—'}
+                {' · '}{p.active_jobs} active · {p.done_jobs} done
+              </div>
+            </Link>
+          ))}
+        </article>
+
+        <article className="card" style={{ gridColumn: 'span 4' }}>
+          <h3 style={{ margin: '0 0 10px', fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <AlertTriangle size={16} color="var(--warn)" /> Agent Alerts
+          </h3>
+          {alerts.length === 0 ? (
+            <div className="muted" style={{ padding: 16, textAlign: 'center' }}>All agents healthy</div>
+          ) : alerts.map(a => (
+            <Link key={a.id} href={`/agents/${a.id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--line)', color: 'inherit', textDecoration: 'none', fontSize: 13 }}>
+              <span style={{ fontSize: 18 }}>{a.avatar_emoji || '🤖'}</span>
+              <div>
+                <div style={{ fontWeight: 500 }}>{a.name}</div>
+                <div className="muted" style={{ fontSize: 11 }}>
+                  {a.consecutive_failures > 0 && <span className="badge bad" style={{ marginRight: 4 }}>{a.consecutive_failures} failures</span>}
+                  {a.quality_score_avg > 0 && a.quality_score_avg < 25 && <span className="badge warn">QA: {a.quality_score_avg}</span>}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </article>
+      </section>
+
+      {/* Row 4: Activity Feed */}
+      <section className="card">
+        <h3 style={{ marginTop: 0, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Clock size={16} color="var(--accent)" /> Recent Activity
+        </h3>
+        {feed.length === 0 ? (
+          <div className="muted" style={{ padding: 16, textAlign: 'center' }}>No recent activity</div>
+        ) : feed.map(f => (
+          <div key={f.id} className="feed-item">
+            <div className="feed-dot" style={{
+              background: f.status === 'done' ? 'var(--good)' : f.status === 'failed' ? 'var(--bad)' : f.status === 'reviewing' ? 'var(--warn)' : 'var(--accent)'
+            }} />
+            <div style={{ flex: 1 }}>
+              <span style={{ fontWeight: 500 }}>{f.title}</span>
+              <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
+                <span className={`badge ${f.status === 'done' ? 'good' : f.status === 'failed' ? 'bad' : 'warn'}`}>{f.status}</span>
+                {f.quality_score !== null && (
+                  <span className={`badge ${f.quality_score >= 35 ? 'good' : 'bad'}`} style={{ marginLeft: 4 }}>QA: {f.quality_score}/50</span>
+                )}
+                {f.job_type !== 'task' && <span className="badge" style={{ marginLeft: 4 }}>{f.job_type}</span>}
+              </div>
+            </div>
+            <div className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+              {new Date(f.completed_at).toLocaleString()}
+            </div>
+          </div>
+        ))}
       </section>
     </div>
   );
