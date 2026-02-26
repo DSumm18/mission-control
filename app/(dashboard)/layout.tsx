@@ -4,11 +4,19 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, GitBranch, Kanban, FolderOpen, Bot, Zap,
-  Wrench, Activity, Newspaper, Scale, Radio, Palette,
+  Wrench, Activity, Scale, Radio,
   ListTodo, Settings, CheckSquare,
+  Calendar, Search, FileEdit, ShieldCheck, Send,
 } from 'lucide-react';
 
-const NAV = [
+type NavItem =
+  | { href: string; label: string; icon: typeof LayoutDashboard }
+  | { divider: true }
+  | { section: string };
+
+const NAV: NavItem[] = [
+  // General
+  { section: 'General' },
   { href: '/', label: 'Overview', icon: LayoutDashboard },
   { href: '/org-chart', label: 'Org Chart', icon: GitBranch },
   { href: '/pipeline', label: 'Pipeline', icon: Kanban },
@@ -17,16 +25,24 @@ const NAV = [
   { href: '/agents', label: 'Agents', icon: Bot },
   { href: '/jobs', label: 'Jobs Runner', icon: Zap },
   { href: '/skills', label: 'Skills', icon: Wrench },
-  { divider: true },
-  { href: '/runs', label: 'Runs', icon: Activity },
+
+  // Schoolgle Signal
+  { section: 'Schoolgle Signal' },
+  { href: '/this-week', label: 'This Week', icon: Calendar },
+  { href: '/research', label: 'Research', icon: Search },
+  { href: '/content-studio', label: 'Content Studio', icon: FileEdit },
+  { href: '/newsletters', label: 'QA Gate', icon: ShieldCheck },
+  { href: '/publish', label: 'Publish', icon: Send },
+
+  // Operations
+  { section: 'Operations' },
   { href: '/sources', label: 'Sources', icon: Radio },
-  { href: '/newsletters', label: 'Newsletter Pipeline', icon: Newspaper },
+  { href: '/runs', label: 'Runs', icon: Activity },
   { href: '/decisions', label: 'Decisions', icon: Scale },
   { href: '/activity', label: 'Activity', icon: ListTodo },
-  { href: '/creative-studio', label: 'Creative Studio', icon: Palette },
   { divider: true },
   { href: '/settings', label: 'Settings', icon: Settings },
-] as const;
+];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -40,6 +56,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {NAV.map((item, i) => {
             if ('divider' in item) {
               return <div key={`d-${i}`} className="nav-divider" />;
+            }
+            if ('section' in item) {
+              return (
+                <div key={item.section} style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  color: '#667aa3',
+                  padding: '12px 12px 4px',
+                  marginTop: i === 0 ? 0 : 4,
+                }}>
+                  {item.section}
+                </div>
+              );
             }
             const Icon = item.icon;
             const isActive = item.href === '/'
