@@ -56,6 +56,15 @@ const QUICK_PATH_PATTERNS = [
   /\b(deploy|deployment|vercel)\b.*\b(status|latest|last|recent)\b/i,
 ];
 
+/** Patterns that indicate Ed needs to DO something (dispatch, create, build) → always Sonnet */
+const ACTION_TRIGGERS = [
+  /\b(create|build|deploy|dispatch|spawn|queue|fix|launch|ship|push|set up|make|implement)\b/i,
+  /\b(repo|repository|sprint|milestone|deadline)\b/i,
+  /\b(get .+ (working|done|started|going|built|delivered))\b/i,
+  /\b(i want|i need|we need|you need)\b.*\b(to|you)\b/i,
+  /\b(progress this|crack on|make it happen|get on with|move on)\b/i,
+];
+
 /**
  * Determine which model tier to use for a given message.
  */
@@ -64,9 +73,12 @@ export function routeMessage(message: string, hasImages: boolean): ModelTier {
 
   const trimmed = message.trim();
 
-  // Check quick-path patterns first
-  for (const pattern of QUICK_PATH_PATTERNS) {
-    if (pattern.test(trimmed)) return 'quick-path';
+  // Long messages always go to LLM — never quick-path
+  // Quick-path is ONLY for short, direct status queries (< 80 chars)
+  if (trimmed.length <= 80) {
+    for (const pattern of QUICK_PATH_PATTERNS) {
+      if (pattern.test(trimmed)) return 'quick-path';
+    }
   }
 
   // Short confirmations → Haiku
@@ -74,7 +86,12 @@ export function routeMessage(message: string, hasImages: boolean): ModelTier {
     if (pattern.test(trimmed)) return 'haiku';
   }
 
-  // Sonnet triggers
+  // Action triggers → always Sonnet (Ed needs to emit MC_ACTION blocks)
+  for (const pattern of ACTION_TRIGGERS) {
+    if (pattern.test(trimmed)) return 'sonnet';
+  }
+
+  // Sonnet triggers (analysis, URLs, etc.)
   for (const pattern of SONNET_TRIGGERS) {
     if (pattern.test(trimmed)) return 'sonnet';
   }

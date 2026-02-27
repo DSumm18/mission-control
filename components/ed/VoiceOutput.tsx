@@ -10,6 +10,25 @@ interface VoiceOutputProps {
   voice?: VoicePersona;
 }
 
+/** Strip markdown syntax so TTS doesn't read "asterisk asterisk" etc. */
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')   // **bold** → bold
+    .replace(/\*([^*]+)\*/g, '$1')        // *italic* → italic
+    .replace(/__([^_]+)__/g, '$1')        // __bold__ → bold
+    .replace(/_([^_]+)_/g, '$1')          // _italic_ → italic
+    .replace(/~~([^~]+)~~/g, '$1')        // ~~strike~~ → strike
+    .replace(/`([^`]+)`/g, '$1')          // `code` → code
+    .replace(/^#{1,6}\s+/gm, '')          // # heading → heading
+    .replace(/^\s*[-*+]\s+/gm, '')        // - list item → list item
+    .replace(/^\s*\d+\.\s+/gm, '')        // 1. list item → list item
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // [link](url) → link
+    .replace(/\[MC_ACTION:[^\]]*\].*?\[\/MC_ACTION\]/gs, '') // strip action blocks
+    .replace(/<!--.*?-->/gs, '')          // strip HTML comments
+    .replace(/\n{3,}/g, '\n\n')           // collapse excess newlines
+    .trim();
+}
+
 /**
  * Sentence-level voice output for Ed.
  * Streams audio per sentence — plays sentence 1 while sentence 2 synthesises.
@@ -58,12 +77,15 @@ export default function VoiceOutput({ text, enabled, voice = 'ed' }: VoiceOutput
     const controller = new AbortController();
     abortRef.current = controller;
 
+    const cleanText = stripMarkdown(text);
+    if (!cleanText) return;
+
     async function streamVoice() {
       try {
         const res = await fetch('/api/ed/voice-stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: text.slice(0, 2000), voice }),
+          body: JSON.stringify({ text: cleanText.slice(0, 2000), voice }),
           signal: controller.signal,
         });
 
@@ -127,7 +149,7 @@ export default function VoiceOutput({ text, enabled, voice = 'ed' }: VoiceOutput
 function fallbackTTS(text: string) {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
 
-  const utterance = new SpeechSynthesisUtterance(text.slice(0, 500));
+  const utterance = new SpeechSynthesisUtterance(stripMarkdown(text).slice(0, 500));
   utterance.lang = 'en-GB';
   utterance.rate = 1.0;
   utterance.pitch = 1.0;
