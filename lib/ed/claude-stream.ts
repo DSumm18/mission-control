@@ -6,20 +6,51 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { EdImageAttachment } from './types';
 
-const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-5-20250929';
 const MAX_TOKENS = 4096;
 
+/** Whether we're using OpenRouter or direct Anthropic */
+let _useOpenRouter: boolean | null = null;
+
+function useOpenRouter(): boolean {
+  if (_useOpenRouter === null) {
+    _useOpenRouter = !!process.env.OPENROUTER_API_KEY;
+  }
+  return _useOpenRouter;
+}
+
+/** Default model — prefixed for OpenRouter, plain for direct Anthropic */
+function defaultModel(): string {
+  return useOpenRouter()
+    ? 'anthropic/claude-sonnet-4-5-20250929'
+    : 'claude-sonnet-4-5-20250929';
+}
+
 function getClient(): Anthropic {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (useOpenRouter()) {
+    return new Anthropic({
+      apiKey: process.env.OPENROUTER_API_KEY!,
+      baseURL: 'https://openrouter.ai/api',
+    });
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error(
-      'OPENROUTER_API_KEY not set. Add it to .env.local and Vercel environment variables.',
+      'Neither OPENROUTER_API_KEY nor ANTHROPIC_API_KEY is set. Add one to .env.local and Vercel environment variables.',
     );
   }
-  return new Anthropic({
-    apiKey,
-    baseURL: 'https://openrouter.ai/api',
-  });
+  return new Anthropic({ apiKey });
+}
+
+/**
+ * Strip the anthropic/ prefix from model names when using direct Anthropic API.
+ */
+function resolveModel(model: string | undefined): string {
+  const m = model || defaultModel();
+  if (!useOpenRouter() && m.startsWith('anthropic/')) {
+    return m.replace('anthropic/', '');
+  }
+  return m;
 }
 
 export interface ClaudeStreamOptions {
@@ -40,7 +71,7 @@ export async function* claudeStream(
   const client = getClient();
 
   const stream = client.messages.stream({
-    model: model || DEFAULT_MODEL,
+    model: resolveModel(model),
     max_tokens: MAX_TOKENS,
     system: [
       {
@@ -74,7 +105,7 @@ export async function claudeCall(
   const client = getClient();
 
   const response = await client.messages.create({
-    model: model || DEFAULT_MODEL,
+    model: resolveModel(model),
     max_tokens: MAX_TOKENS,
     system: [
       {
