@@ -10,8 +10,8 @@ import { NextRequest } from 'next/server';
 import { fishAudioSpeak } from '@/lib/ed/fish-audio';
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.FISH_AUDIO_API_KEY;
-  const voiceId = process.env.FISH_AUDIO_VOICE_ID_ED;
+  const apiKey = process.env.FISH_AUDIO_API_KEY || process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY;
+  const voiceId = process.env.FISH_AUDIO_VOICE_ID_ED || process.env.NEXT_PUBLIC_FISH_AUDIO_VOICE_ID_ED;
 
   if (!apiKey || !voiceId) {
     return Response.json(

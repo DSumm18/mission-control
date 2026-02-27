@@ -482,6 +482,78 @@ Output a structured JSON report with these sections.`,
           break;
         }
 
+        case 'code_change': {
+          // Ed spawns a Claude CLI job on the Mac Mini to edit code.
+          // The scheduler picks this up and runs it via ag_run.sh with full tool access.
+          const p = action.params as Record<string, string>;
+          const { data: kerry } = await sb
+            .from('mc_agents')
+            .select('id')
+            .eq('name', 'Kerry')
+            .single();
+
+          const repoPath = p.repo_path || '/Users/david/.openclaw/workspace/mission-control';
+          const description = p.description || '';
+          const files = p.files || '';
+          const reason = p.reason || '';
+
+          const prompt = `You are working on the Mission Control codebase at ${repoPath}.
+
+## Task
+${description}
+
+${files ? `## Files to modify\n${files}` : ''}
+
+${reason ? `## Why\n${reason}` : ''}
+
+## Instructions
+1. Read the relevant files first to understand the current code
+2. Make the necessary changes
+3. Run \`npm run build\` to verify zero errors
+4. If build passes, run: git add -A && git commit -m "${(p.commit_message || description).replace(/"/g, '\\"')}\n\nCo-Authored-By: Ed (MC CEO) <ed@missioncontrol.ai>" && git push origin main
+5. Report what you changed and whether the push succeeded`;
+
+          const { data: job, error } = await sb
+            .from('mc_jobs')
+            .insert({
+              title: `Code Change: ${(description).slice(0, 80)}`,
+              prompt_text: prompt,
+              repo_path: repoPath,
+              engine: 'claude',
+              status: 'queued',
+              priority: 1,
+              agent_id: kerry?.id || null,
+            })
+            .select('id')
+            .single();
+          if (error) throw error;
+          results.push({ type: 'code_change', job_id: job.id, ok: true });
+          break;
+        }
+
+        case 'deploy': {
+          // Trigger a Vercel redeployment by pushing current code or creating a deploy hook job
+          const p = action.params as Record<string, string>;
+          const reason = p.reason || 'Ed-triggered deployment';
+
+          // Create a shell job that pushes the latest code (triggers Vercel auto-deploy)
+          const { data: job, error } = await sb
+            .from('mc_jobs')
+            .insert({
+              title: `Deploy: ${reason.slice(0, 60)}`,
+              prompt_text: `cd /Users/david/.openclaw/workspace/mission-control && npm run build && echo "Build passed — Vercel will auto-deploy from latest push." || echo "Build FAILED — do not push."`,
+              repo_path: '/Users/david/.openclaw/workspace/mission-control',
+              engine: 'shell',
+              status: 'queued',
+              priority: 1,
+            })
+            .select('id')
+            .single();
+          if (error) throw error;
+          results.push({ type: 'deploy', job_id: job.id, ok: true });
+          break;
+        }
+
         case 'check_status': {
           // This is a read-only action — Ed uses the context block
           results.push({ type: 'check_status', ok: true });

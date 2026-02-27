@@ -54,6 +54,10 @@ function formatAction(action: ActionResult): string {
       return `${icon} Task updated`;
     case 'request_tools':
       return `${icon} Tools assigned`;
+    case 'code_change':
+      return `${icon} Code change dispatched to Kerry (CTO)${action.job_id ? ` — job ${action.job_id.slice(0, 8)}` : ''}`;
+    case 'deploy':
+      return `${icon} Deployment triggered${action.job_id ? ` — job ${action.job_id.slice(0, 8)}` : ''}`;
     default:
       return `${icon} ${action.type}`;
   }

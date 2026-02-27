@@ -5,7 +5,8 @@
  * Body: { conversation_id, message, images? }
  * Response: SSE stream with text chunks, action results, and done event.
  *
- * Quick-path: Supabase-answerable questions (status checks) bypass Claude CLI entirely.
+ * Quick-path: Supabase-answerable questions (status checks) bypass Claude entirely.
+ * Full-path: Anthropic API streaming (works on Vercel + local).
  */
 
 export const runtime = 'nodejs';
@@ -15,7 +16,7 @@ import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
 import { buildSystemPrompt } from '@/lib/ed/system-prompt';
 import { buildContextBlock, loadConversationHistory } from '@/lib/ed/context';
-import { claudeCall } from '@/lib/ed/claude-stream';
+import { claudeStream } from '@/lib/ed/claude-stream';
 import { parseActions, executeActions } from '@/lib/ed/actions';
 import type { EdChatRequest, EdStreamChunk } from '@/lib/ed/types';
 
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Store user message
-  const { data: userMsg, error: insertErr } = await sb
+  const { error: insertErr } = await sb
     .from('mc_ed_messages')
     .insert({
       conversation_id,
@@ -152,7 +153,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Full Claude CLI path
+  // Full Anthropic API streaming path
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
@@ -176,14 +177,26 @@ export async function POST(req: NextRequest) {
 
         userPrompt += '\n\nRespond as Ed:';
 
-        // Call Claude CLI (non-streaming for reliability)
-        const rawResponse = await claudeCall(systemPrompt, userPrompt);
+        // Stream from Anthropic API
+        let fullText = '';
+        for await (const chunk of claudeStream({
+          systemPrompt,
+          userMessage: userPrompt,
+          images: images || undefined,
+        })) {
+          fullText += chunk;
+          controller.enqueue(encoder.encode(sseEncode({ type: 'text', content: chunk })));
+        }
 
-        // Parse actions
-        const { cleanText, actions } = parseActions(rawResponse);
+        // Parse actions from the complete response
+        const { cleanText, actions } = parseActions(fullText);
 
-        // Stream text to client
-        controller.enqueue(encoder.encode(sseEncode({ type: 'text', content: cleanText })));
+        // If actions were stripped, send the clean version
+        // (the client has been receiving the raw text with action blocks —
+        //  we'll send a replace event so the UI shows the clean version)
+        if (actions.length > 0 && cleanText !== fullText) {
+          controller.enqueue(encoder.encode(sseEncode({ type: 'text', content: `\n<!-- REPLACE -->\n${cleanText}` })));
+        }
 
         // Execute actions
         let actionResults: { type: string; ok: boolean; id?: string; job_id?: string; task_id?: string; error?: string }[] = [];
@@ -204,7 +217,7 @@ export async function POST(req: NextRequest) {
             role: 'assistant',
             content: cleanText,
             actions_taken: actionResults,
-            model_used: 'claude-cli',
+            model_used: 'claude-sonnet-4.5',
             duration_ms: durationMs,
           })
           .select('id')

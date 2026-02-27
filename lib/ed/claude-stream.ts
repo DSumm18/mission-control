@@ -1,13 +1,23 @@
 /**
- * AsyncGenerator that spawns `claude -p` and yields stdout chunks
- * instead of collecting all output. Used for SSE streaming.
+ * Ed's Claude backend — uses Anthropic API directly (works on Vercel + local).
+ * Replaces the old Claude CLI spawn approach that only worked on the Mac Mini.
  */
 
-import { spawn, type ChildProcess } from 'node:child_process';
+import Anthropic from '@anthropic-ai/sdk';
 import type { EdImageAttachment } from './types';
 
-const CLAUDE_CLI = '/opt/homebrew/bin/claude';
-const CLAUDE_TIMEOUT = 180_000; // 180s
+const CLAUDE_MODEL = 'claude-sonnet-4-5-20250929';
+const MAX_TOKENS = 4096;
+
+function getClient(): Anthropic {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      'ANTHROPIC_API_KEY not set. Add it to .env.local and Vercel environment variables.',
+    );
+  }
+  return new Anthropic({ apiKey });
+}
 
 export interface ClaudeStreamOptions {
   systemPrompt: string;
@@ -16,152 +26,70 @@ export interface ClaudeStreamOptions {
 }
 
 /**
- * Yields string chunks as Claude CLI writes to stdout.
- * Throws on timeout or non-zero exit with no output.
+ * Yields string chunks as Claude streams its response.
  */
 export async function* claudeStream(
   opts: ClaudeStreamOptions,
 ): AsyncGenerator<string, void, undefined> {
   const { systemPrompt, userMessage, images } = opts;
+  const client = getClient();
 
-  const args = ['-p', '--output-format', 'stream-json'];
+  // Build content blocks
+  const content: Anthropic.MessageCreateParams['messages'][0]['content'] = [];
 
-  // If we have images, write them to temp files and pass via CLI
-  const tempFiles: string[] = [];
+  // Add images if present
   if (images?.length) {
-    const { writeFileSync, mkdtempSync } = await import('node:fs');
-    const { join } = await import('node:path');
-    const { tmpdir } = await import('node:os');
-    const dir = mkdtempSync(join(tmpdir(), 'ed-img-'));
-
     for (const img of images) {
-      const ext = img.mimeType.split('/')[1] || 'png';
-      const path = join(dir, `img-${tempFiles.length}.${ext}`);
-      writeFileSync(path, Buffer.from(img.base64, 'base64'));
-      tempFiles.push(path);
-    }
-
-    // Claude CLI supports --image flag for vision
-    for (const f of tempFiles) {
-      args.push('--image', f);
+      content.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: img.mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+          data: img.base64,
+        },
+      });
     }
   }
 
-  // Unset CLAUDECODE to allow nested CLI calls
-  const env = { ...process.env };
-  delete env.CLAUDECODE;
+  // Add text
+  content.push({ type: 'text', text: userMessage });
 
-  let proc: ChildProcess | null = null;
+  const stream = client.messages.stream({
+    model: CLAUDE_MODEL,
+    max_tokens: MAX_TOKENS,
+    system: systemPrompt,
+    messages: [{ role: 'user', content }],
+  });
 
-  try {
-    proc = spawn(CLAUDE_CLI, args, {
-      env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-
-    const timer = setTimeout(() => {
-      proc?.kill('SIGTERM');
-    }, CLAUDE_TIMEOUT);
-
-    // Write system prompt + user message via stdin
-    proc.stdin!.write(
-      `${systemPrompt}\n\n---\n\n${userMessage}`,
-    );
-    proc.stdin!.end();
-
-    // Stream stdout chunks
-    for await (const chunk of proc.stdout! as AsyncIterable<Buffer>) {
-      const text = chunk.toString('utf-8');
-      // stream-json outputs one JSON object per line
-      const lines = text.split('\n').filter(Boolean);
-      for (const line of lines) {
-        try {
-          const parsed = JSON.parse(line);
-          // stream-json format: { type: "assistant", content: [...] } or { type: "content_block_delta", ... }
-          if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-            yield parsed.delta.text;
-          } else if (parsed.type === 'result' && parsed.result) {
-            // Final result — yield any remaining text
-            if (typeof parsed.result === 'string') {
-              yield parsed.result;
-            }
-          }
-        } catch {
-          // Not JSON — yield as raw text (fallback)
-          yield line;
-        }
-      }
-    }
-
-    clearTimeout(timer);
-
-    // Wait for process to close
-    await new Promise<void>((resolve, reject) => {
-      proc!.on('close', (code) => {
-        if (code !== 0 && code !== null) {
-          // Only reject if we got no output at all
-          reject(new Error(`Claude CLI exited with code ${code}`));
-        } else {
-          resolve();
-        }
-      });
-      proc!.on('error', reject);
-    });
-  } finally {
-    // Clean up temp image files
-    if (tempFiles.length) {
-      const { unlinkSync, rmdirSync } = await import('node:fs');
-      const { dirname } = await import('node:path');
-      for (const f of tempFiles) {
-        try { unlinkSync(f); } catch { /* ignore */ }
-      }
-      try { rmdirSync(dirname(tempFiles[0])); } catch { /* ignore */ }
+  for await (const event of stream) {
+    if (
+      event.type === 'content_block_delta' &&
+      event.delta.type === 'text_delta'
+    ) {
+      yield event.delta.text;
     }
   }
 }
 
 /**
- * Non-streaming Claude CLI call. Used for quick operations.
+ * Non-streaming Claude API call. Used for quick operations.
  * Returns the full response text.
  */
 export async function claudeCall(
   systemPrompt: string,
   userMessage: string,
 ): Promise<string> {
-  const env = { ...process.env };
-  delete env.CLAUDECODE;
+  const client = getClient();
 
-  return new Promise((resolve, reject) => {
-    const proc = spawn(CLAUDE_CLI, ['-p', '--system-prompt', systemPrompt], {
-      env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-
-    const timer = setTimeout(() => {
-      proc.kill('SIGTERM');
-      reject(new Error('Claude CLI timed out after 180s'));
-    }, CLAUDE_TIMEOUT);
-
-    proc.stdin.write(userMessage);
-    proc.stdin.end();
-
-    let stdout = '';
-    let stderr = '';
-    proc.stdout.on('data', (d: Buffer) => { stdout += d; });
-    proc.stderr.on('data', (d: Buffer) => { stderr += d; });
-
-    proc.on('close', (code) => {
-      clearTimeout(timer);
-      if (code === 0 || stdout.length > 0) {
-        resolve(stdout.trim());
-      } else {
-        reject(new Error(`Claude CLI exited ${code}: ${stderr.slice(0, 500)}`));
-      }
-    });
-
-    proc.on('error', (err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
+  const response = await client.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: MAX_TOKENS,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userMessage }],
   });
+
+  const textBlocks = response.content.filter(
+    (b): b is Anthropic.TextBlock => b.type === 'text',
+  );
+  return textBlocks.map((b) => b.text).join('');
 }

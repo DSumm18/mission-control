@@ -157,7 +157,12 @@ export default function EdPanel({ onClose }: EdPanelProps) {
             const data = JSON.parse(line.slice(6));
             switch (data.type) {
               case 'text':
-                fullText += data.content;
+                // Handle action-stripped replacement
+                if (data.content.startsWith('\n<!-- REPLACE -->\n')) {
+                  fullText = data.content.replace('\n<!-- REPLACE -->\n', '');
+                } else {
+                  fullText += data.content;
+                }
                 setStreamingContent(fullText);
                 break;
               case 'action':
