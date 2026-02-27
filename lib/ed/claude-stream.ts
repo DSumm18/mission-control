@@ -1,64 +1,55 @@
 /**
- * Ed's Claude backend — uses Anthropic API directly (works on Vercel + local).
- * Replaces the old Claude CLI spawn approach that only worked on the Mac Mini.
+ * Ed's Claude backend — uses OpenRouter as proxy for Anthropic API.
+ * Supports streaming, prompt caching, multi-turn messages, and model selection.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
 import type { EdImageAttachment } from './types';
 
-const CLAUDE_MODEL = 'claude-sonnet-4-5-20250929';
+const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-5-20250929';
 const MAX_TOKENS = 4096;
 
 function getClient(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error(
-      'ANTHROPIC_API_KEY not set. Add it to .env.local and Vercel environment variables.',
+      'OPENROUTER_API_KEY not set. Add it to .env.local and Vercel environment variables.',
     );
   }
-  return new Anthropic({ apiKey });
+  return new Anthropic({
+    apiKey,
+    baseURL: 'https://openrouter.ai/api',
+  });
 }
 
 export interface ClaudeStreamOptions {
   systemPrompt: string;
-  userMessage: string;
+  messages: Anthropic.MessageCreateParams['messages'];
   images?: EdImageAttachment[];
+  model?: string;
 }
 
 /**
  * Yields string chunks as Claude streams its response.
+ * Uses proper multi-turn messages array and prompt caching on the system prompt.
  */
 export async function* claudeStream(
   opts: ClaudeStreamOptions,
 ): AsyncGenerator<string, void, undefined> {
-  const { systemPrompt, userMessage, images } = opts;
+  const { systemPrompt, messages, model } = opts;
   const client = getClient();
 
-  // Build content blocks
-  const content: Anthropic.MessageCreateParams['messages'][0]['content'] = [];
-
-  // Add images if present
-  if (images?.length) {
-    for (const img of images) {
-      content.push({
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: img.mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-          data: img.base64,
-        },
-      });
-    }
-  }
-
-  // Add text
-  content.push({ type: 'text', text: userMessage });
-
   const stream = client.messages.stream({
-    model: CLAUDE_MODEL,
+    model: model || DEFAULT_MODEL,
     max_tokens: MAX_TOKENS,
-    system: systemPrompt,
-    messages: [{ role: 'user', content }],
+    system: [
+      {
+        type: 'text',
+        text: systemPrompt,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
+    messages,
   });
 
   for await (const event of stream) {
@@ -78,13 +69,20 @@ export async function* claudeStream(
 export async function claudeCall(
   systemPrompt: string,
   userMessage: string,
+  model?: string,
 ): Promise<string> {
   const client = getClient();
 
   const response = await client.messages.create({
-    model: CLAUDE_MODEL,
+    model: model || DEFAULT_MODEL,
     max_tokens: MAX_TOKENS,
-    system: systemPrompt,
+    system: [
+      {
+        type: 'text',
+        text: systemPrompt,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
     messages: [{ role: 'user', content: userMessage }],
   });
 

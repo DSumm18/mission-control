@@ -39,7 +39,7 @@ export interface EdActionResult {
 export type EdStreamChunk =
   | { type: 'text'; content: string }
   | { type: 'action'; action: EdActionResult }
-  | { type: 'done'; message_id: string; duration_ms: number }
+  | { type: 'done'; message_id: string; duration_ms: number; model_used?: string }
   | { type: 'error'; error: string };
 
 export interface EdChatRequest {

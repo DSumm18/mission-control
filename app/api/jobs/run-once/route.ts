@@ -4,6 +4,7 @@ import { routeJob } from '@/lib/org/agent-router';
 import { composePrompt, getAgentMCPServers } from '@/lib/org/prompt-composer';
 import { scoreJob, type QAScores } from '@/lib/org/quality-scorer';
 import { decomposeJob } from '@/lib/org/decomposer';
+import { createNotification } from '@/lib/ed/notifications';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -193,6 +194,41 @@ export async function POST(req: NextRequest) {
   }
 
   await appendRunnerLog(`run-finish job=${claimed.id} status=${status} code=${proc.code}`);
+
+  // --- Auto-create notification for David ---
+  try {
+    const isCodeChange = (claimed.title as string || '').toLowerCase().includes('code change');
+    if (status === 'done' && isCodeChange) {
+      await createNotification({
+        title: `Deploy ready: ${(claimed.title as string || '').slice(0, 80)}`,
+        body: `Code change complete. Build passed. Ready for Vercel deploy.`,
+        category: 'deploy_ready',
+        priority: 'high',
+        source_type: 'job',
+        source_id: claimed.id as string,
+      });
+    } else if (status === 'done') {
+      await createNotification({
+        title: `Job complete: ${(claimed.title as string || '').slice(0, 80)}`,
+        body: result?.slice(0, 200) || undefined,
+        category: 'job_complete',
+        priority: 'normal',
+        source_type: 'job',
+        source_id: claimed.id as string,
+      });
+    } else if (status === 'failed') {
+      await createNotification({
+        title: `Job failed: ${(claimed.title as string || '').slice(0, 80)}`,
+        body: error?.slice(0, 200) || undefined,
+        category: 'job_failed',
+        priority: 'high',
+        source_type: 'job',
+        source_id: claimed.id as string,
+      });
+    }
+  } catch (notifErr) {
+    await appendRunnerLog(`notification-error job=${claimed.id} err=${notifErr}`);
+  }
 
   // --- Post-execution: QA pipeline ---
   if (status === 'done') {

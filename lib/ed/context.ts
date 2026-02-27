@@ -4,6 +4,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/supabase-server';
+import type Anthropic from '@anthropic-ai/sdk';
 
 export async function buildContextBlock(): Promise<string> {
   const sb = supabaseAdmin();
@@ -132,6 +133,22 @@ export async function buildContextBlock(): Promise<string> {
       }
     }
 
+    // Pending notifications
+    const { data: notifications } = await sb
+      .from('mc_ed_notifications')
+      .select('id, title, body, category, priority, created_at')
+      .in('status', ['pending', 'delivered'])
+      .order('priority', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (notifications?.length) {
+      ctx += '\n**Pending Items for David:**\n';
+      for (const n of notifications) {
+        ctx += `- [${n.priority}] ${n.title}${n.body ? ` — ${n.body.slice(0, 100)}` : ''} (${n.category}, id: ${n.id})\n`;
+      }
+    }
+
     // Recent decisions for pattern learning + quality analysis
     const { data: recentDecisions } = await sb
       .from('mc_challenge_board')
@@ -237,12 +254,13 @@ export async function buildContextBlock(): Promise<string> {
 }
 
 /**
- * Load recent conversation history from mc_ed_messages.
+ * Load recent conversation history as Anthropic messages[] array.
+ * Returns proper multi-turn format for better prompt caching.
  */
 export async function loadConversationHistory(
   conversationId: string,
   limit = 20,
-): Promise<string> {
+): Promise<Anthropic.MessageCreateParams['messages']> {
   const sb = supabaseAdmin();
 
   const { data } = await sb
@@ -252,12 +270,25 @@ export async function loadConversationHistory(
     .order('created_at', { ascending: false })
     .limit(limit);
 
-  if (!data?.length) return '';
+  if (!data?.length) return [];
 
-  const lines = data.reverse().map(m => {
-    const name = m.role === 'user' ? 'David' : 'Ed';
-    return `${name}: ${m.content}`;
-  });
+  // Reverse to chronological order and map to Anthropic format
+  const messages: Anthropic.MessageCreateParams['messages'] = [];
+  for (const m of data.reverse()) {
+    const role = m.role === 'user' ? 'user' as const : 'assistant' as const;
+    // Merge consecutive same-role messages
+    if (messages.length > 0 && messages[messages.length - 1].role === role) {
+      const last = messages[messages.length - 1];
+      last.content = `${last.content}\n${m.content}`;
+    } else {
+      messages.push({ role, content: m.content });
+    }
+  }
 
-  return '\n## Recent Conversation\n' + lines.join('\n') + '\n';
+  // Ensure messages start with user (Anthropic requirement)
+  if (messages.length > 0 && messages[0].role !== 'user') {
+    messages.shift();
+  }
+
+  return messages;
 }

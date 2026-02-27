@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, X, Volume2, VolumeX } from 'lucide-react';
+import { Plus, X, Volume2, VolumeX, Bell } from 'lucide-react';
 import EdMessageList from './EdMessageList';
 import EdInput from './EdInput';
 import VoiceInput from './VoiceInput';
 import VoiceOutput from './VoiceOutput';
+import EdNotifications from './EdNotifications';
 import type { ImagePreview } from './ImageUpload';
 
 interface Message {
@@ -45,6 +46,7 @@ export default function EdPanel({ onClose }: EdPanelProps) {
   const [streamingContent, setStreamingContent] = useState('');
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [lastAssistantText, setLastAssistantText] = useState('');
+  const [notifCount, setNotifCount] = useState(0);
 
   // Load conversations
   useEffect(() => {
@@ -143,6 +145,7 @@ export default function EdPanel({ onClose }: EdPanelProps) {
       const actions: ActionResult[] = [];
       let messageId = '';
       let durationMs = 0;
+      let modelUsed: string | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -171,6 +174,7 @@ export default function EdPanel({ onClose }: EdPanelProps) {
               case 'done':
                 messageId = data.message_id;
                 durationMs = data.duration_ms;
+                modelUsed = data.model_used || null;
                 break;
               case 'error':
                 fullText += `\n\n**Error:** ${data.error}`;
@@ -189,7 +193,7 @@ export default function EdPanel({ onClose }: EdPanelProps) {
         role: 'assistant',
         content: fullText,
         actions_taken: actions,
-        model_used: actions.length > 0 ? 'claude-cli' : null,
+        model_used: modelUsed,
         duration_ms: durationMs || null,
         created_at: new Date().toISOString(),
       };
@@ -220,6 +224,9 @@ export default function EdPanel({ onClose }: EdPanelProps) {
           <span className="ed-status">CEO</span>
         </div>
         <div className="ed-header-actions">
+          {notifCount > 0 && (
+            <span className="ed-notif-badge">{notifCount}</span>
+          )}
           <button
             className="ed-icon-btn"
             onClick={() => setVoiceEnabled(!voiceEnabled)}
@@ -235,6 +242,8 @@ export default function EdPanel({ onClose }: EdPanelProps) {
           </button>
         </div>
       </div>
+
+      <EdNotifications onNotificationCount={setNotifCount} />
 
       {conversations.length > 1 && (
         <div className="ed-conv-bar">

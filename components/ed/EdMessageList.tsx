@@ -58,6 +58,10 @@ function formatAction(action: ActionResult): string {
       return `${icon} Code change dispatched to Kerry (CTO)${action.job_id ? ` — job ${action.job_id.slice(0, 8)}` : ''}`;
     case 'deploy':
       return `${icon} Deployment triggered${action.job_id ? ` — job ${action.job_id.slice(0, 8)}` : ''}`;
+    case 'acknowledge_notification':
+      return `${icon} Notification acknowledged`;
+    case 'create_notification':
+      return `${icon} Reminder created`;
     default:
       return `${icon} ${action.type}`;
   }

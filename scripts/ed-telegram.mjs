@@ -593,23 +593,20 @@ async function processMessage(msg) {
   }
 }
 
-// ── Job Completion Notifier ─────────────────────────────────────────────
+// ── Notification Delivery ────────────────────────────────────────────────
 
-let lastJobCheck = new Date().toISOString();
-
-async function checkCompletedJobs() {
+async function deliverNotifications() {
   try {
-    // Find jobs completed since last check that were queued by Ed actions
-    const { data: completedJobs } = await sb
-      .from('mc_jobs')
-      .select('id, title, status, result, updated_at')
-      .in('status', ['done', 'failed'])
-      .gt('updated_at', lastJobCheck)
-      .order('updated_at', { ascending: false })
+    // Find pending notifications not yet delivered via Telegram
+    const { data: notifications } = await sb
+      .from('mc_ed_notifications')
+      .select('id, title, body, category, priority, metadata')
+      .eq('status', 'pending')
+      .order('priority', { ascending: false })
+      .order('created_at', { ascending: true })
       .limit(5);
 
-    if (!completedJobs?.length) return;
-    lastJobCheck = new Date().toISOString();
+    if (!notifications?.length) return;
 
     // Find David's chat ID from recent messages
     const { data: recentMsg } = await sb
@@ -622,14 +619,40 @@ async function checkCompletedJobs() {
 
     if (!recentMsg?.chat_id) return;
 
-    for (const job of completedJobs) {
-      const icon = job.status === 'done' ? '✅' : '❌';
-      const resultPreview = job.result
-        ? (typeof job.result === 'string' ? job.result : JSON.stringify(job.result)).slice(0, 200)
-        : '';
-      await sendTelegram(recentMsg.chat_id,
-        `${icon} Job complete: *${job.title}*\n${resultPreview ? `\n${resultPreview}` : ''}`
-      );
+    for (const notif of notifications) {
+      const icon = {
+        job_complete: '✅',
+        job_failed: '❌',
+        decision_needed: '🤔',
+        approval_needed: '✋',
+        deploy_ready: '🚀',
+        alert: '⚠️',
+        info: 'ℹ️',
+        reminder: '🔔',
+      }[notif.category] || '📌';
+
+      let text = `${icon} *${notif.title}*`;
+      if (notif.body) text += `\n${notif.body.slice(0, 300)}`;
+
+      // Urgent items get extra emphasis
+      if (notif.priority === 'urgent') {
+        text = `🔴 URGENT\n${text}`;
+      }
+
+      await sendTelegram(recentMsg.chat_id, text);
+
+      // Mark as delivered via telegram
+      const delivered_via = ['telegram'];
+      await sb
+        .from('mc_ed_notifications')
+        .update({
+          status: 'delivered',
+          delivered_via,
+          delivered_at: new Date().toISOString(),
+        })
+        .eq('id', notif.id);
+
+      log(`NOTIFICATION: delivered ${notif.id} via telegram (${notif.category}/${notif.priority})`);
     }
   } catch (err) {
     // Non-critical — don't log spam
@@ -727,8 +750,8 @@ async function loop() {
         await processMessage(stored);
       }
 
-      // 4. Check for completed jobs to proactively notify David
-      await checkCompletedJobs();
+      // 4. Deliver pending notifications to David via Telegram
+      await deliverNotifications();
 
     } catch (err) {
       log(`LOOP ERROR: ${err.message}`);

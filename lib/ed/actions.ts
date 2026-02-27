@@ -6,6 +6,7 @@
 import { supabaseAdmin } from '@/lib/db/supabase-server';
 import type { EdAction, EdActionResult } from './types';
 import { createChallengeBoard, recordDecision } from './challenge-board';
+import { createNotification, markAcknowledged } from './notifications';
 
 /**
  * Parse MC_ACTION blocks from Ed's response text.
@@ -557,6 +558,33 @@ ${reason ? `## Why\n${reason}` : ''}
         case 'check_status': {
           // This is a read-only action — Ed uses the context block
           results.push({ type: 'check_status', ok: true });
+          break;
+        }
+
+        case 'acknowledge_notification': {
+          const p = action.params as Record<string, string>;
+          if (!p.notification_id) {
+            results.push({ type: 'acknowledge_notification', ok: false, error: 'notification_id required' });
+            break;
+          }
+          await markAcknowledged(p.notification_id);
+          results.push({ type: 'acknowledge_notification', id: p.notification_id, ok: true });
+          break;
+        }
+
+        case 'create_notification': {
+          const p = action.params as Record<string, string>;
+          const notif = await createNotification({
+            title: p.title || 'Reminder from Ed',
+            body: p.body || undefined,
+            category: (p.category as 'reminder' | 'info' | 'alert') || 'reminder',
+            priority: (p.priority as 'low' | 'normal' | 'high' | 'urgent') || 'normal',
+          });
+          if (notif) {
+            results.push({ type: 'create_notification', id: notif.id, ok: true });
+          } else {
+            results.push({ type: 'create_notification', ok: false, error: 'Failed to create notification' });
+          }
           break;
         }
 
