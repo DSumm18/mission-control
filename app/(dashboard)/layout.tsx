@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -8,6 +9,8 @@ import {
   ListTodo, Settings, CheckSquare,
   Calendar, Search, FileEdit, ShieldCheck, Send,
 } from 'lucide-react';
+import EdToggle from '@/components/ed/EdToggle';
+import EdPanel from '@/components/ed/EdPanel';
 
 type NavItem =
   | { href: string; label: string; icon: typeof LayoutDashboard }
@@ -46,9 +49,10 @@ const NAV: NavItem[] = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [edOpen, setEdOpen] = useState(false);
 
   return (
-    <div className="shell">
+    <div className={`shell ${edOpen ? 'shell-ed-open' : ''}`}>
       <aside className="sidebar">
         <div className="brand">Mission Control</div>
         <div className="sub">Operator Console</div>
@@ -87,9 +91,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Link>
             );
           })}
+
+          <div className="nav-divider" />
+          <EdToggle isOpen={edOpen} onToggle={() => setEdOpen(!edOpen)} />
         </nav>
       </aside>
       <main className="main">{children}</main>
+      {edOpen && <EdPanel onClose={() => setEdOpen(false)} />}
     </div>
   );
 }

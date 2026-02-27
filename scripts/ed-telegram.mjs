@@ -25,7 +25,7 @@ import { spawn } from 'node:child_process';
 const ENV_PATH       = resolve(process.cwd(), '.env.local');
 const MAX_HISTORY    = 20;             // messages to include in conversation context
 const CLAUDE_CLI     = '/opt/homebrew/bin/claude';
-const CLAUDE_TIMEOUT = 90_000;         // 90s max per response
+const CLAUDE_TIMEOUT = 180_000;        // 180s max per response
 
 // ── Load .env.local ─────────────────────────────────────────────────────
 
@@ -333,12 +333,8 @@ async function executeActions(actions, chatId) {
             .from('mc_jobs')
             .insert({
               title: `Assess: ${p.title || p.url || 'Research item'}`,
-              command: 'research_assessment',
-              args: JSON.stringify({
-                research_item_id: researchId,
-                url: p.url,
-                content_type: p.content_type,
-              }),
+              prompt_text: `Assess this content for the Schoolgle Signal newsletter. URL: ${p.url || 'N/A'}. Content type: ${p.content_type || 'article'}. Summarise the key points, score relevance 1-10 for UK school leaders, suggest a newsletter angle, and explain WHY it matters.`,
+              repo_path: '/Users/david/.openclaw/workspace/mission-control',
               engine: 'claude',
               status: 'queued',
               priority: 1,
@@ -372,8 +368,8 @@ async function executeActions(actions, chatId) {
             .from('mc_jobs')
             .insert({
               title: `Deep Dive: ${p.focus || 'Analysis'}`,
-              command: 'deep_analysis',
-              args: JSON.stringify(p),
+              prompt_text: `Deep analysis for Schoolgle Signal: ${p.focus || 'General analysis'}. Provide policy context, cross-references with DfE data, implications for UK school leaders, and actionable recommendations.${p.research_item_id ? ` Research item: ${p.research_item_id}` : ''}`,
+              repo_path: '/Users/david/.openclaw/workspace/mission-control',
               engine: 'claude',
               status: 'queued',
               priority: 1,
@@ -417,8 +413,8 @@ async function executeActions(actions, chatId) {
             .from('mc_jobs')
             .insert({
               title: `Generate Draft: Newsletter ${p.newsletter_id}`,
-              command: 'draft_decompose',
-              args: JSON.stringify({ newsletter_id: p.newsletter_id }),
+              prompt_text: `Decompose newsletter ${p.newsletter_id} into sections. Review approved research items and generate a draft plan with sections: headline, lead_story, data_snapshot, tool_spotlight, policy_watch, quick_wins, week_ahead.`,
+              repo_path: '/Users/david/.openclaw/workspace/mission-control',
               engine: 'claude',
               status: 'queued',
               priority: 1,
@@ -536,11 +532,18 @@ async function processMessage(msg) {
 
     userMessage += '\n\nRespond as Ed:';
 
-    // 7. Refresh typing indicator (might have expired)
-    await sendChatAction(msg.chat_id, 'typing');
+    // 7. Refresh typing indicator periodically during Claude call
+    const typingInterval = setInterval(() => {
+      sendChatAction(msg.chat_id, 'typing');
+    }, 4_000);
 
     // 8. Call Claude CLI
-    const rawResponse = await callClaude(systemPrompt, userMessage);
+    let rawResponse;
+    try {
+      rawResponse = await callClaude(systemPrompt, userMessage);
+    } finally {
+      clearInterval(typingInterval);
+    }
 
     // 9. Parse response and extract actions
     const { text, actions } = parseResponse(rawResponse);
@@ -581,10 +584,12 @@ async function processMessage(msg) {
       .update({ status: 'error', error_message: err.message })
       .eq('id', msg.id);
 
-    // Send error to David
-    await sendTelegram(msg.chat_id,
-      `⚠️ Hit a snag processing that. Error: ${err.message.slice(0, 200)}\n\nI'll keep trying on the next message.`
-    );
+    // Send error to David with context-specific message
+    const isTimeout = err.message.includes('timed out');
+    const errorMsg = isTimeout
+      ? `⚡ That one took too long (>3 min). Try breaking it into smaller messages or I'll pick it up on a shorter prompt.`
+      : `⚠️ Hit a snag: ${err.message.slice(0, 200)}\n\nI'll keep going on the next message.`;
+    await sendTelegram(msg.chat_id, errorMsg);
   }
 }
 

@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
   const args = [
     '--job-id', claimed.id,
     '--engine', claimed.engine,
-    '--repo', claimed.repo_path,
+    '--repo', claimed.repo_path || process.cwd(),
     '--command', commandText,
     '--args', JSON.stringify(claimed.args || []),
     ...(mcpServersStr ? ['--mcp-servers', mcpServersStr] : []),
