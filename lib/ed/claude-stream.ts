@@ -27,9 +27,13 @@ function defaultModel(): string {
 
 function getClient(): Anthropic {
   if (useOpenRouter()) {
+    const key = process.env.OPENROUTER_API_KEY!;
     return new Anthropic({
-      apiKey: process.env.OPENROUTER_API_KEY!,
+      apiKey: key,
       baseURL: 'https://openrouter.ai/api',
+      defaultHeaders: {
+        'Authorization': `Bearer ${key}`,
+      },
     });
   }
 
