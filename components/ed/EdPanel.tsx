@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, X, Volume2, VolumeX, Bell } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import EdMessageList from './EdMessageList';
 import EdInput from './EdInput';
 import VoiceInput from './VoiceInput';
-import VoiceOutput from './VoiceOutput';
+import VoiceOutput, { type VoicePersona } from './VoiceOutput';
 import EdNotifications from './EdNotifications';
 import type { ImagePreview } from './ImageUpload';
 
@@ -44,7 +44,7 @@ export default function EdPanel({ onClose }: EdPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceMode, setVoiceMode] = useState<'off' | VoicePersona>('off');
   const [lastAssistantText, setLastAssistantText] = useState('');
   const [notifCount, setNotifCount] = useState(0);
 
@@ -227,13 +227,16 @@ export default function EdPanel({ onClose }: EdPanelProps) {
           {notifCount > 0 && (
             <span className="ed-notif-badge">{notifCount}</span>
           )}
-          <button
-            className="ed-icon-btn"
-            onClick={() => setVoiceEnabled(!voiceEnabled)}
-            title={voiceEnabled ? 'Mute Ed' : 'Enable voice'}
+          <select
+            className="ed-voice-select"
+            value={voiceMode}
+            onChange={(e) => setVoiceMode(e.target.value as 'off' | VoicePersona)}
+            title="Voice persona"
           >
-            {voiceEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-          </button>
+            <option value="off">Mute</option>
+            <option value="ed">Ed</option>
+            <option value="edwina">Edwina</option>
+          </select>
           <button className="ed-icon-btn" onClick={createConversation} title="New conversation">
             <Plus size={14} />
           </button>
@@ -276,8 +279,8 @@ export default function EdPanel({ onClose }: EdPanelProps) {
         }
       />
 
-      {voiceEnabled && lastAssistantText && (
-        <VoiceOutput text={lastAssistantText} enabled={voiceEnabled} />
+      {voiceMode !== 'off' && lastAssistantText && (
+        <VoiceOutput text={lastAssistantText} enabled voice={voiceMode} />
       )}
     </aside>
   );

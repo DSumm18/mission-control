@@ -2,16 +2,19 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 
+export type VoicePersona = 'ed' | 'edwina';
+
 interface VoiceOutputProps {
   text: string;
   enabled: boolean;
+  voice?: VoicePersona;
 }
 
 /**
  * Sentence-level voice output for Ed.
  * Streams audio per sentence — plays sentence 1 while sentence 2 synthesises.
  */
-export default function VoiceOutput({ text, enabled }: VoiceOutputProps) {
+export default function VoiceOutput({ text, enabled, voice = 'ed' }: VoiceOutputProps) {
   const lastSpokenRef = useRef('');
   const audioQueueRef = useRef<HTMLAudioElement[]>([]);
   const isPlayingRef = useRef(false);
@@ -60,7 +63,7 @@ export default function VoiceOutput({ text, enabled }: VoiceOutputProps) {
         const res = await fetch('/api/ed/voice-stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: text.slice(0, 2000) }),
+          body: JSON.stringify({ text: text.slice(0, 2000), voice }),
           signal: controller.signal,
         });
 
@@ -116,7 +119,7 @@ export default function VoiceOutput({ text, enabled }: VoiceOutputProps) {
     return () => {
       controller.abort();
     };
-  }, [text, enabled, playNext]);
+  }, [text, enabled, voice, playNext]);
 
   return null;
 }

@@ -5,21 +5,37 @@
 
 export interface TTSProvider {
   name: string;
-  synthesize(text: string): Promise<ArrayBuffer>;
+  synthesize(text: string, persona?: VoicePersona): Promise<ArrayBuffer>;
 }
+
+export type VoicePersona = 'ed' | 'edwina';
 
 /** Fish Audio TTS provider */
 class FishAudioProvider implements TTSProvider {
   name = 'fish-audio';
   private apiKey: string;
-  private voiceId: string;
 
-  constructor(apiKey: string, voiceId: string) {
+  constructor(apiKey: string) {
     this.apiKey = apiKey;
-    this.voiceId = voiceId;
   }
 
-  async synthesize(text: string): Promise<ArrayBuffer> {
+  private getVoiceId(persona: VoicePersona): string | null {
+    if (persona === 'edwina') {
+      return process.env.FISH_AUDIO_VOICE_ID_EDWINA
+        || process.env.NEXT_PUBLIC_FISH_AUDIO_VOICE_ID_EDWINA
+        || null;
+    }
+    return process.env.FISH_AUDIO_VOICE_ID_ED
+      || process.env.NEXT_PUBLIC_FISH_AUDIO_VOICE_ID_ED
+      || null;
+  }
+
+  async synthesize(text: string, persona: VoicePersona = 'ed'): Promise<ArrayBuffer> {
+    const voiceId = this.getVoiceId(persona);
+    if (!voiceId) {
+      throw new Error(`No voice ID configured for persona "${persona}"`);
+    }
+
     const res = await fetch('https://api.fish.audio/v1/tts', {
       method: 'POST',
       headers: {
@@ -28,7 +44,7 @@ class FishAudioProvider implements TTSProvider {
       },
       body: JSON.stringify({
         text,
-        reference_id: this.voiceId,
+        reference_id: voiceId,
         format: 'mp3',
         latency: 'balanced',
       }),
@@ -50,9 +66,8 @@ export function getTTSProvider(): TTSProvider | null {
   switch (provider) {
     case 'fish-audio': {
       const apiKey = process.env.FISH_AUDIO_API_KEY || process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY;
-      const voiceId = process.env.FISH_AUDIO_VOICE_ID_ED || process.env.NEXT_PUBLIC_FISH_AUDIO_VOICE_ID_ED;
-      if (!apiKey || !voiceId) return null;
-      return new FishAudioProvider(apiKey, voiceId);
+      if (!apiKey) return null;
+      return new FishAudioProvider(apiKey);
     }
     default:
       return null;

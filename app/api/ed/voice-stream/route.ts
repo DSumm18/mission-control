@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 import { NextRequest } from 'next/server';
-import { getTTSProvider, splitSentences } from '@/lib/ed/tts-provider';
+import { getTTSProvider, splitSentences, type VoicePersona } from '@/lib/ed/tts-provider';
 
 function arrayBufferToBase64(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
@@ -27,15 +27,17 @@ export async function POST(req: NextRequest) {
   const provider = getTTSProvider();
   if (!provider) {
     return Response.json(
-      { error: 'TTS not configured (check TTS_PROVIDER, FISH_AUDIO_API_KEY, FISH_AUDIO_VOICE_ID_ED)' },
+      { error: 'TTS not configured (check FISH_AUDIO_API_KEY or NEXT_PUBLIC_FISH_AUDIO_API_KEY)' },
       { status: 503 },
     );
   }
 
   let text: string;
+  let voice: VoicePersona = 'ed';
   try {
     const body = await req.json();
     text = body.text;
+    if (body.voice === 'edwina') voice = 'edwina';
   } catch {
     return Response.json({ error: 'Invalid JSON' }, { status: 400 });
   }
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
         for (let i = 0; i < sentences.length; i++) {
           const sentence = sentences[i];
           try {
-            const audio = await provider.synthesize(sentence);
+            const audio = await provider.synthesize(sentence, voice);
             const base64 = arrayBufferToBase64(audio);
             controller.enqueue(
               encoder.encode(
