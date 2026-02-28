@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/ToastContext';
+import PageInfo from '@/components/ui/PageInfo';
 
 type PipelineJob = {
   job_id: string;
@@ -94,7 +95,10 @@ export default function PipelinePage() {
 
   return (
     <div>
-      <h1 className="page-title">Pipeline</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Pipeline</h1>
+        <PageInfo title="Pipeline" description="Kanban board showing all jobs by status. Drag and drop cards between columns to update job status in real-time." features={["Drag cards between Queued, Running, Reviewing, Done, and Failed columns", "Running jobs pulse with a breathing glow", "Shows elapsed time on active jobs", "Click any card to see full job details"]} />
+      </div>
       <p className="page-sub">Kanban view — drag cards between columns to update status.</p>
 
       <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 12 }}>

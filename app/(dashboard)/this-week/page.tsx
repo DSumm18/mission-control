@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import PageInfo from '@/components/ui/PageInfo';
 
 /* ── types ───────────────────────────────────────────────── */
 
@@ -144,7 +145,10 @@ export default function ThisWeekPage() {
 
   return (
     <>
-      <h1 className="page-title">This Week</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">This Week</h1>
+        <PageInfo title="This Week's Newsletter" description="Preview of the current week's Schoolgle Signal newsletter. See the latest draft with all sections assembled." features={["Live preview of the newsletter draft", "Sections pulled from research and content pipeline", "Track publish status and quality scores"]} />
+      </div>
       <p className="page-sub">
         {current
           ? `Week ${current.week_no} — ${current.title}`

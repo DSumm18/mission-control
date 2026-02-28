@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import PageInfo from '@/components/ui/PageInfo';
 
 type Project = {
   id: string;
@@ -39,7 +40,10 @@ export default function ProjectsPage() {
 
   return (
     <div>
-      <h1 className="page-title">Projects</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Projects</h1>
+        <PageInfo title="Projects" description="Your product portfolio. Each project tracks revenue targets, delivery milestones, assigned agents, and overall progress." features={["Revenue targets and milestone progress at a glance", "Click a project for the full command center", "Launch Claude Code sessions directly from projects", "Track costs and job history per project"]} />
+      </div>
       <p className="page-sub">Portfolio view with delivery plans, revenue targets, and PM assignments.</p>
 
       {/* Business Summary */}

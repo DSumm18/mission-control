@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import PageInfo from '@/components/ui/PageInfo';
 
 type Run = {
   id: string;
@@ -29,7 +30,10 @@ export default function RunsPage() {
 
   return (
     <div>
-      <h1 className="page-title">Run Ledger</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Run Ledger</h1>
+        <PageInfo title="Runs" description="Execution history for all agent runs. Lower-level view than Jobs — shows individual run attempts, retries, and timing." features={["See raw execution data per run", "Track retries and failure patterns", "Duration and cost per individual run"]} />
+      </div>
       <p className="page-sub">Who ran what, on which model, at what cost, with what outcome.</p>
       <div className="card table-wrap">
         <table>

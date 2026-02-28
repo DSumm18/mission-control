@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Calendar as CalIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import PageInfo from '@/components/ui/PageInfo';
 
 type DayStats = {
   date: string;
@@ -72,9 +73,12 @@ export default function CalendarPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <CalIcon size={24} /> Job Calendar
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <CalIcon size={24} /> Job Calendar
+            </h1>
+            <PageInfo title="Calendar" description="Visual calendar showing job execution history. See at a glance which days had the most activity and what succeeded or failed." features={["Colored dots show job outcomes — green for done, red for failed", "Navigate between weeks to see historical patterns", "Click a day to see all jobs that ran"]} />
+          </div>
           <p className="page-sub" style={{ marginBottom: 0 }}>Visual job history by day. Click a day to see details.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

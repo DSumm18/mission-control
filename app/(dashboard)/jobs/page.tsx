@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import PageInfo from '@/components/ui/PageInfo';
 
 type Job = {
   id: string;
@@ -100,7 +101,10 @@ export default function JobsPage() {
 
   return (
     <div>
-      <h1 className="page-title">Jobs Runner</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Jobs Runner</h1>
+        <PageInfo title="Jobs Runner" description="Full job execution log. See every job that has run, is running, or is queued — with status, timing, cost, and quality scores." features={["Filter by status, agent, or job type", "See execution duration and cost per job", "Quality scores from automated QA review", "Click any job to see its full output"]} />
+      </div>
       <p className="page-sub">Create execution jobs, run them through engines, and keep evidence for every outcome.</p>
 
       <section className="grid" style={{ marginBottom: 14 }}>

@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import PageInfo from '@/components/ui/PageInfo';
 
 type Skill = {
   id: string;
@@ -167,7 +168,10 @@ export default function SkillsPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <h1 className="page-title">Skills Registry</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h1 className="page-title">Skills Registry</h1>
+          <PageInfo title="Skills" description="Reusable prompt templates that agents use for specific tasks. Skills standardize quality and ensure consistent output." features={["Each skill has a prompt template and target engine", "Agents reference skills when executing jobs", "Edit skills to improve agent output quality"]} />
+        </div>
         <button className="btn-primary" onClick={() => { setShowForm(!showForm); setEditId(null); }}>
           {showForm ? 'Cancel' : '+ Add Skill'}
         </button>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import PageInfo from '@/components/ui/PageInfo';
 
 type OrgAgent = {
   agent_id: string;
@@ -157,7 +158,10 @@ export default function OrgChartPage() {
 
   return (
     <div>
-      <h1 className="page-title">Org Chart & Decision Board</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Org Chart & Decision Board</h1>
+        <PageInfo title="Org Chart" description="Visual hierarchy of your AI organization. See how agents are structured, their roles, and reporting lines." features={["Executive agents shown at the top with accent borders", "See each agent's role, engine, and status", "Click any agent card to view their full profile"]} />
+      </div>
       <p className="page-sub">
         {agents.length} agents across {new Set(agents.map(a => a.department_name).filter(Boolean)).size} departments
         {' '}&middot; {openBoards.length} open decision{openBoards.length !== 1 ? 's' : ''}

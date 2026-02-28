@@ -1,3 +1,7 @@
+'use client';
+
+import PageInfo from '@/components/ui/PageInfo';
+
 const queue = [
   { item: 'Feature launch post: Mission Control', channel: 'X + LinkedIn', status: 'Drafting' },
   { item: 'ClawPhone voice update teaser', channel: 'Telegram', status: 'Queued' },
@@ -7,7 +11,14 @@ const queue = [
 export default function CreativeStudioPage() {
   return (
     <div>
-      <h1 className="page-title">Creative Studio</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Creative Studio</h1>
+        <PageInfo
+          title="Creative Studio"
+          description="Creative asset workspace for generating images, designs, and visual content for projects and newsletters."
+          features={["Generate visual assets with AI", "Manage creative briefs", "Assets integrate with newsletter pipeline"]}
+        />
+      </div>
       <p className="page-sub">Campaign and content ops tied directly to product execution.</p>
 
       <section className="grid">

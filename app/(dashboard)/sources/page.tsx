@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import PageInfo from '@/components/ui/PageInfo';
 
 type Source = { id: string; name: string; source_type: string; check_cadence: string; reliability_score: number };
 type Update = { id: string; headline: string; topic_area: string; url: string; verified_official: boolean; impact_score: number; mc_signal_sources?: { name?: string } };
@@ -35,7 +36,10 @@ export default function SourcesPage() {
 
   return (
     <div>
-      <h1 className="page-title">Signal Sources + Updates</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Signal Sources + Updates</h1>
+        <PageInfo title="Sources" description="Data sources that feed your research pipeline. Manage RSS feeds, APIs, and other inputs that Scout and research agents monitor." features={["Add and manage research data sources", "Track which sources are active", "Sources feed into the research capture pipeline"]} />
+      </div>
       <p className="page-sub">Track specific topic updates (not vague source labels) to drive newsletter planning.</p>
 
       <section className="grid" style={{ marginBottom: 14 }}>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import PageInfo from '@/components/ui/PageInfo';
 
 type Agent = {
   id: string;
@@ -48,7 +49,10 @@ export default function AgentsPage() {
 
   return (
     <div>
-      <h1 className="page-title">Agents</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Agents</h1>
+        <PageInfo title="Agents" description="Your AI workforce. Each agent has a role, an engine, and performance metrics. Monitor quality scores, failure rates, and job history." features={["Status dots show which agents are actively running jobs", "Quality scores track output quality over time", "Click an agent to see full detail and job history", "Toggle agents active/inactive as needed"]} />
+      </div>
       <p className="page-sub">Role-based orchestration roster grouped by department.</p>
 
       {allGroups.map(([deptName, deptAgents]) => (

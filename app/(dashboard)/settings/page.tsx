@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import PageInfo from '@/components/ui/PageInfo';
 
 type EnvKey = { name: string; set: boolean };
 type Setting = { key: string; value: string };
@@ -47,7 +48,10 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h1 className="page-title">Settings</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Settings</h1>
+        <PageInfo title="Settings" description="Global Mission Control configuration. Feature flags, scheduling intervals, parallel job limits, and system preferences." features={["Toggle feature flags on/off instantly", "Adjust scheduler polling interval", "Set parallel job execution limits", "Changes take effect on next scheduler cycle"]} />
+      </div>
       <p className="page-sub">System configuration, environment status, and operational controls.</p>
 
       <section className="grid" style={{ marginBottom: 14 }}>

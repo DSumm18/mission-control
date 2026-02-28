@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import PageInfo from '@/components/ui/PageInfo';
 
 type Task = {
   id: string;
@@ -100,7 +101,10 @@ export default function TasksPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <h1 className="page-title">My Tasks</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h1 className="page-title">My Tasks</h1>
+          <PageInfo title="My Tasks" description="Personal task board. Track what needs doing across all projects — assigned to you, agents, or Ed." features={["Create tasks with priority, due dates, and project links", "Filter by status: todo, in progress, done", "Inline status updates — click the badge to cycle", "Tasks feed into agent job creation"]} />
+        </div>
         <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Cancel' : '+ Add Task'}
         </button>

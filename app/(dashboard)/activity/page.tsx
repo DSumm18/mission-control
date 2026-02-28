@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Activity, Filter } from 'lucide-react';
+import PageInfo from '@/components/ui/PageInfo';
 
 type ActivityItem = {
   id: string;
@@ -81,9 +82,12 @@ export default function ActivityPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Activity size={24} /> Activity Log
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Activity size={24} /> Activity Log
+            </h1>
+            <PageInfo title="Activity Feed" description="Live feed of everything happening across Mission Control — jobs, notifications, research, newsletters, and challenge board decisions." features={["Auto-refreshes every 30 seconds", "Filter by activity type using the buttons", "Grouped by date for easy scanning", "Click any item to navigate to its detail page"]} />
+          </div>
           <p className="page-sub" style={{ marginBottom: 0 }}>Live feed across jobs, research, newsletters, decisions, and notifications.</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

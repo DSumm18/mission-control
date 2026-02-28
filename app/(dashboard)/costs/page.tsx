@@ -7,6 +7,7 @@ import {
 import { DollarSign, TrendingDown } from 'lucide-react';
 import AnimatedKPI from '@/components/ui/AnimatedKPI';
 import { SkeletonKPI, SkeletonCard } from '@/components/ui/Skeleton';
+import PageInfo from '@/components/ui/PageInfo';
 
 type CostData = {
   total_cost: number;
@@ -38,9 +39,12 @@ export default function CostsPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <DollarSign size={24} /> Cost Dashboard
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <DollarSign size={24} /> Cost Dashboard
+            </h1>
+            <PageInfo title="Costs" description="Track AI engine spending across all agents and jobs. Monitor daily cost trends and identify which engines are most cost-effective." features={["KPIs show total spend, daily average, and run count", "Daily cost chart reveals spending patterns", "Breakdown table shows cost per engine", "Adjust time period with the dropdown"]} />
+          </div>
           <p className="page-sub" style={{ marginBottom: 0 }}>AI spend tracking across engines, agents, and projects.</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

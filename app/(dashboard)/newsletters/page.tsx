@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import PageInfo from '@/components/ui/PageInfo';
 
 /* ── types ───────────────────────────────────────────────── */
 
@@ -140,7 +141,14 @@ export default function NewsletterPipelinePage() {
 
   return (
     <div>
-      <h1 className="page-title">Newsletter Pipeline</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Newsletter Pipeline</h1>
+        <PageInfo
+          title="QA Gate"
+          description="Quality assurance checkpoint for newsletters. Review assembled drafts, run automated QA checks, and approve for publishing."
+          features={["Automated quality scoring on drafts", "Review full newsletter before publish", "Flag issues for revision", "Approved drafts move to Publish"]}
+        />
+      </div>
       <p className="page-sub">Manage the Schoolgle Signal production pipeline — research, draft, build, QA, publish.</p>
 
       {/* ── KPI Cards ─────────────────────────── */}

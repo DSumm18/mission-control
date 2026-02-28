@@ -13,6 +13,7 @@ import {
 import AnimatedKPI from '@/components/ui/AnimatedKPI';
 import { SkeletonKPI, SkeletonCard } from '@/components/ui/Skeleton';
 import SystemVitals from '@/components/ui/SystemVitals';
+import PageInfo from '@/components/ui/PageInfo';
 
 type Overview = {
   total_revenue_target: number;
@@ -127,7 +128,10 @@ export default function HomePage() {
 
   return (
     <div>
-      <h1 className="page-title">Mission Control</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Mission Control</h1>
+        <PageInfo title="Overview" description="Your command center dashboard. Shows real-time KPIs, job activity, costs, system health, and project status at a glance." features={["KPIs animate and refresh every 30 seconds", "Charts show 7-day job and cost trends", "System vitals monitor Mac Mini health", "Click any card to drill into details"]} />
+      </div>
       <p className="page-sub">Business command center — agents, projects, quality, and costs at a glance.</p>
 
       {/* Row 1: KPIs */}

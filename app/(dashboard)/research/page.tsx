@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import PageInfo from '@/components/ui/PageInfo';
 
 /* ── types ───────────────────────────────────────────────── */
 
@@ -146,7 +147,14 @@ export default function ResearchPage() {
 
   return (
     <>
-      <h1 className="page-title">Research Feed</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Research Feed</h1>
+        <PageInfo
+          title="Research"
+          description="Research items captured by Scout and other agents. Raw intelligence gathered from sources, ready for newsletter curation."
+          features={["View all captured research items", "Filter by status: captured, curated, used, discarded", "Click items to see full content and source", "Curated items flow into newsletter sections"]}
+        />
+      </div>
       <p className="page-sub">Capture, assess, and approve content for the newsletter</p>
 
       <div className="grid">

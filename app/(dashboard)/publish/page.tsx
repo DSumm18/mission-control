@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import PageInfo from '@/components/ui/PageInfo';
 
 /* ── types ───────────────────────────────────────────────── */
 
@@ -83,7 +84,14 @@ export default function PublishPage() {
 
   return (
     <>
-      <h1 className="page-title">Publish</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Publish</h1>
+        <PageInfo
+          title="Publish"
+          description="Final publishing step for newsletters. Send approved drafts to subscribers and track delivery status."
+          features={["One-click publish for approved newsletters", "Track delivery and open rates", "Archive of all published editions"]}
+        />
+      </div>
       <p className="page-sub">Final review, social copy, and publish to GitHub Pages</p>
 
       <div className="grid">

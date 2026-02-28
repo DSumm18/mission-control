@@ -1045,6 +1045,72 @@ tbody tr:hover {
   font-family: monospace;
 }
 
+/* ── Page Info Toggle ────────────────────────────────────────────── */
+
+.page-info-wrap {
+  display: inline-flex;
+  align-items: flex-start;
+  vertical-align: middle;
+  position: relative;
+}
+.page-info-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.page-info-toggle:hover,
+.page-info-toggle-active {
+  background: rgba(110, 168, 254, 0.08);
+  border-color: rgba(110, 168, 254, 0.3);
+  color: var(--accent);
+}
+.page-info-card {
+  position: absolute;
+  top: 34px;
+  left: 0;
+  z-index: 30;
+  width: 360px;
+  max-width: calc(100vw - 40px);
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  animation: mc-fade-in 0.2s ease;
+}
+.page-info-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.page-info-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+.page-info-features {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.page-info-features li {
+  margin-bottom: 2px;
+}
+
 /* ── Mobile Header ───────────────────────────────────────────────── */
 
 .mobile-header {

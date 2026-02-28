@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import PageInfo from '@/components/ui/PageInfo';
 
 /* ── types ───────────────────────────────────────────────── */
 
@@ -144,7 +145,14 @@ export default function ContentStudioPage() {
 
   return (
     <>
-      <h1 className="page-title">Content Studio</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Content Studio</h1>
+        <PageInfo
+          title="Content Studio"
+          description="Draft and edit newsletter sections. This is where research gets transformed into polished content for the Schoolgle Signal."
+          features={["Create and edit newsletter sections", "AI-assisted drafting from research items", "Preview sections before assembly", "Track section status through the pipeline"]}
+        />
+      </div>
       <p className="page-sub">Edit and humanise newsletter drafts</p>
 
       <div className="grid">

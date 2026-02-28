@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import PageInfo from '@/components/ui/PageInfo';
 
 type ChallengeBoard = {
   id: string;
@@ -69,7 +70,10 @@ export default function DecisionsPage() {
 
   return (
     <div>
-      <h1 className="page-title">Decisions Inbox</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h1 className="page-title">Decisions Inbox</h1>
+        <PageInfo title="Decisions" description="Challenge board history. See strategic decisions made by the AI team — options considered, pros/cons, and final outcomes." features={["Each decision shows all options with supporting agents", "Recommended options highlighted in green", "Track decision outcomes over time"]} />
+      </div>
       <p className="page-sub">
         Challenge board debates, pending sign-offs, and decision history.
       </p>
