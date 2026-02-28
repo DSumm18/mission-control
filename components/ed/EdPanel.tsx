@@ -5,7 +5,7 @@ import { Plus, X } from 'lucide-react';
 import EdMessageList from './EdMessageList';
 import EdInput from './EdInput';
 import VoiceInput from './VoiceInput';
-import VoiceOutput, { type VoicePersona } from './VoiceOutput';
+import VoiceOutput, { type VoicePersona, unlockAudio } from './VoiceOutput';
 import EdNotifications from './EdNotifications';
 import type { ImagePreview } from './ImageUpload';
 
@@ -89,6 +89,11 @@ export default function EdPanel({ onClose }: EdPanelProps) {
 
   const handleSend = useCallback(
     async (text: string, images?: ImagePreview[]) => {
+      // Unlock audio on user gesture — required for iOS Safari / PWA
+      if (voiceMode !== 'off') {
+        unlockAudio();
+      }
+
       if (!activeConv) {
         // Auto-create conversation
         const res = await fetch('/api/ed/conversations', {
@@ -106,7 +111,7 @@ export default function EdPanel({ onClose }: EdPanelProps) {
         sendMessage(activeConv, text, images);
       }
     },
-    [activeConv], // eslint-disable-line react-hooks/exhaustive-deps
+    [activeConv, voiceMode], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const sendMessage = async (convId: string, text: string, images?: ImagePreview[]) => {

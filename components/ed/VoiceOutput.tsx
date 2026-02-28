@@ -29,33 +29,81 @@ function stripMarkdown(text: string): string {
     .trim();
 }
 
+// Shared AudioContext — must be unlocked on user gesture for iOS
+let audioCtx: AudioContext | null = null;
+
+/**
+ * Call this from a user gesture handler (e.g. Send button tap)
+ * to unlock audio playback on iOS Safari / PWA.
+ */
+export function unlockAudio(): void {
+  if (typeof window === 'undefined') return;
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  // Play a silent buffer to fully unlock on iOS
+  const buffer = audioCtx.createBuffer(1, 1, 22050);
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioCtx.destination);
+  source.start(0);
+}
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+  }
+  return audioCtx;
+}
+
 /**
  * Sentence-level voice output for Ed.
+ * Uses Web Audio API (AudioContext) for iOS Safari / PWA compatibility.
  * Streams audio per sentence — plays sentence 1 while sentence 2 synthesises.
  */
 export default function VoiceOutput({ text, enabled, voice = 'ed' }: VoiceOutputProps) {
   const lastSpokenRef = useRef('');
-  const audioQueueRef = useRef<HTMLAudioElement[]>([]);
+  const audioQueueRef = useRef<ArrayBuffer[]>([]);
   const isPlayingRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const playNext = useCallback(() => {
-    if (!isPlayingRef.current && audioQueueRef.current.length > 0) {
-      isPlayingRef.current = true;
-      const audio = audioQueueRef.current.shift()!;
-      audio.onended = () => {
-        isPlayingRef.current = false;
-        playNext();
-      };
-      audio.onerror = () => {
-        isPlayingRef.current = false;
-        playNext();
-      };
-      audio.play().catch(() => {
-        isPlayingRef.current = false;
-        playNext();
-      });
+    const ctx = getAudioContext();
+    if (!ctx || isPlayingRef.current || audioQueueRef.current.length === 0) return;
+
+    isPlayingRef.current = true;
+    const buf = audioQueueRef.current.shift()!;
+
+    // Ensure context is running
+    if (ctx.state === 'suspended') {
+      ctx.resume();
     }
+
+    ctx.decodeAudioData(
+      buf,
+      (audioBuffer) => {
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        currentSourceRef.current = source;
+        source.onended = () => {
+          currentSourceRef.current = null;
+          isPlayingRef.current = false;
+          playNext();
+        };
+        source.start(0);
+      },
+      () => {
+        // Decode error — skip to next
+        isPlayingRef.current = false;
+        playNext();
+      },
+    );
   }, []);
 
   useEffect(() => {
@@ -67,9 +115,10 @@ export default function VoiceOutput({ text, enabled, voice = 'ed' }: VoiceOutput
       abortRef.current.abort();
     }
 
-    // Stop any queued/playing audio
-    for (const audio of audioQueueRef.current) {
-      audio.pause();
+    // Stop current playback
+    if (currentSourceRef.current) {
+      try { currentSourceRef.current.stop(); } catch { /* already stopped */ }
+      currentSourceRef.current = null;
     }
     audioQueueRef.current = [];
     isPlayingRef.current = false;
@@ -96,33 +145,28 @@ export default function VoiceOutput({ text, enabled, voice = 'ed' }: VoiceOutput
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let buffer = '';
+        let sseBuffer = '';
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
+          sseBuffer += decoder.decode(value, { stream: true });
+          const lines = sseBuffer.split('\n');
+          sseBuffer = lines.pop() || '';
 
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
             try {
               const data = JSON.parse(line.slice(6));
               if (data.type === 'audio' && data.audio) {
-                // Decode base64 to audio blob
+                // Decode base64 to ArrayBuffer for Web Audio API
                 const binary = atob(data.audio);
                 const bytes = new Uint8Array(binary.length);
                 for (let i = 0; i < binary.length; i++) {
                   bytes[i] = binary.charCodeAt(i);
                 }
-                const blob = new Blob([bytes], { type: 'audio/mpeg' });
-                const url = URL.createObjectURL(blob);
-                const audio = new Audio(url);
-                audio.onended = () => URL.revokeObjectURL(url);
-
-                audioQueueRef.current.push(audio);
+                audioQueueRef.current.push(bytes.buffer);
                 playNext();
               }
             } catch {
