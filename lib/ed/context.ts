@@ -5,6 +5,7 @@
 
 import { supabaseAdmin } from '@/lib/db/supabase-server';
 import type { ModelTier } from './model-router';
+import { parseProjectSpec } from '@/lib/org/project-spec';
 
 type MessageEntry = { role: 'user' | 'assistant'; content: string };
 
@@ -68,17 +69,28 @@ export async function buildContextBlock(tier?: ModelTier): Promise<string> {
       const totalTarget = projects.reduce((s, p) => s + (p.revenue_target_monthly || 0), 0);
       ctx += `\n**Product Portfolio (£${totalTarget.toLocaleString()}/mo target):**\n`;
       for (const p of projects) {
-        const milestones = (p.delivery_plan as { milestones?: { name: string; status: string; target?: string }[] })?.milestones || [];
-        const nextMs = milestones.find(m => m.status !== 'done');
+        const spec = parseProjectSpec(p.delivery_plan);
+        const nextMs = spec.milestones.find(m => m.status !== 'done');
         const msInfo = nextMs ? ` → next: ${nextMs.name} [${nextMs.status}]${nextMs.target ? ` by ${nextMs.target}` : ''}` : '';
         ctx += `- **${p.name}** — £${p.revenue_target_monthly || 0}/mo target${msInfo} (id: ${p.id})\n`;
         if (p.description) ctx += `  ${p.description}\n`;
 
-        // Opus tier: include full delivery plan details
-        if (tier === 'opus' && milestones.length > 0) {
-          ctx += `  Milestones:\n`;
-          for (const m of milestones) {
-            ctx += `    - ${m.name} [${m.status}]${m.target ? ` (target: ${m.target})` : ''}\n`;
+        // Show key blockers for all tiers
+        if (spec.key_blockers.length > 0) {
+          ctx += `  Blockers: ${spec.key_blockers.join('; ')}\n`;
+        }
+
+        // Opus tier: include expanded spec details
+        if (tier === 'opus') {
+          if (spec.current_status) ctx += `  Status: ${spec.current_status}\n`;
+          if (spec.milestones.length > 0) {
+            ctx += `  Milestones:\n`;
+            for (const m of spec.milestones) {
+              ctx += `    - ${m.name} [${m.status}]${m.target ? ` (target: ${m.target})` : ''}\n`;
+              if (m.acceptance_criteria.length > 0) {
+                ctx += `      Criteria: ${m.acceptance_criteria.join('; ')}\n`;
+              }
+            }
           }
         }
       }

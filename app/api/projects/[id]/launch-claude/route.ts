@@ -13,6 +13,7 @@
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
 import { existsSync } from 'fs';
+import { parseProjectSpec, formatSpecForPrompt } from '@/lib/org/project-spec';
 
 export async function POST(
   req: NextRequest,
@@ -56,22 +57,56 @@ export async function POST(
   const mode = body.mode === 'interactive' ? 'interactive' : 'autonomous';
 
   if (mode === 'autonomous') {
-    // Build a rich prompt with project context
-    const milestones = (project.delivery_plan as { milestones?: { name: string; status: string; target?: string }[] })?.milestones || [];
-    const msContext = milestones.length > 0
-      ? `\nProject milestones:\n${milestones.map(m => `- ${m.name} [${m.status}]${m.target ? ` (target: ${m.target})` : ''}`).join('\n')}`
-      : '';
+    // Build a rich prompt with full project specification
+    const spec = parseProjectSpec(project.delivery_plan);
+    const specBlock = formatSpecForPrompt(spec, project.name, {
+      includeConstraints: true,
+      activeMilestoneOnly: false,
+    });
 
-    const promptText = `You are working on the project "${project.name}".
-Repo path: ${project.repo_path}
-${project.description ? `Description: ${project.description}` : ''}
-${project.revenue_target_monthly ? `Revenue target: £${project.revenue_target_monthly}/month` : ''}
-${msContext}
+    // Find the active milestone for focused instructions
+    const activeMilestone = spec.milestones.find(m => m.status !== 'done');
 
-Task: ${task}
+    const workingInstructions: string[] = [
+      'Work in the project repo. Make changes, run tests, and commit when done.',
+    ];
+    if (spec.evaluation?.build_must_pass) {
+      workingInstructions.push('Build MUST pass before committing any changes.');
+    }
+    if (spec.evaluation?.test_command) {
+      workingInstructions.push(`Run tests: \`${spec.evaluation.test_command}\``);
+    }
+    if (spec.evaluation?.verify_url) {
+      workingInstructions.push(`Verify the app at: ${spec.evaluation.verify_url}`);
+    }
+    workingInstructions.push('If you encounter issues, document them clearly.');
 
-Work in the project repo. Make changes, run tests, and commit when done.
-If you encounter issues, document them clearly.`;
+    const promptParts: string[] = [
+      `You are working on the project "${project.name}".`,
+      `Repo path: ${project.repo_path}`,
+    ];
+    if (project.description) promptParts.push(`Description: ${project.description}`);
+    if (project.revenue_target_monthly) {
+      promptParts.push(`Revenue target: £${project.revenue_target_monthly}/month`);
+    }
+
+    promptParts.push('', specBlock);
+
+    if (activeMilestone) {
+      promptParts.push('', `## Active Milestone: ${activeMilestone.name}`);
+      if (activeMilestone.acceptance_criteria.length > 0) {
+        promptParts.push('Acceptance Criteria (all must be met):');
+        for (const ac of activeMilestone.acceptance_criteria) {
+          promptParts.push(`- [ ] ${ac}`);
+        }
+      }
+    }
+
+    promptParts.push('', `## Task`, task);
+    promptParts.push('', `## Working Instructions`);
+    promptParts.push(...workingInstructions);
+
+    const promptText = promptParts.join('\n');
 
     // Create job
     const { data: job, error: jobErr } = await sb

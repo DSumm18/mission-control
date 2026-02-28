@@ -10,6 +10,37 @@ import {
 import AnimatedKPI from '@/components/ui/AnimatedKPI';
 import { SkeletonKPI } from '@/components/ui/Skeleton';
 import { useToast } from '@/components/ui/ToastContext';
+import { FileText } from 'lucide-react';
+
+const SPEC_TEMPLATE = {
+  overview: '',
+  target_audience: '',
+  tech_stack: [],
+  revenue_model: '',
+  current_status: '',
+  key_blockers: [],
+  milestones: [
+    {
+      name: 'Milestone 1',
+      target: '',
+      status: 'not_started',
+      acceptance_criteria: [],
+      features: [],
+      constraints: {
+        musts: [],
+        must_nots: [],
+        preferences: [],
+        escalation: [],
+      },
+    },
+  ],
+  decomposition_pattern: '',
+  evaluation: {
+    build_must_pass: true,
+    test_command: '',
+    verify_url: '',
+  },
+};
 
 type Milestone = { name: string; target: string; status: string };
 
@@ -154,7 +185,7 @@ export default function ProjectCommandCenter() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ delivery_plan: parsed }),
       });
-      toast('Delivery plan saved', 'good');
+      toast('Project specification saved', 'good');
       fetchProject();
     } catch {
       toast('Invalid JSON', 'bad');
@@ -504,7 +535,19 @@ export default function ProjectCommandCenter() {
             </div>
           </article>
           <article className="card" style={{ gridColumn: 'span 6' }}>
-            <h3 style={{ marginTop: 0, fontSize: 15 }}>Delivery Plan (JSON)</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <h3 style={{ margin: 0, fontSize: 15 }}>Project Specification (JSON)</h3>
+              <button
+                className="btn-sm"
+                onClick={() => {
+                  setEditPlan(JSON.stringify(SPEC_TEMPLATE, null, 2));
+                  toast('Template loaded — fill in the fields', 'good');
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}
+              >
+                <FileText size={12} /> Load Template
+              </button>
+            </div>
             <textarea
               value={editPlan}
               onChange={e => setEditPlan(e.target.value)}
@@ -512,7 +555,7 @@ export default function ProjectCommandCenter() {
               style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
             />
             <button onClick={savePlan} disabled={saving} style={{ marginTop: 8 }}>
-              {saving ? 'Saving...' : 'Save Plan'}
+              {saving ? 'Saving...' : 'Save Spec'}
             </button>
           </article>
         </div>

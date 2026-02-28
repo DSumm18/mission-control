@@ -1,4 +1,10 @@
 import { supabaseAdmin } from '@/lib/db/supabase-server';
+import {
+  parseProjectSpec,
+  formatSpecForPrompt,
+  formatMasterIntentForPrompt,
+  MasterIntentSchema,
+} from './project-spec';
 
 /**
  * Compose a full prompt for an agent executing a job.
@@ -42,7 +48,7 @@ export async function composePrompt(jobId: string, agentId: string): Promise<str
     parts.push(`**Command:** ${job.command}`);
   }
 
-  // 3. Project delivery plan (if applicable)
+  // 3. Project specification (if applicable)
   if (job.project_id) {
     const { data: project } = await sb
       .from('mc_projects')
@@ -59,9 +65,30 @@ export async function composePrompt(jobId: string, agentId: string): Promise<str
         parts.push(`**Revenue Target:** £${project.revenue_target_monthly}/month`);
       }
       if (project.delivery_plan && Object.keys(project.delivery_plan).length > 0) {
-        parts.push(`**Delivery Plan:** ${JSON.stringify(project.delivery_plan)}`);
+        const spec = parseProjectSpec(project.delivery_plan);
+        parts.push('');
+        parts.push(formatSpecForPrompt(spec, project.name));
       }
     }
+  }
+
+  // 3b. Master intent (applies to all jobs)
+  try {
+    const { data: intentRow } = await sb
+      .from('mc_settings')
+      .select('value')
+      .eq('key', 'master_intent')
+      .single();
+
+    if (intentRow?.value) {
+      const parsed = MasterIntentSchema.safeParse(intentRow.value);
+      if (parsed.success) {
+        parts.push('');
+        parts.push(formatMasterIntentForPrompt(parsed.data));
+      }
+    }
+  } catch {
+    // master intent not set yet — skip
   }
 
   // 4. Improvement instructions from prior rejection
