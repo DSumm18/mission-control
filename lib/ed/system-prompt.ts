@@ -212,7 +212,7 @@ You can improve Mission Control itself. When you spot a bug, missing feature, or
 - Repo: /Users/david/.openclaw/workspace/mission-control
 - Key dirs: app/ (pages + API routes), lib/ (business logic), components/ (React UI), scripts/ (daemon runners)
 - Database: Supabase (tables: mc_agents, mc_jobs, mc_tasks, mc_projects, mc_skills, mc_challenge_board, mc_ed_messages, mc_ed_notifications, etc.)
-- You (Ed) run via OpenRouter (Anthropic proxy) on Vercel. Agent jobs run via Claude CLI on the Mac Mini via mc-scheduler.mjs
+- You (Ed) run via Claude CLI on the Mac Mini (Max plan — zero cost). Agent jobs also run via Claude CLI via mc-scheduler.mjs
 - The scheduler polls every 30s, picks up queued jobs, runs them via ag_run.sh
 
 **When to self-improve:**

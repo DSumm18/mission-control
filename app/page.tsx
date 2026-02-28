@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -10,6 +10,9 @@ import {
   DollarSign, Briefcase, Users, Star,
   AlertTriangle, CheckCircle, Clock, FolderOpen,
 } from 'lucide-react';
+import AnimatedKPI from '@/components/ui/AnimatedKPI';
+import { SkeletonKPI, SkeletonCard } from '@/components/ui/Skeleton';
+import SystemVitals from '@/components/ui/SystemVitals';
 
 type Overview = {
   total_revenue_target: number;
@@ -72,6 +75,7 @@ type FeedItem = {
 };
 
 const PIE_COLORS = ['#6ea8fe', '#3ddc97', '#f7c948', '#ff6b6b', '#c084fc'];
+const POLL_MS = 30_000;
 
 function priorityBadge(p: number) {
   if (p <= 2) return 'bad';
@@ -88,7 +92,7 @@ export default function HomePage() {
   const [alerts, setAlerts] = useState<AlertAgent[]>([]);
   const [feed, setFeed] = useState<FeedItem[]>([]);
 
-  useEffect(() => {
+  const fetchAll = useCallback(() => {
     const opts = { cache: 'no-store' as const };
     fetch('/api/stats/overview', opts).then(r => r.json()).then(d => setOverview(d)).catch(() => {});
     fetch('/api/stats/jobs-daily', opts).then(r => r.json()).then(d => setDaily(d.daily || [])).catch(() => {});
@@ -110,6 +114,12 @@ export default function HomePage() {
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    fetchAll();
+    const interval = setInterval(fetchAll, POLL_MS);
+    return () => clearInterval(interval);
+  }, [fetchAll]);
+
   const pieData = useMemo(() =>
     costs.filter(c => c.est_cost_usd > 0).map(c => ({ name: c.engine, value: Number(c.est_cost_usd) })),
     [costs]
@@ -122,39 +132,66 @@ export default function HomePage() {
 
       {/* Row 1: KPIs */}
       <section className="grid" style={{ marginBottom: 14 }}>
-        <article className="card card-glow" style={{ gridColumn: 'span 3' }}>
+        <article className="card card-glow-active card-animated" style={{ gridColumn: 'span 3' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <DollarSign size={18} color="var(--accent)" />
             <span className="muted">Revenue Target</span>
           </div>
-          <div className="kpi">{overview ? `£${Math.round(overview.total_revenue_target).toLocaleString()}` : '—'}</div>
+          <div className="kpi">
+            {overview ? (
+              <AnimatedKPI value={Math.round(overview.total_revenue_target)} prefix="\u00A3" />
+            ) : (
+              <SkeletonKPI />
+            )}
+          </div>
           <div className="muted">per month</div>
         </article>
-        <article className="card card-glow" style={{ gridColumn: 'span 3' }}>
+        <article className="card card-glow-active card-animated" style={{ gridColumn: 'span 3' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Briefcase size={18} color="var(--accent)" />
             <span className="muted">Active Jobs</span>
+            {overview && overview.active_jobs > 0 && (
+              <span className="status-dot status-dot-live" />
+            )}
           </div>
-          <div className="kpi">{overview?.active_jobs ?? '—'}</div>
+          <div className="kpi">
+            {overview ? (
+              <AnimatedKPI value={overview.active_jobs} />
+            ) : (
+              <SkeletonKPI />
+            )}
+          </div>
           <div className="muted">running / queued / assigned</div>
         </article>
-        <article className="card card-glow" style={{ gridColumn: 'span 3' }}>
+        <article className="card card-glow-active card-animated" style={{ gridColumn: 'span 3' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Users size={18} color="var(--accent)" />
             <span className="muted">Agent Utilization</span>
           </div>
           <div className="kpi">
-            {overview ? `${overview.active_agents}/${overview.total_agents}` : '—'}
+            {overview ? (
+              <>{overview.active_agents}/{overview.total_agents}</>
+            ) : (
+              <SkeletonKPI />
+            )}
           </div>
           <div className="muted">agents with running jobs</div>
         </article>
-        <article className="card card-glow" style={{ gridColumn: 'span 3' }}>
+        <article className="card card-glow-active card-animated" style={{ gridColumn: 'span 3' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Star size={18} color="var(--accent)" />
             <span className="muted">Quality (7d)</span>
           </div>
           <div className="kpi">
-            {overview?.avg_quality_7d ? `${Math.round(overview.avg_quality_7d)}/50` : '—'}
+            {overview ? (
+              overview.avg_quality_7d ? (
+                <AnimatedKPI value={Math.round(overview.avg_quality_7d)} suffix="/50" />
+              ) : (
+                '\u2014'
+              )
+            ) : (
+              <SkeletonKPI />
+            )}
           </div>
           <div className="muted">average review score</div>
         </article>
@@ -162,27 +199,31 @@ export default function HomePage() {
 
       {/* Row 2: Charts */}
       <section className="grid" style={{ marginBottom: 14 }}>
-        <article className="card" style={{ gridColumn: 'span 7' }}>
+        <article className="card card-animated" style={{ gridColumn: 'span 7' }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Jobs by Status (7 days)</h3>
-          <div className="chart-wrap">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={daily} barCategoryGap="20%">
-                <XAxis dataKey="date" tick={{ fill: '#9fb0d9', fontSize: 11 }} tickFormatter={v => v.slice(5)} />
-                <YAxis tick={{ fill: '#9fb0d9', fontSize: 11 }} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{ background: '#1a2440', border: '1px solid #2a3559', borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: '#eef3ff' }}
-                />
-                <Bar dataKey="done" stackId="a" fill="#3ddc97" radius={[0,0,0,0]} />
-                <Bar dataKey="reviewing" stackId="a" fill="#f7c948" />
-                <Bar dataKey="failed" stackId="a" fill="#ff6b6b" />
-                <Bar dataKey="running" stackId="a" fill="#6ea8fe" />
-                <Bar dataKey="queued" stackId="a" fill="#2a3559" radius={[4,4,0,0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {daily.length > 0 ? (
+            <div className="chart-wrap">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={daily} barCategoryGap="20%">
+                  <XAxis dataKey="date" tick={{ fill: '#9fb0d9', fontSize: 11 }} tickFormatter={v => v.slice(5)} />
+                  <YAxis tick={{ fill: '#9fb0d9', fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{ background: '#1a2440', border: '1px solid #2a3559', borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: '#eef3ff' }}
+                  />
+                  <Bar dataKey="done" stackId="a" fill="#3ddc97" radius={[0,0,0,0]} />
+                  <Bar dataKey="reviewing" stackId="a" fill="#f7c948" />
+                  <Bar dataKey="failed" stackId="a" fill="#ff6b6b" />
+                  <Bar dataKey="running" stackId="a" fill="#6ea8fe" />
+                  <Bar dataKey="queued" stackId="a" fill="#2a3559" radius={[4,4,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <SkeletonCard height={200} />
+          )}
         </article>
-        <article className="card" style={{ gridColumn: 'span 5' }}>
+        <article className="card card-animated" style={{ gridColumn: 'span 5' }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Cost by Engine (7d)</h3>
           <div className="chart-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {pieData.length > 0 ? (
@@ -216,7 +257,7 @@ export default function HomePage() {
 
       {/* Row 3: Tasks, Projects, Alerts */}
       <section className="grid" style={{ marginBottom: 14 }}>
-        <article className="card" style={{ gridColumn: 'span 4' }}>
+        <article className="card card-animated" style={{ gridColumn: 'span 4' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <h3 style={{ margin: 0, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
               <CheckCircle size={16} color="var(--accent)" /> My Tasks
@@ -237,7 +278,7 @@ export default function HomePage() {
           ))}
         </article>
 
-        <article className="card" style={{ gridColumn: 'span 4' }}>
+        <article className="card card-animated" style={{ gridColumn: 'span 4' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <h3 style={{ margin: 0, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
               <FolderOpen size={16} color="var(--accent)" /> Active Projects
@@ -253,14 +294,14 @@ export default function HomePage() {
                 <span className={`badge ${p.status === 'active' ? 'good' : 'warn'}`}>{p.status}</span>
               </div>
               <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
-                {p.revenue_target_monthly ? `£${p.revenue_target_monthly.toLocaleString()}/mo` : '—'}
-                {' · '}{p.active_jobs} active · {p.done_jobs} done
+                {p.revenue_target_monthly ? `\u00A3${p.revenue_target_monthly.toLocaleString()}/mo` : '\u2014'}
+                {' \u00B7 '}{p.active_jobs} active \u00B7 {p.done_jobs} done
               </div>
             </Link>
           ))}
         </article>
 
-        <article className="card" style={{ gridColumn: 'span 4' }}>
+        <article className="card card-animated" style={{ gridColumn: 'span 4' }}>
           <h3 style={{ margin: '0 0 10px', fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
             <AlertTriangle size={16} color="var(--warn)" /> Agent Alerts
           </h3>
@@ -268,7 +309,7 @@ export default function HomePage() {
             <div className="muted" style={{ padding: 16, textAlign: 'center' }}>All agents healthy</div>
           ) : alerts.map(a => (
             <Link key={a.id} href={`/agents/${a.id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--line)', color: 'inherit', textDecoration: 'none', fontSize: 13 }}>
-              <span style={{ fontSize: 18 }}>{a.avatar_emoji || '🤖'}</span>
+              <span style={{ fontSize: 18 }}>{a.avatar_emoji || '\uD83E\uDD16'}</span>
               <div>
                 <div style={{ fontWeight: 500 }}>{a.name}</div>
                 <div className="muted" style={{ fontSize: 11 }}>
@@ -281,8 +322,19 @@ export default function HomePage() {
         </article>
       </section>
 
-      {/* Row 4: Activity Feed */}
-      <section className="card">
+      {/* Row 4: System Vitals */}
+      <section className="grid" style={{ marginBottom: 14 }}>
+        <article className="card card-animated" style={{ gridColumn: 'span 12' }}>
+          <h3 style={{ marginTop: 0, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+            Mac Mini Vitals
+            <span className="status-dot status-dot-live" />
+          </h3>
+          <SystemVitals />
+        </article>
+      </section>
+
+      {/* Row 5: Activity Feed */}
+      <section className="card card-animated">
         <h3 style={{ marginTop: 0, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
           <Clock size={16} color="var(--accent)" /> Recent Activity
         </h3>

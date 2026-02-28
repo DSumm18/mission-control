@@ -6,7 +6,8 @@
  * Response: SSE stream with text chunks, action results, and done event.
  *
  * Quick-path: Supabase-answerable questions (status checks) bypass LLM entirely.
- * Model routing: Haiku for fast replies, Sonnet for complex analysis.
+ * Model routing: Haiku (fast) → Sonnet (complex) → Opus (strategic).
+ * All LLM tiers use Claude CLI on Max plan — zero cost.
  */
 
 export const runtime = 'nodejs';
@@ -20,7 +21,8 @@ import { claudeStream } from '@/lib/ed/claude-stream';
 import { parseActions, executeActions } from '@/lib/ed/actions';
 import { routeMessage, getModelId, getModelDisplayName } from '@/lib/ed/model-router';
 import type { EdChatRequest, EdStreamChunk } from '@/lib/ed/types';
-import type Anthropic from '@anthropic-ai/sdk';
+
+type MessageEntry = { role: 'user' | 'assistant'; content: string | unknown[] };
 
 function sseEncode(chunk: EdStreamChunk): string {
   return `data: ${JSON.stringify(chunk)}\n\n`;
@@ -320,9 +322,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // LLM streaming path (Haiku or Sonnet)
-  const modelId = getModelId(tier === 'quick-path' ? 'haiku' : tier);
-  const modelDisplay = getModelDisplayName(tier === 'quick-path' ? 'haiku' : tier);
+  // LLM streaming path via Claude CLI
+  const effectiveTier = tier === 'quick-path' ? 'haiku' : tier;
+  const modelId = getModelId(effectiveTier);
+  const modelDisplay = getModelDisplayName(effectiveTier);
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -331,38 +334,26 @@ export async function POST(req: NextRequest) {
       try {
         // Build context and load history in parallel
         const [contextBlock, historyMessages] = await Promise.all([
-          buildContextBlock(),
+          buildContextBlock(effectiveTier),
           loadConversationHistory(conversation_id),
         ]);
 
         const systemPrompt = buildSystemPrompt(contextBlock);
 
         // Build messages array: history + current message
-        const messages: Anthropic.MessageCreateParams['messages'] = [...historyMessages];
+        const messages: MessageEntry[] = [...historyMessages];
 
-        // Build current user message content
-        const content: Anthropic.MessageCreateParams['messages'][0]['content'] = [];
-
+        // Build current user message content (images not supported via CLI, include as text description)
+        let userContent = message;
         if (images?.length) {
-          for (const img of images) {
-            content.push({
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: img.mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-                data: img.base64,
-              },
-            });
-          }
+          userContent = `[${images.length} image(s) attached — image analysis not available via CLI]\n\n${message}`;
         }
+        messages.push({ role: 'user', content: userContent });
 
-        content.push({ type: 'text', text: message });
-        messages.push({ role: 'user', content });
-
-        // Ensure alternating roles (Anthropic requirement)
+        // Ensure alternating roles
         const cleanMessages = ensureAlternatingRoles(messages);
 
-        // Stream from OpenRouter
+        // Stream from Claude CLI
         let fullText = '';
         for await (const chunk of claudeStream({
           systemPrompt,
@@ -431,18 +422,18 @@ export async function POST(req: NextRequest) {
 
 /** Ensure messages alternate user/assistant (merge consecutive same-role) */
 function ensureAlternatingRoles(
-  messages: Anthropic.MessageCreateParams['messages'],
-): Anthropic.MessageCreateParams['messages'] {
+  messages: MessageEntry[],
+): MessageEntry[] {
   if (messages.length === 0) return messages;
 
-  const result: Anthropic.MessageCreateParams['messages'] = [messages[0]];
+  const result: MessageEntry[] = [messages[0]];
   for (let i = 1; i < messages.length; i++) {
     const prev = result[result.length - 1];
     const curr = messages[i];
     if (prev.role === curr.role) {
       // Merge content
-      const prevText = typeof prev.content === 'string' ? prev.content : prev.content.map(b => 'text' in b ? b.text : '').join('\n');
-      const currText = typeof curr.content === 'string' ? curr.content : curr.content.map(b => 'text' in b ? b.text : '').join('\n');
+      const prevText = typeof prev.content === 'string' ? prev.content : (prev.content as { text?: string }[]).map(b => b.text || '').join('\n');
+      const currText = typeof curr.content === 'string' ? curr.content : (curr.content as { text?: string }[]).map(b => b.text || '').join('\n');
       prev.content = `${prevText}\n${currText}`;
     } else {
       result.push(curr);

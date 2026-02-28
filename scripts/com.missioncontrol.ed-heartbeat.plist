@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.missioncontrol.ed-heartbeat</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/node</string>
+        <string>/Users/david/.openclaw/workspace/mission-control/scripts/ed-heartbeat.mjs</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Hour</key>
+            <integer>8</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>
+            <integer>18</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/david/.openclaw/workspace/mission-control</string>
+    <key>StandardOutPath</key>
+    <string>/Users/david/.openclaw/workspace/mission-control/logs/ed-heartbeat.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/david/.openclaw/workspace/mission-control/logs/ed-heartbeat.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+        <key>MC_BASE_URL</key>
+        <string>http://localhost:3000</string>
+    </dict>
+</dict>
+</plist>

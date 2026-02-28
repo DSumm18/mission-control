@@ -1,16 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, GitBranch, Kanban, FolderOpen, Bot, Zap,
-  Wrench, Activity, Scale, Radio,
+  Wrench, Activity, Scale, Radio, DollarSign,
   ListTodo, Settings, CheckSquare,
   Calendar, Search, FileEdit, ShieldCheck, Send,
+  Menu, X,
 } from 'lucide-react';
 import EdToggle from '@/components/ed/EdToggle';
 import EdPanel from '@/components/ed/EdPanel';
+import GlobalSearch from '@/components/ui/GlobalSearch';
 
 type NavItem =
   | { href: string; label: string; icon: typeof LayoutDashboard }
@@ -43,6 +45,8 @@ const NAV: NavItem[] = [
   { href: '/runs', label: 'Runs', icon: Activity },
   { href: '/decisions', label: 'Decisions', icon: Scale },
   { href: '/activity', label: 'Activity', icon: ListTodo },
+  { href: '/costs', label: 'Costs', icon: DollarSign },
+  { href: '/calendar', label: 'Calendar', icon: Calendar },
   { divider: true },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -50,10 +54,27 @@ const NAV: NavItem[] = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [edOpen, setEdOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+
+  // Close mobile nav on route change
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
 
   return (
     <div className={`shell ${edOpen ? 'shell-ed-open' : ''}`}>
-      <aside className="sidebar">
+      {/* Mobile top bar */}
+      <header className="mobile-header">
+        <button className="mobile-menu-btn" onClick={() => setNavOpen(!navOpen)} aria-label="Toggle menu">
+          {navOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+        <span className="mobile-brand">Mission Control</span>
+        <EdToggle isOpen={edOpen} onToggle={() => setEdOpen(!edOpen)} mobile />
+      </header>
+
+      {/* Sidebar / mobile nav overlay */}
+      {navOpen && <div className="nav-overlay" onClick={() => setNavOpen(false)} />}
+      <aside className={`sidebar ${navOpen ? 'sidebar-open' : ''}`}>
         <div className="brand">Mission Control</div>
         <div className="sub">Operator Console</div>
         <nav className="nav">
@@ -93,11 +114,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
 
           <div className="nav-divider" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', fontSize: 13, color: 'var(--muted)' }}>
+            <Search size={14} />
+            <span>Search</span>
+            <span className="cmd-k-hint" style={{ marginLeft: 'auto' }}>{'\u2318'}K</span>
+          </div>
           <EdToggle isOpen={edOpen} onToggle={() => setEdOpen(!edOpen)} />
         </nav>
       </aside>
       <main className="main">{children}</main>
       {edOpen && <EdPanel onClose={() => setEdOpen(false)} />}
+      <GlobalSearch />
     </div>
   );
 }

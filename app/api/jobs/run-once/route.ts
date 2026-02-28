@@ -5,6 +5,7 @@ import { composePrompt, getAgentMCPServers } from '@/lib/org/prompt-composer';
 import { scoreJob, type QAScores } from '@/lib/org/quality-scorer';
 import { decomposeJob } from '@/lib/org/decomposer';
 import { createNotification } from '@/lib/ed/notifications';
+import { checkAutoDispatch } from '@/lib/ed/auto-dispatch';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -249,6 +250,11 @@ export async function POST(req: NextRequest) {
       await appendRunnerLog(`post-exec-error job=${claimed.id} err=${postErr}`);
     }
   }
+
+  // Run auto-dispatch checks (non-blocking)
+  checkAutoDispatch().catch(err => {
+    console.error('[auto-dispatch] Error:', err);
+  });
 
   return NextResponse.json({ ok: true, job_id: claimed.id, status, result, error, log_path: LOG_PATH, raw: parsed });
 }

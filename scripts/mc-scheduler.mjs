@@ -145,24 +145,59 @@ async function tick() {
     return;
   }
 
-  // 4. Call run-once
-  inFlight++;
-  try {
-    const { status, body } = await callRunOnce();
+  // 4. Check parallel_jobs setting
+  const parallelSetting = await readSetting('parallel_jobs');
+  const parallelJobs = parallelSetting?.count ?? 1;
 
-    if (status === 401) {
-      log('ERROR: run-once returned 401 — check MC_RUNNER_TOKEN');
-    } else if (body.message === 'no queued jobs') {
-      log('no queued jobs');
-    } else if (body.ok) {
-      log(`job=${body.job_id} status=${body.status}`);
-    } else {
-      log(`run-once response: ${JSON.stringify(body).slice(0, 500)}`);
+  if (parallelJobs > 1) {
+    // Parallel mode — call run-parallel endpoint
+    inFlight++;
+    try {
+      const res = await fetch(`${SERVER_URL}/api/jobs/run-parallel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-runner-token': RUNNER_TOKEN,
+        },
+        body: JSON.stringify({ max_jobs: parallelJobs }),
+      });
+      const body = await res.json();
+
+      if (body.message === 'no queued jobs') {
+        log('no queued jobs');
+      } else if (body.ok && body.claimed) {
+        log(`parallel: ${body.claimed.length} jobs claimed`);
+        for (const c of body.claimed) {
+          log(`  job=${c.job_id} status=${c.status || 'claimed'} title=${c.title}`);
+        }
+      } else {
+        log(`run-parallel response: ${JSON.stringify(body).slice(0, 500)}`);
+      }
+    } catch (err) {
+      log(`ERROR calling run-parallel: ${err.message}`);
+    } finally {
+      inFlight--;
     }
-  } catch (err) {
-    log(`ERROR calling run-once: ${err.message}`);
-  } finally {
-    inFlight--;
+  } else {
+    // Single mode — call run-once
+    inFlight++;
+    try {
+      const { status, body } = await callRunOnce();
+
+      if (status === 401) {
+        log('ERROR: run-once returned 401 — check MC_RUNNER_TOKEN');
+      } else if (body.message === 'no queued jobs') {
+        log('no queued jobs');
+      } else if (body.ok) {
+        log(`job=${body.job_id} status=${body.status}`);
+      } else {
+        log(`run-once response: ${JSON.stringify(body).slice(0, 500)}`);
+      }
+    } catch (err) {
+      log(`ERROR calling run-once: ${err.message}`);
+    } finally {
+      inFlight--;
+    }
   }
 }
 

@@ -1,12 +1,14 @@
 /**
  * Live MC state loader for Ed's context window.
- * Lifted from ed-telegram.mjs:143-216, adapted to use server-side supabase.
+ * Supports tier-based context depth — Opus gets richer context.
  */
 
 import { supabaseAdmin } from '@/lib/db/supabase-server';
-import type Anthropic from '@anthropic-ai/sdk';
+import type { ModelTier } from './model-router';
 
-export async function buildContextBlock(): Promise<string> {
+type MessageEntry = { role: 'user' | 'assistant'; content: string };
+
+export async function buildContextBlock(tier?: ModelTier): Promise<string> {
   const sb = supabaseAdmin();
   let ctx = '\n## Current MC State\n';
 
@@ -71,6 +73,14 @@ export async function buildContextBlock(): Promise<string> {
         const msInfo = nextMs ? ` → next: ${nextMs.name} [${nextMs.status}]${nextMs.target ? ` by ${nextMs.target}` : ''}` : '';
         ctx += `- **${p.name}** — £${p.revenue_target_monthly || 0}/mo target${msInfo} (id: ${p.id})\n`;
         if (p.description) ctx += `  ${p.description}\n`;
+
+        // Opus tier: include full delivery plan details
+        if (tier === 'opus' && milestones.length > 0) {
+          ctx += `  Milestones:\n`;
+          for (const m of milestones) {
+            ctx += `    - ${m.name} [${m.status}]${m.target ? ` (target: ${m.target})` : ''}\n`;
+          }
+        }
       }
     }
 
@@ -155,7 +165,7 @@ export async function buildContextBlock(): Promise<string> {
       .select('decision_title, final_decision, rationale, decided_at, options')
       .eq('status', 'decided')
       .order('decided_at', { ascending: false })
-      .limit(5);
+      .limit(tier === 'opus' ? 10 : 5);
 
     if (recentDecisions?.length) {
       ctx += '\n**Recent Decisions (for learning):**\n';
@@ -242,6 +252,42 @@ export async function buildContextBlock(): Promise<string> {
       }
     }
 
+    // Opus tier: extended context — recent completed job results + cost summary
+    if (tier === 'opus') {
+      const { data: recentJobs } = await sb
+        .from('mc_jobs')
+        .select('title, status, result, quality_score, completed_at, engine')
+        .eq('status', 'done')
+        .order('completed_at', { ascending: false })
+        .limit(5);
+
+      if (recentJobs?.length) {
+        ctx += '\n**Recent Completed Jobs (for strategic context):**\n';
+        for (const j of recentJobs) {
+          const result = typeof j.result === 'string' ? j.result.slice(0, 500) : JSON.stringify(j.result || '').slice(0, 500);
+          ctx += `- ${j.title} [${j.engine}] QA:${j.quality_score || '?'}/50\n  ${result}\n`;
+        }
+      }
+
+      // Cost summary for Opus
+      const { data: costData } = await sb
+        .from('mc_runs')
+        .select('engine, cost_usd')
+        .gte('created_at', new Date(Date.now() - 7 * 86400000).toISOString());
+
+      if (costData?.length) {
+        const totalCost = costData.reduce((s, r) => s + (r.cost_usd || 0), 0);
+        const byEngine = new Map<string, number>();
+        for (const r of costData) {
+          byEngine.set(r.engine, (byEngine.get(r.engine) || 0) + (r.cost_usd || 0));
+        }
+        ctx += `\n**Cost Summary (7d): $${totalCost.toFixed(4)} total**\n`;
+        for (const [engine, cost] of byEngine) {
+          ctx += `- ${engine}: $${cost.toFixed(4)} (${costData.filter(r => r.engine === engine).length} runs)\n`;
+        }
+      }
+    }
+
     // Today's date for deadline awareness
     ctx += `\n**Today:** ${new Date().toISOString().split('T')[0]}\n`;
 
@@ -254,13 +300,13 @@ export async function buildContextBlock(): Promise<string> {
 }
 
 /**
- * Load recent conversation history as Anthropic messages[] array.
- * Returns proper multi-turn format for better prompt caching.
+ * Load recent conversation history as messages[] array.
+ * Returns proper multi-turn format for CLI prompt building.
  */
 export async function loadConversationHistory(
   conversationId: string,
   limit = 20,
-): Promise<Anthropic.MessageCreateParams['messages']> {
+): Promise<MessageEntry[]> {
   const sb = supabaseAdmin();
 
   const { data } = await sb
@@ -272,8 +318,8 @@ export async function loadConversationHistory(
 
   if (!data?.length) return [];
 
-  // Reverse to chronological order and map to Anthropic format
-  const messages: Anthropic.MessageCreateParams['messages'] = [];
+  // Reverse to chronological order and map to message format
+  const messages: MessageEntry[] = [];
   for (const m of data.reverse()) {
     const role = m.role === 'user' ? 'user' as const : 'assistant' as const;
     // Merge consecutive same-role messages
@@ -285,7 +331,7 @@ export async function loadConversationHistory(
     }
   }
 
-  // Ensure messages start with user (Anthropic requirement)
+  // Ensure messages start with user
   if (messages.length > 0 && messages[0].role !== 'user') {
     messages.shift();
   }

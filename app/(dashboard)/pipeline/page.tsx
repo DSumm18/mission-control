@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useToast } from '@/components/ui/ToastContext';
 
 type PipelineJob = {
   job_id: string;
@@ -49,24 +50,61 @@ function typeBadgeColor(t: string) {
 
 export default function PipelinePage() {
   const [jobs, setJobs] = useState<PipelineJob[]>([]);
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  useEffect(() => {
+  const fetchJobs = useCallback(() => {
     fetch('/api/jobs/pipeline', { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setJobs(d.jobs || []));
+      .then((d) => setJobs(d.jobs || []))
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    fetchJobs();
+    const interval = setInterval(fetchJobs, 30_000);
+    return () => clearInterval(interval);
+  }, [fetchJobs]);
+
+  async function handleDrop(jobId: string, newStatus: string) {
+    // Optimistic update
+    setJobs(prev => prev.map(j =>
+      j.job_id === jobId ? { ...j, status: newStatus } : j
+    ));
+
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || 'Failed to update', 'bad');
+        fetchJobs(); // Revert
+      } else {
+        toast(`Job moved to ${newStatus}`, 'good');
+      }
+    } catch {
+      toast('Network error', 'bad');
+      fetchJobs();
+    }
+  }
 
   return (
     <div>
       <h1 className="page-title">Pipeline</h1>
-      <p className="page-sub">Kanban view of job execution pipeline with agent assignments and quality scores.</p>
+      <p className="page-sub">Kanban view — drag cards between columns to update status.</p>
 
       <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 12 }}>
         {COLUMNS.map((col) => {
           const colJobs = jobs.filter((j) => col.statuses.includes(j.status));
+          const isOver = dragOver === col.key;
           return (
             <div
               key={col.key}
+              className={isOver ? 'drag-over' : ''}
               style={{
                 minWidth: 240,
                 maxWidth: 280,
@@ -75,6 +113,21 @@ export default function PipelinePage() {
                 border: '1px solid var(--line)',
                 borderRadius: 12,
                 padding: 10,
+                transition: 'border-color 0.15s ease, background 0.15s ease',
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(col.key);
+              }}
+              onDragLeave={() => setDragOver(null)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(null);
+                if (dragging) {
+                  const targetStatus = col.statuses[0];
+                  handleDrop(dragging, targetStatus);
+                }
+                setDragging(null);
               }}
             >
               <div style={{ fontWeight: 600, marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
@@ -85,12 +138,18 @@ export default function PipelinePage() {
                 {colJobs.slice(0, 20).map((job) => (
                   <div
                     key={job.job_id}
+                    draggable
+                    onDragStart={() => setDragging(job.job_id)}
+                    onDragEnd={() => { setDragging(null); setDragOver(null); }}
+                    className={`${job.status === 'running' ? 'card-running' : ''} ${dragging === job.job_id ? 'dragging-card' : ''}`}
                     style={{
                       border: '1px solid var(--line)',
                       borderRadius: 8,
                       padding: 10,
                       background: 'var(--panel)',
                       fontSize: 13,
+                      cursor: 'grab',
+                      transition: 'opacity 0.15s ease, transform 0.15s ease',
                     }}
                   >
                     <div style={{ fontWeight: 600, marginBottom: 4, lineHeight: 1.3 }}>
@@ -111,7 +170,7 @@ export default function PipelinePage() {
                     </div>
                     {job.agent_name && (
                       <div className="muted" style={{ fontSize: 12 }}>
-                        {job.agent_emoji || '🤖'}{' '}
+                        {job.agent_emoji || '\uD83E\uDD16'}{' '}
                         <Link href={`/agents/${job.agent_id}`} style={{ color: 'var(--accent)' }}>
                           {job.agent_name}
                         </Link>
@@ -120,6 +179,11 @@ export default function PipelinePage() {
                     {job.project_name && (
                       <div className="muted" style={{ fontSize: 11 }}>
                         {job.project_name}
+                      </div>
+                    )}
+                    {job.status === 'running' && job.started_at && (
+                      <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
+                        {'\u23F1'} {Math.round((Date.now() - new Date(job.started_at).getTime()) / 60000)}m elapsed
                       </div>
                     )}
                     {job.quality_score !== null && (
