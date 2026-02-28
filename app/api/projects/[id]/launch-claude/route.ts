@@ -83,7 +83,7 @@ If you encounter issues, document them clearly.`;
         status: 'queued',
         priority: 3,
         job_type: 'task',
-        source: 'project-launch',
+        source: 'dashboard',
         project_id: project.id,
         repo_path: project.repo_path,
       })
