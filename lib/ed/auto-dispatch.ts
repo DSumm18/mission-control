@@ -67,12 +67,14 @@ export async function checkAutoDispatch(): Promise<void> {
       }
     }
 
-    // 2. Failed jobs with retry_count < MAX_RETRIES → auto-requeue
+    // 2. Failed jobs with retry_count < MAX_RETRIES → auto-requeue (only recent failures)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { data: failedJobs } = await sb
       .from('mc_jobs')
       .select('id, title, prompt_text, engine, project_id, agent_id, repo_path, priority, job_type, retry_count')
       .eq('status', 'failed')
       .lt('retry_count', MAX_RETRIES)
+      .gt('completed_at', oneHourAgo) // Only retry jobs that failed in the last hour
       .order('completed_at', { ascending: false })
       .limit(5);
 

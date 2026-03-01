@@ -263,8 +263,16 @@ export async function POST(req: NextRequest) {
       else if (claimed.job_type === 'decomposition') {
         await handleDecompositionResult(claimed, result);
       }
+      // Skip QA for operational jobs that don't produce business content
+      else if (
+        claimed.engine === 'shell' ||
+        claimed.job_type === 'integration' ||
+        (claimed.title as string || '').startsWith('__SMOKE_TEST')
+      ) {
+        await appendRunnerLog(`qa-skipped job=${claimed.id} reason=${claimed.engine === 'shell' ? 'shell-job' : 'operational'}`);
+      }
       // Regular task: send to QA review
-      else if (claimed.job_type !== 'integration') {
+      else {
         await queueQAReview(claimed, result);
       }
     } catch (postErr) {
@@ -376,7 +384,7 @@ async function queueQAReview(
       title: `QA Review: ${job.title}`,
       engine: 'claude',
       repo_path: job.repo_path,
-      prompt_text: `Review the output of job "${job.title}" and score on 5 dimensions (completeness, accuracy, actionability, revenue_relevance, evidence) each 1-10. Return ONLY JSON with those 5 scores plus total, passed (boolean, threshold 35/50), and feedback.\n\n## Job Output:\n${(result || '').slice(0, 4000)}`,
+      prompt_text: `Review the output of job "${job.title}" and score on 5 dimensions (completeness, accuracy, actionability, revenue_relevance, evidence) each 1-10. Return ONLY JSON: {"completeness":N,"accuracy":N,"actionability":N,"revenue_relevance":N,"evidence":N,"total":N,"passed":bool,"feedback":"..."}\n\nScoring guidance:\n- completeness: Does it answer the full prompt? (If output appears truncated by the review pipeline, score based on what IS present)\n- accuracy: Is the content correct and well-reasoned?\n- actionability: Can David or agents act on this immediately?\n- revenue_relevance: Does it advance business goals? (Score 7 baseline for internal/operational tasks)\n- evidence: Are claims supported with sources or data?\n\nThreshold: 35/50. If output is cut off, note it in feedback but don't penalise completeness if the visible content is substantive.\n\n## Job Output:\n${(result || '').slice(0, 8000)}`,
       output_dir: job.output_dir,
       status: 'queued',
       parent_job_id: job.id,
