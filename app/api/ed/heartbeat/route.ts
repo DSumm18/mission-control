@@ -60,6 +60,25 @@ export async function POST(req: NextRequest) {
   // Build context
   const contextBlock = await buildContextBlock();
 
+  // Run health check for evening briefings
+  let healthReport = '';
+  if (briefingType === 'evening') {
+    try {
+      const baseUrl = process.env.MC_SERVER_URL || 'http://localhost:3000';
+      const hRes = await fetch(`${baseUrl}/api/health`, { signal: AbortSignal.timeout(15_000) });
+      const health = await hRes.json();
+      const checks = (health.checks || []) as { name: string; ok: boolean; detail: string }[];
+      const failures = checks.filter(c => !c.ok);
+      healthReport = `\n\n## System Health Check (${health.passed}/${health.total} passed)\n`;
+      healthReport += checks.map(c => `- ${c.ok ? 'OK' : 'FAIL'} ${c.name}: ${c.detail}`).join('\n');
+      if (failures.length > 0) {
+        healthReport += `\n\nWARNING: ${failures.length} check(s) failed. Report these issues to David and suggest fixes.`;
+      }
+    } catch {
+      healthReport = '\n\n## System Health Check\nUnable to run health check.';
+    }
+  }
+
   // Compose briefing prompt
   const prompt =
     briefingType === 'morning'
@@ -79,13 +98,17 @@ Keep it under 200 words. Direct, no waffle. Use plain text (no markdown bold/ita
 
 Context:
 ${contextBlock}
+${healthReport}
 
 Format: Start casually. Then cover:
 1. What got done today
-2. Any issues that need attention tomorrow
-3. Quick wins available for tomorrow morning
+2. System health status — highlight any failures and what you'll do about them
+3. Any issues that need attention tomorrow
+4. Quick wins available for tomorrow morning
 
-Keep it under 150 words. Direct, no waffle. Use plain text (no markdown bold/italic — this goes to Telegram).`;
+If any health checks failed, explain what's wrong and what self-corrective action you'd take (e.g. restarting services, requeuing failed jobs, unpausing agents).
+
+Keep it under 200 words. Direct, no waffle. Use plain text (no markdown bold/italic — this goes to Telegram).`;
 
   try {
     const briefing = await claudeCall(

@@ -99,12 +99,35 @@ export async function buildContextBlock(tier?: ModelTier): Promise<string> {
     // Agent summary
     const { data: agents } = await sb
       .from('mc_agents')
-      .select('name, status, department')
+      .select('name, active, consecutive_failures')
       .order('name');
 
     if (agents?.length) {
-      const active = agents.filter(a => a.status === 'active').length;
-      ctx += `\n**Agents:** ${active}/${agents.length} active\n`;
+      const activeCount = agents.filter(a => a.active).length;
+      ctx += `\n**Agents:** ${activeCount}/${agents.length} active\n`;
+    }
+
+    // Env health summary
+    const { data: envHealth } = await sb
+      .from('mc_env_health')
+      .select('project_id, health_score, missing_vercel, missing_local')
+      .lt('health_score', 100);
+
+    if (envHealth?.length) {
+      const { data: projects } = await sb
+        .from('mc_projects')
+        .select('id, name')
+        .in('id', envHealth.map(e => e.project_id));
+      const nameMap = new Map((projects || []).map(p => [p.id, p.name]));
+      const unhealthy = envHealth.filter(e => e.health_score < 80);
+      if (unhealthy.length > 0) {
+        ctx += '\n**Env Health Issues:**\n';
+        for (const e of unhealthy) {
+          const name = nameMap.get(e.project_id) || 'Unknown';
+          const missing = [...(e.missing_vercel || []), ...(e.missing_local || [])];
+          ctx += `- ${name}: score ${e.health_score}/100 — missing: ${missing.slice(0, 5).join(', ') || 'none'}\n`;
+        }
+      }
     }
 
     // Recent tasks

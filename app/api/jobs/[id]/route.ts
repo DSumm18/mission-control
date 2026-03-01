@@ -29,6 +29,17 @@ export async function GET(
 
 const VALID_STATUSES = ['queued', 'assigned', 'running', 'reviewing', 'done', 'rejected', 'failed'];
 
+/** Valid status transitions — prevents state corruption */
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  queued:     ['assigned', 'running', 'failed'],
+  assigned:   ['running', 'queued', 'failed'],
+  running:    ['done', 'failed', 'reviewing', 'paused_human', 'paused_quota'],
+  reviewing:  ['done', 'rejected', 'failed'],
+  done:       [], // terminal
+  rejected:   ['queued'], // allow re-queue
+  failed:     ['queued'], // allow retry
+};
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -49,6 +60,19 @@ export async function PATCH(
     if (!VALID_STATUSES.includes(body.status)) {
       return Response.json({ error: `Invalid status: ${body.status}` }, { status: 400 });
     }
+
+    // Validate transition
+    const { data: current } = await sb.from('mc_jobs').select('status').eq('id', id).single();
+    if (current) {
+      const allowed = VALID_TRANSITIONS[current.status] || [];
+      if (allowed.length > 0 && !allowed.includes(body.status)) {
+        return Response.json(
+          { error: `Invalid transition: ${current.status} → ${body.status}` },
+          { status: 400 },
+        );
+      }
+    }
+
     updates.status = body.status;
 
     // Set timestamps based on status

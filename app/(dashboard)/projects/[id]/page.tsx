@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   FolderOpen, Target, Briefcase, Activity, Settings as SettingsIcon,
-  Play, Terminal, CheckCircle, Clock, Zap,
+  Play, Terminal, CheckCircle, Clock, Zap, Shield,
 } from 'lucide-react';
 import AnimatedKPI from '@/components/ui/AnimatedKPI';
 import { SkeletonKPI } from '@/components/ui/Skeleton';
@@ -50,6 +50,8 @@ type Project = {
   slug: string;
   description: string | null;
   repo_path: string | null;
+  vercel_project_id: string | null;
+  supabase_project_id: string | null;
   delivery_plan: { milestones?: Milestone[] };
   status: string;
   revenue_target_monthly: number | null;
@@ -88,7 +90,19 @@ type ActivityItem = {
   timestamp: string;
 };
 
-type Tab = 'overview' | 'tasks' | 'jobs' | 'activity' | 'settings';
+type Tab = 'overview' | 'tasks' | 'jobs' | 'activity' | 'env' | 'settings';
+
+type EnvRow = {
+  key: string;
+  inVercel: boolean;
+  inLocal: boolean;
+  inManifest: boolean;
+  required: boolean;
+  vercelType?: string;
+  targets?: string[];
+  vercelId?: string;
+  manifestId?: string;
+};
 
 function statusBadge(status: string) {
   if (['done', 'active', 'completed'].includes(status)) return 'good';
@@ -108,6 +122,12 @@ export default function ProjectCommandCenter() {
   const [editPlan, setEditPlan] = useState('');
   const [editRepoPath, setEditRepoPath] = useState('');
   const [saving, setSaving] = useState(false);
+  const [envRows, setEnvRows] = useState<EnvRow[]>([]);
+  const [envLoading, setEnvLoading] = useState(false);
+  const [envScore, setEnvScore] = useState<number | null>(null);
+  const [newEnvKey, setNewEnvKey] = useState('');
+  const [newEnvValue, setNewEnvValue] = useState('');
+  const [addingEnv, setAddingEnv] = useState(false);
   const [launching, setLaunching] = useState(false);
   const [launchTask, setLaunchTask] = useState('');
 
@@ -238,6 +258,110 @@ export default function ProjectCommandCenter() {
     }
   }
 
+  async function loadEnvData() {
+    if (!project) return;
+    setEnvLoading(true);
+    try {
+      // Fetch all three sources in parallel
+      const [vercelRes, localRes, manifestRes] = await Promise.all([
+        project.vercel_project_id
+          ? fetch(`/api/env/vercel?vercel_project_id=${project.vercel_project_id}`).then(r => r.json())
+          : Promise.resolve({ envs: [] }),
+        project.repo_path
+          ? fetch(`/api/env/local?repo_path=${encodeURIComponent(project.repo_path)}`).then(r => r.json())
+          : Promise.resolve({ keys: [] }),
+        fetch(`/api/env/manifest?project_id=${project.id}`).then(r => r.json()),
+      ]);
+
+      type VercelEntry = { key: string; id: string; type: string; target: string[] };
+      type ManifestEntry = { key_name: string; id: string; required: boolean };
+      const vercelKeys = new Map<string, VercelEntry>((vercelRes.envs || []).map((e: VercelEntry) => [e.key, e]));
+      const localKeys = new Set<string>((localRes.keys || []) as string[]);
+      const manifestEntries = new Map<string, ManifestEntry>(
+        (manifestRes.manifest || []).map((m: ManifestEntry) => [m.key_name, m]),
+      );
+
+      // Build unified rows
+      const allKeys = new Set([
+        ...vercelKeys.keys(),
+        ...localKeys,
+        ...manifestEntries.keys(),
+      ]);
+
+      const rows: EnvRow[] = ([...allKeys] as string[]).sort().map(key => {
+        const v = vercelKeys.get(key);
+        const m = manifestEntries.get(key);
+        return {
+          key,
+          inVercel: vercelKeys.has(key),
+          inLocal: localKeys.has(key),
+          inManifest: manifestEntries.has(key),
+          required: m?.required ?? false,
+          vercelType: v?.type,
+          targets: v?.target,
+          vercelId: v?.id,
+          manifestId: m?.id,
+        };
+      });
+
+      setEnvRows(rows);
+
+      // Compute simple health score
+      const manifestKeys = [...manifestEntries.keys()];
+      const requiredMissing = manifestKeys.filter(k => manifestEntries.get(k)?.required && !vercelKeys.has(k));
+      let score = 100 - requiredMissing.length * 15;
+      score = Math.max(0, Math.min(100, score));
+      setEnvScore(score);
+    } catch {
+      toast('Failed to load env data', 'bad');
+    } finally {
+      setEnvLoading(false);
+    }
+  }
+
+  async function addEnvToManifest(keyName: string) {
+    try {
+      await fetch('/api/env/manifest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: project?.id, key_name: keyName }),
+      });
+      toast(`Added ${keyName} to manifest`, 'good');
+      loadEnvData();
+    } catch {
+      toast('Failed to add to manifest', 'bad');
+    }
+  }
+
+  async function addEnvToVercel() {
+    if (!newEnvKey || !newEnvValue || !project?.vercel_project_id) return;
+    setAddingEnv(true);
+    try {
+      const res = await fetch('/api/env/vercel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vercel_project_id: project.vercel_project_id,
+          key: newEnvKey,
+          value: newEnvValue,
+        }),
+      });
+      if (res.ok) {
+        toast(`${newEnvKey} added to Vercel`, 'good');
+        setNewEnvKey('');
+        setNewEnvValue('');
+        loadEnvData();
+      } else {
+        const data = await res.json();
+        toast(data.error || 'Failed', 'bad');
+      }
+    } catch {
+      toast('Network error', 'bad');
+    } finally {
+      setAddingEnv(false);
+    }
+  }
+
   async function cycleTaskStatus(taskId: string, currentStatus: string) {
     const nextStatus = currentStatus === 'todo' ? 'in_progress' : currentStatus === 'in_progress' ? 'done' : 'todo';
     try {
@@ -258,6 +382,7 @@ export default function ProjectCommandCenter() {
     { key: 'tasks', label: 'Tasks', icon: CheckCircle },
     { key: 'jobs', label: 'Jobs', icon: Briefcase },
     { key: 'activity', label: 'Activity', icon: Activity },
+    { key: 'env', label: 'Env Vars', icon: Shield },
     { key: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
 
@@ -514,6 +639,126 @@ export default function ProjectCommandCenter() {
               </span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ENV VARS TAB */}
+      {tab === 'env' && (
+        <div>
+          {/* Health Score + Refresh */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            {envScore !== null && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 14px', borderRadius: 8,
+                background: envScore >= 80 ? 'rgba(61,220,151,0.1)' : envScore >= 50 ? 'rgba(247,201,72,0.1)' : 'rgba(255,107,107,0.1)',
+                color: envScore >= 80 ? 'var(--good)' : envScore >= 50 ? 'var(--warn)' : 'var(--bad)',
+                fontWeight: 600, fontSize: 14,
+              }}>
+                Health: {envScore}/100
+              </div>
+            )}
+            <button onClick={loadEnvData} disabled={envLoading} className="btn-sm">
+              {envLoading ? 'Loading...' : 'Refresh'}
+            </button>
+            {!project.vercel_project_id && (
+              <span style={{ color: 'var(--warn)', fontSize: 12 }}>
+                No Vercel project linked — set vercel_project_id in Settings
+              </span>
+            )}
+          </div>
+
+          {/* Comparison Table */}
+          {envRows.length > 0 ? (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Key</th>
+                    <th style={{ width: 70, textAlign: 'center' }}>Required</th>
+                    <th style={{ width: 70, textAlign: 'center' }}>Vercel</th>
+                    <th style={{ width: 70, textAlign: 'center' }}>Local</th>
+                    <th>Targets</th>
+                    <th style={{ width: 100 }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {envRows.map(row => {
+                    const allGood = row.inManifest && row.inVercel;
+                    const missing = row.required && !row.inVercel;
+                    return (
+                      <tr key={row.key} style={{
+                        background: missing ? 'rgba(255,107,107,0.05)' : allGood ? 'rgba(61,220,151,0.03)' : undefined,
+                      }}>
+                        <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{row.key}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          {row.required ? <span style={{ color: 'var(--warn)' }}>Yes</span> : <span style={{ color: 'var(--muted)' }}>-</span>}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {row.inVercel
+                            ? <span className="status-dot" style={{ background: 'var(--good)' }} />
+                            : <span className="status-dot" style={{ background: 'var(--line)' }} />
+                          }
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {row.inLocal
+                            ? <span className="status-dot" style={{ background: 'var(--good)' }} />
+                            : <span className="status-dot" style={{ background: 'var(--line)' }} />
+                          }
+                        </td>
+                        <td style={{ fontSize: 11, color: 'var(--muted)' }}>
+                          {row.targets?.join(', ') || '-'}
+                        </td>
+                        <td>
+                          {!row.inManifest && (
+                            <button
+                              className="btn-sm"
+                              style={{ fontSize: 10, padding: '2px 6px' }}
+                              onClick={() => addEnvToManifest(row.key)}
+                            >
+                              + Manifest
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p style={{ color: 'var(--muted)', fontSize: 13 }}>
+              {envLoading ? 'Loading...' : 'Click Refresh to load env var data from Vercel and local files.'}
+            </p>
+          )}
+
+          {/* Add New Env Var */}
+          {project.vercel_project_id && (
+            <article className="card" style={{ marginTop: 16 }}>
+              <h3 style={{ marginTop: 0, fontSize: 14 }}>Add Env Var to Vercel</h3>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  value={newEnvKey}
+                  onChange={e => setNewEnvKey(e.target.value.toUpperCase())}
+                  placeholder="KEY_NAME"
+                  style={{ width: 200, fontFamily: 'monospace', fontSize: 12 }}
+                />
+                <input
+                  type="password"
+                  value={newEnvValue}
+                  onChange={e => setNewEnvValue(e.target.value)}
+                  placeholder="value"
+                  style={{ flex: 1, fontSize: 12 }}
+                />
+                <button onClick={addEnvToVercel} disabled={addingEnv || !newEnvKey || !newEnvValue} className="btn-sm">
+                  {addingEnv ? 'Adding...' : 'Add'}
+                </button>
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, marginBottom: 0 }}>
+                Added to all environments (production, preview, development) as encrypted.
+              </p>
+            </article>
+          )}
         </div>
       )}
 

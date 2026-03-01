@@ -107,6 +107,21 @@ Use this EXACT format — each on its own line:
 
 [MC_ACTION:check_status]{"entity":"jobs|research|newsletters"}[/MC_ACTION]
 
+[MC_ACTION:health_check]{}[/MC_ACTION]
+-> Runs a full system health diagnostic across all MC subsystems. Checks: Supabase connectivity, job queue status, stalled jobs, recent failures, scheduler, Telegram bridge, Cloudflare tunnel, agents, disk space, notifications, pause flag. Returns a pass/fail report for each. Use this when David asks "is everything working?", "run a health check", "systems check", or proactively if you suspect something is broken.
+
+[MC_ACTION:env_health]{"project_name":"MyMeme"}[/MC_ACTION]
+-> Checks environment variable health for a project. Compares Vercel env vars vs local .env.local vs manifest (expected keys).
+-> Returns: missing keys, extra keys, health score (0-100).
+-> Use without project_name to check ALL projects at once.
+-> Use when David asks "are env vars set up?", "check env health", "what's missing for MyMeme?".
+
+[MC_ACTION:query_project]{"project_name":"MyMeme","sql":"SELECT count(*) FROM users"}[/MC_ACTION]
+→ Queries a project's own Supabase database directly. Use this to check user counts, errors, activity, or any project-specific data.
+→ Projects with linked databases: MyMeme, CricBook, Schoolgle. Others need their supabase_project_id set.
+→ Only SELECT queries are allowed — no DDL or destructive operations.
+→ Use this when David asks "how's MyMeme doing?", "any users on CricBook?", "check Schoolgle signups", etc.
+
 [MC_ACTION:review_project]{"project_name":"MyMeme"}[/MC_ACTION]
 → Dispatches Inspector to scan the project's repo and produce a status report.
 

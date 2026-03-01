@@ -5,7 +5,8 @@
 
 import { supabaseAdmin } from '@/lib/db/supabase-server';
 
-const STALL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+const STALL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes — alert
+const STALL_FORCE_FAIL_MS = 15 * 60 * 1000; // 15 minutes — force-fail
 const MAX_RETRIES = 3;
 const RESEARCH_STALE_MS = 30 * 60 * 1000; // 30 minutes
 const MAX_CONSECUTIVE_FAILURES = 3;
@@ -25,8 +26,25 @@ export async function checkAutoDispatch(): Promise<void> {
       const now = Date.now();
       for (const j of stalledJobs) {
         const elapsed = now - new Date(j.started_at!).getTime();
-        if (elapsed > STALL_TIMEOUT_MS) {
-          // Check if we already have a stall notification for this job
+        // Force-fail zombie jobs (>15 min running)
+        if (elapsed > STALL_FORCE_FAIL_MS) {
+          await sb.from('mc_jobs').update({
+            status: 'failed',
+            error: `Timed out after ${Math.round(elapsed / 60000)} minutes`,
+            last_error: `Timed out after ${Math.round(elapsed / 60000)} minutes`,
+            completed_at: new Date().toISOString(),
+          }).eq('id', j.id);
+
+          await sb.from('mc_ed_notifications').insert({
+            title: `Zombie job killed: ${j.title}`,
+            body: `Was running for ${Math.round(elapsed / 60000)} minutes with no response. Marked as failed for auto-retry.`,
+            category: 'alert',
+            priority: 'high',
+            status: 'pending',
+            metadata: { job_id: j.id, type: 'zombie_killed' },
+          });
+        } else if (elapsed > STALL_TIMEOUT_MS) {
+          // Warn about stalled jobs (>10 min)
           const { data: existing } = await sb
             .from('mc_ed_notifications')
             .select('id')
@@ -71,6 +89,8 @@ export async function checkAutoDispatch(): Promise<void> {
             started_at: null,
             completed_at: null,
             result: null,
+            last_error: null, // Clear stale error on retry
+            error: null,
           })
           .eq('id', j.id);
 
@@ -121,14 +141,14 @@ export async function checkAutoDispatch(): Promise<void> {
     const { data: troubleAgents } = await sb
       .from('mc_agents')
       .select('id, name, consecutive_failures')
-      .eq('status', 'active')
+      .eq('active', true)
       .gte('consecutive_failures', MAX_CONSECUTIVE_FAILURES);
 
     if (troubleAgents?.length) {
       for (const a of troubleAgents) {
         await sb
           .from('mc_agents')
-          .update({ status: 'paused' })
+          .update({ active: false })
           .eq('id', a.id);
 
         await sb.from('mc_ed_notifications').insert({

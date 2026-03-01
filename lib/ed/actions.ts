@@ -561,6 +561,127 @@ ${reason ? `## Why\n${reason}` : ''}
           break;
         }
 
+        case 'health_check': {
+          // Run system health diagnostics and return results
+          try {
+            const baseUrl = process.env.MC_SERVER_URL || 'http://localhost:3000';
+            const res = await fetch(`${baseUrl}/api/health`, {
+              signal: AbortSignal.timeout(15_000),
+            });
+            const health = await res.json();
+            const checks = (health.checks || []) as { name: string; ok: boolean; detail: string }[];
+            const summary = checks
+              .map((c: { name: string; ok: boolean; detail: string }) =>
+                `${c.ok ? 'OK' : 'FAIL'} ${c.name}: ${c.detail}`)
+              .join('\n');
+            results.push({
+              type: 'health_check',
+              ok: health.ok,
+              id: `${health.passed}/${health.total} passed`,
+              error: health.ok ? undefined : `${health.failed} check(s) failed`,
+              ...health,
+              summary,
+            } as EdActionResult & Record<string, unknown>);
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            results.push({ type: 'health_check', ok: false, error: `Health check failed: ${msg}` });
+          }
+          break;
+        }
+
+        case 'env_health': {
+          const p = action.params as Record<string, string>;
+          const projectName = p.project_name || p.project;
+          try {
+            const baseUrl = process.env.MC_SERVER_URL || 'http://localhost:3000';
+            let body: Record<string, string> = {};
+
+            if (projectName && projectName !== 'all') {
+              const { data: proj } = await sb
+                .from('mc_projects')
+                .select('id')
+                .ilike('name', `%${projectName}%`)
+                .single();
+              if (!proj) {
+                results.push({ type: 'env_health', ok: false, error: `Project not found: ${projectName}` });
+                break;
+              }
+              body = { project_id: proj.id };
+            }
+
+            const res = await fetch(`${baseUrl}/api/env/health`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+              signal: AbortSignal.timeout(30_000),
+            });
+            const data = await res.json();
+            results.push({
+              type: 'env_health',
+              ok: res.ok,
+              ...(res.ok ? data : { error: data.error }),
+            } as EdActionResult & Record<string, unknown>);
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            results.push({ type: 'env_health', ok: false, error: msg });
+          }
+          break;
+        }
+
+        case 'query_project': {
+          // Query a project's Supabase database
+          const p = action.params as Record<string, string>;
+          const projectName = p.project_name || p.project;
+          const sql = p.sql || p.query;
+          if (!projectName || !sql) {
+            results.push({ type: 'query_project', ok: false, error: 'project_name and sql are required' });
+            break;
+          }
+          // Look up the project's supabase_project_id
+          const { data: project } = await sb
+            .from('mc_projects')
+            .select('name, supabase_project_id')
+            .ilike('name', projectName)
+            .single();
+          if (!project?.supabase_project_id) {
+            results.push({
+              type: 'query_project',
+              ok: false,
+              error: project
+                ? `Project "${project.name}" has no Supabase database linked. Ask David to set supabase_project_id.`
+                : `Project "${projectName}" not found.`,
+            });
+            break;
+          }
+          // Execute via MC's /api/projects/query endpoint (proxies to project's Supabase)
+          try {
+            const baseUrl = process.env.MC_SERVER_URL || 'http://localhost:3000';
+            const res = await fetch(`${baseUrl}/api/projects/query`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-runner-token': process.env.MC_RUNNER_TOKEN || '',
+              },
+              body: JSON.stringify({
+                project_id: project.supabase_project_id,
+                sql,
+              }),
+              signal: AbortSignal.timeout(15_000),
+            });
+            const data = await res.json();
+            results.push({
+              type: 'query_project',
+              ok: res.ok,
+              project: project.name,
+              ...(res.ok ? { data: data.rows } : { error: data.error }),
+            } as EdActionResult & Record<string, unknown>);
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            results.push({ type: 'query_project', ok: false, error: msg });
+          }
+          break;
+        }
+
         case 'acknowledge_notification': {
           const p = action.params as Record<string, string>;
           if (!p.notification_id) {

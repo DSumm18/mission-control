@@ -58,8 +58,8 @@ ARGS_JOINED="$(ARGS_JSON="$ARGS_JSON" join_args)"
 
 case "$ENGINE" in
   shell)
-    OUT="$(bash -lc "$COMMAND_TEXT $ARGS_JOINED" 2>&1)"
-    python3 - <<'PY'
+    OUT="$(bash -lc "$COMMAND_TEXT $ARGS_JOINED" 2>&1)" || true
+    OUT="$OUT" python3 - <<'PY'
 import json, os
 print(json.dumps({"ok": True, "engine": "shell", "result": os.environ.get("OUT","")[:12000]}))
 PY

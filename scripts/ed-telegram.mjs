@@ -25,7 +25,7 @@ import { spawn } from 'node:child_process';
 const ENV_PATH       = resolve(process.cwd(), '.env.local');
 const MAX_HISTORY    = 20;             // messages to include in conversation context
 const CLAUDE_CLI     = '/opt/homebrew/bin/claude';
-const CLAUDE_TIMEOUT = 180_000;        // 180s max per response
+const CLAUDE_TIMEOUT = 300_000;        // 300s max per response
 
 // ── Load .env.local ─────────────────────────────────────────────────────
 
@@ -85,55 +85,84 @@ function buildSystemPrompt(contextBlock) {
   return `You are Ed, the orchestrator agent for Mission Control — David Summers' AI operations platform.
 
 ## Who You Are
-- David's right-hand AI assistant — think Jarvis, but for EdTech.
-- You coordinate a team of specialist agents: Scout, Hawk, Megaphone, Builder, Inspector, Publisher, Pixel, Pulse.
+- David's right-hand AI assistant — think Jarvis, but for the whole product portfolio.
+- You coordinate a team of specialist agents across ALL products.
 - You're direct, proactive, and efficient. No waffle.
 - You communicate like a sharp colleague, not a corporate chatbot.
+- When David tells you to do something, you DO it by creating jobs — not just discuss it.
 
 ## What You Know
-- **Schoolgle**: EdTech platform for UK schools. Weekly newsletter "The Schoolgle Signal" for heads, SBMs, governors, DSLs.
-- **DfE Data Warehouse**: 307K+ school records from Department for Education (in Schoolgle's separate Supabase).
-- **Product Portfolio**: MyMeme, MySongs, Schoolgle, DealFind, CricBook, ClawPhone.
-- **Revenue target**: £10K/month by end March 2026.
-- **Newsletter model**: Free basic tool in newsletter, full pro tool in Schoolgle Toolbox (paid tier). Articles tease upgrade.
+- **Product Portfolio** (priority order): MySongs, MyMeme, Schoolgle, DealFind, CricBook, ClawPhone.
+- **Revenue target**: £10K/month combined by end March 2026.
+- **Schoolgle**: EdTech platform for UK schools. Weekly newsletter "The Schoolgle Signal".
+- **MySongs**: AI song generator. Claude + Suno API + Stripe.
+- **MyMeme**: AI photo style transformation. Expo/React Native + Runware API. 127K+ photos.
+- **DealFind**: Deal discovery engine. Node.js + Crawlee + Supabase.
+- **CricBook**: Cricket social network. Next.js + Expo monorepo.
+- **ClawPhone**: Voice-first iOS app. Swift native.
+- Each project has structured specs with milestones, acceptance criteria, and constraints in its delivery_plan.
 
 ## Your Agent Team
 - **Scout**: Research — finds, summarises, scores content relevance 1-10
-- **Hawk**: Deep analysis — policy context, cross-references, implications for schools
-- **Megaphone**: Writer — newsletter sections in Schoolgle voice, social copy
-- **Builder**: Tool creator — interactive tools/snippets for newsletters
+- **Hawk**: Deep analysis — policy context, cross-references, implications
+- **Megaphone**: Writer — newsletter sections, social copy
+- **Builder**: Tool creator — interactive tools/snippets
 - **Inspector**: QA — voice check, accuracy, AI-phrase detection
-- **Publisher**: Deployment — GitHub Pages, releases
+- **Publisher**: Deployment — releases
 - **Pixel**: Design — visual assets, branding
-- **Pulse**: Data analyst — DfE data insights, trends, projections
+- **Pulse**: Data analyst — insights, trends, projections
+
+## CRITICAL: When to Act vs Talk
+- If David asks you to DO something → create jobs/tasks immediately, don't just discuss
+- If David asks for a status update → report what you know from MC state
+- If David says something "needs doing" or "sort this out" → create the jobs NOW
+- Only ask clarification if genuinely ambiguous — otherwise pick the obvious path and go
 
 ## How to Respond
 - SHORT and punchy. This is Telegram, not an essay. 2-4 sentences for most replies.
 - Emojis: use sparingly but effectively (✅ 🔍 📰 🎯 ⚡).
-- If David shares a URL → assess what it's useful for, suggest newsletter angles.
-- If David shares an idea → help develop it, suggest next steps.
+- If David shares a URL → assess what it's useful for, suggest angles.
+- If David shares an idea → help develop it AND create the jobs to execute.
 - If you need clarification → ask ONE focused question.
-- When delegating to an agent → explain what + why in one line.
+- When delegating → explain what + why in one line, and include the action.
 - Be proactive — suggest connections and actions David hasn't thought of.
 
 ## Actions
 When you need to execute something in Mission Control, include action blocks in your response.
 Use this EXACT format — each on its own line:
 
+### Create a job for any project (main action — use this for all product work)
+[MC_ACTION:create_job]{"title":"...","prompt_text":"...","project_name":"MySongs","engine":"claude","priority":3}[/MC_ACTION]
+- project_name: must match exactly — MySongs, MyMeme, Schoolgle, DealFind, CricBook, ClawPhone
+- engine: "claude" (default), "gemini", or "shell"
+- priority: 1 (highest) to 10 (lowest), default 3
+- prompt_text: detailed instructions for the agent — include what to do, acceptance criteria, constraints
+
+### Launch Claude Code in a project repo (for code changes)
+[MC_ACTION:launch_claude]{"project_name":"MyMeme","task":"Fix the RUNWARE_API_KEY env var loading in production builds"}[/MC_ACTION]
+- Creates a job with full project spec context, runs in the project's repo
+
+### Research actions (for Schoolgle newsletter pipeline)
 [MC_ACTION:create_research]{"url":"...","title":"...","content_type":"article","notes":"..."}[/MC_ACTION]
-
 [MC_ACTION:queue_scout]{"research_item_id":"...","title":"...","url":"...","content_type":"article"}[/MC_ACTION]
-
 [MC_ACTION:queue_hawk]{"research_item_id":"...","focus":"..."}[/MC_ACTION]
-
-[MC_ACTION:create_task]{"title":"...","description":"..."}[/MC_ACTION]
-
 [MC_ACTION:queue_draft]{"newsletter_id":"..."}[/MC_ACTION]
+
+### Task management
+[MC_ACTION:create_task]{"title":"...","description":"...","project_name":"MySongs","priority":3}[/MC_ACTION]
+
+### System health check
+[MC_ACTION:health_check]{}[/MC_ACTION]
+-> Runs diagnostics across all MC subsystems: Supabase, job queue, stalled jobs, failures, scheduler, Telegram bridge, tunnel, agents, disk, notifications, pause flag. Returns pass/fail for each. Use when David asks "is everything working?" or "health check" or "systems check". Also run this proactively if you suspect something is broken.
 
 Available content_types: article, youtube, govuk, pdf, social, manual
 
-Only include actions when you need to DO something. Not for casual chat.
-When creating research from a shared URL, ALWAYS create_research first, then queue_scout.
+IMPORTANT RULES:
+- When David asks for work to be done → ALWAYS include action blocks. Don't just talk about it.
+- Use create_job for research, analysis, specs, reviews across ANY product.
+- Use launch_claude for actual code changes in a project repo.
+- You can include MULTIPLE actions in one response — create several jobs at once if needed.
+- When creating research from a shared URL, create_research first, then queue_scout.
 
 ${contextBlock}`;
 }
@@ -144,6 +173,48 @@ async function buildContextBlock() {
   let ctx = '\n## Current MC State\n';
 
   try {
+    // Products with specs and blockers
+    const { data: projects } = await sb
+      .from('mc_projects')
+      .select('id, name, status, revenue_target_monthly, delivery_plan, description, repo_path')
+      .eq('status', 'active')
+      .order('revenue_target_monthly', { ascending: false });
+
+    if (projects?.length) {
+      const totalTarget = projects.reduce((s, p) => s + (p.revenue_target_monthly || 0), 0);
+      ctx += `\nProduct Portfolio (£${totalTarget.toLocaleString()}/mo target):\n`;
+      for (const p of projects) {
+        const dp = p.delivery_plan || {};
+        const milestones = dp.milestones || [];
+        const nextMs = milestones.find(m => m.status !== 'done');
+        const blockers = dp.key_blockers || [];
+        ctx += `- **${p.name}** — £${p.revenue_target_monthly || 0}/mo${p.repo_path ? ` [repo: ${p.repo_path}]` : ' [NO REPO]'}`;
+        if (nextMs) ctx += ` → next: ${nextMs.name} [${nextMs.status}]`;
+        ctx += ` (id: ${p.id})\n`;
+        if (dp.current_status) ctx += `  Status: ${dp.current_status}\n`;
+        if (blockers.length > 0) ctx += `  Blockers: ${blockers.join('; ')}\n`;
+      }
+    }
+
+    // Active jobs
+    const { data: jobs } = await sb
+      .from('mc_jobs')
+      .select('id, title, status, engine, project_id')
+      .in('status', ['queued', 'running'])
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (jobs?.length) {
+      ctx += `\nActive Jobs (${jobs.length}):\n`;
+      for (const j of jobs) {
+        const projName = projects?.find(p => p.id === j.project_id)?.name || '';
+        ctx += `- [${j.status}] ${j.title}${projName ? ` (${projName})` : ''}\n`;
+      }
+    } else {
+      ctx += '\nActive Jobs: none — queue is empty, ready for new work\n';
+    }
+
+    // Newsletters
     const { data: newsletters } = await sb
       .from('mc_newsletters')
       .select('id, week_no, title, pipeline_status')
@@ -151,12 +222,13 @@ async function buildContextBlock() {
       .limit(3);
 
     if (newsletters?.length) {
-      ctx += 'Newsletters:\n';
+      ctx += '\nNewsletters:\n';
       for (const n of newsletters) {
         ctx += `- Week ${n.week_no}: "${n.title}" [${n.pipeline_status}] (id: ${n.id})\n`;
       }
     }
 
+    // Pending research
     const { data: research } = await sb
       .from('mc_research_items')
       .select('id, title, status, relevance_score, content_type')
@@ -171,19 +243,23 @@ async function buildContextBlock() {
       }
     }
 
-    const { data: jobs } = await sb
+    // Recent completed jobs for awareness
+    const { data: recentDone } = await sb
       .from('mc_jobs')
-      .select('id, title, status, engine')
-      .in('status', ['queued', 'running'])
-      .order('created_at', { ascending: false })
+      .select('title, status, project_id, completed_at')
+      .eq('status', 'done')
+      .order('completed_at', { ascending: false })
       .limit(5);
 
-    if (jobs?.length) {
-      ctx += '\nActive Jobs:\n';
-      for (const j of jobs) {
-        ctx += `- [${j.status}] ${j.title} (${j.engine})\n`;
+    if (recentDone?.length) {
+      ctx += '\nRecently Completed:\n';
+      for (const j of recentDone) {
+        const projName = projects?.find(p => p.id === j.project_id)?.name || '';
+        ctx += `- ${j.title}${projName ? ` (${projName})` : ''}\n`;
       }
     }
+
+    ctx += `\nToday: ${new Date().toISOString().split('T')[0]}\n`;
   } catch (err) {
     ctx += `(Error loading state: ${err.message})\n`;
   }
@@ -383,8 +459,136 @@ async function executeActions(actions, chatId) {
           break;
         }
 
+        case 'create_job': {
+          const p = action.params;
+          // Resolve project_name to project_id
+          let projectId = null;
+          let repoPath = '/Users/david/.openclaw/workspace/mission-control';
+          if (p.project_name) {
+            const { data: proj } = await sb
+              .from('mc_projects')
+              .select('id, repo_path')
+              .ilike('name', p.project_name)
+              .single();
+            if (proj) {
+              projectId = proj.id;
+              if (proj.repo_path) repoPath = proj.repo_path;
+            }
+          }
+
+          const { data: job, error } = await sb
+            .from('mc_jobs')
+            .insert({
+              title: p.title,
+              prompt_text: p.prompt_text || p.title,
+              repo_path: repoPath,
+              engine: p.engine || 'claude',
+              status: 'queued',
+              priority: p.priority || 3,
+              job_type: p.job_type || 'task',
+              source: 'dashboard',
+              project_id: projectId,
+            })
+            .select('id')
+            .single();
+          if (error) throw error;
+          results.push({ type: 'create_job', job_id: job.id, project: p.project_name || 'none', ok: true });
+          log(`ACTION: created job ${job.id} for ${p.project_name || 'MC'}: ${p.title}`);
+          break;
+        }
+
+        case 'launch_claude': {
+          const p = action.params;
+          // Resolve project
+          const { data: proj } = await sb
+            .from('mc_projects')
+            .select('id, name, repo_path, delivery_plan, description, revenue_target_monthly')
+            .ilike('name', p.project_name)
+            .single();
+
+          if (!proj) {
+            results.push({ type: 'launch_claude', ok: false, error: `Project "${p.project_name}" not found` });
+            log(`ACTION ERROR: launch_claude — project "${p.project_name}" not found`);
+            break;
+          }
+          if (!proj.repo_path) {
+            results.push({ type: 'launch_claude', ok: false, error: `No repo_path for ${proj.name}` });
+            log(`ACTION ERROR: launch_claude — no repo_path for ${proj.name}`);
+            break;
+          }
+
+          // Build spec-aware prompt (mirrors launch-claude route logic)
+          const dp = proj.delivery_plan || {};
+          const milestones = dp.milestones || [];
+          const activeMilestone = milestones.find(m => m.status !== 'done');
+          const specLines = [];
+          if (dp.overview) specLines.push(`Overview: ${dp.overview}`);
+          if (dp.tech_stack?.length) specLines.push(`Tech Stack: ${dp.tech_stack.join(', ')}`);
+          if (dp.current_status) specLines.push(`Current Status: ${dp.current_status}`);
+          if (dp.key_blockers?.length) specLines.push(`Blockers: ${dp.key_blockers.join('; ')}`);
+          if (activeMilestone) {
+            specLines.push(`\nActive Milestone: ${activeMilestone.name} [${activeMilestone.status}]`);
+            if (activeMilestone.acceptance_criteria?.length) {
+              specLines.push('Acceptance Criteria:');
+              for (const ac of activeMilestone.acceptance_criteria) specLines.push(`- [ ] ${ac}`);
+            }
+          }
+          const evalBlock = [];
+          if (dp.evaluation?.build_must_pass) evalBlock.push('Build MUST pass before committing.');
+          if (dp.evaluation?.test_command) evalBlock.push(`Run tests: ${dp.evaluation.test_command}`);
+          if (dp.evaluation?.verify_url) evalBlock.push(`Verify at: ${dp.evaluation.verify_url}`);
+
+          const promptText = [
+            `You are working on the project "${proj.name}".`,
+            `Repo path: ${proj.repo_path}`,
+            proj.description ? `Description: ${proj.description}` : '',
+            proj.revenue_target_monthly ? `Revenue target: £${proj.revenue_target_monthly}/month` : '',
+            '',
+            ...specLines,
+            '',
+            `## Task`,
+            p.task,
+            '',
+            `## Working Instructions`,
+            'Work in the project repo. Make changes, run tests, and commit when done.',
+            ...evalBlock,
+            'If you encounter issues, document them clearly.',
+          ].filter(Boolean).join('\n');
+
+          const { data: job, error } = await sb
+            .from('mc_jobs')
+            .insert({
+              title: `[${proj.name}] ${p.task.slice(0, 100)}`,
+              prompt_text: promptText,
+              engine: 'claude',
+              status: 'queued',
+              priority: p.priority || 3,
+              job_type: 'task',
+              source: 'dashboard',
+              project_id: proj.id,
+              repo_path: proj.repo_path,
+            })
+            .select('id')
+            .single();
+          if (error) throw error;
+          results.push({ type: 'launch_claude', job_id: job.id, project: proj.name, ok: true });
+          log(`ACTION: launched claude job ${job.id} for ${proj.name}: ${p.task.slice(0, 80)}`);
+          break;
+        }
+
         case 'create_task': {
           const p = action.params;
+          // Resolve project_name to project_id if provided
+          let projectId = null;
+          if (p.project_name) {
+            const { data: proj } = await sb
+              .from('mc_projects')
+              .select('id')
+              .ilike('name', p.project_name)
+              .single();
+            if (proj) projectId = proj.id;
+          }
+
           const { data: task, error } = await sb
             .from('mc_tasks')
             .insert({
@@ -392,12 +596,13 @@ async function executeActions(actions, chatId) {
               description: p.description || '',
               status: 'todo',
               priority: p.priority || 5,
+              project_id: projectId,
             })
             .select('id')
             .single();
           if (error) throw error;
           results.push({ type: 'create_task', task_id: task.id, ok: true });
-          log(`ACTION: created task ${task.id}`);
+          log(`ACTION: created task ${task.id}${p.project_name ? ` for ${p.project_name}` : ''}`);
           break;
         }
 
@@ -425,6 +630,28 @@ async function executeActions(actions, chatId) {
           if (error) throw error;
           results.push({ type: 'queue_draft', job_id: job.id, ok: true });
           log(`ACTION: queued draft generation job ${job.id}`);
+          break;
+        }
+
+        case 'health_check': {
+          const baseUrl = process.env.MC_SERVER_URL || 'http://localhost:3000';
+          const res = await fetch(`${baseUrl}/api/health`, {
+            signal: AbortSignal.timeout(15000),
+          });
+          const health = await res.json();
+          const checks = health.checks || [];
+          const summary = checks
+            .map(c => `${c.ok ? 'OK' : 'FAIL'} ${c.name}: ${c.detail}`)
+            .join('\n');
+          results.push({
+            type: 'health_check',
+            ok: health.ok,
+            summary,
+            passed: health.passed,
+            failed: health.failed,
+            total: health.total,
+          });
+          log(`ACTION: health check — ${health.passed}/${health.total} passed`);
           break;
         }
 

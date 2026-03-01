@@ -35,6 +35,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   const allowedFields = [
     'name', 'description', 'delivery_plan', 'pm_agent_id',
     'status', 'revenue_target_monthly', 'repo_path',
+    'vercel_project_id', 'supabase_project_id',
   ];
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };

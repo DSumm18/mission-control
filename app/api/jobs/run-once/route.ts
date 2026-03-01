@@ -133,7 +133,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Use composed prompt if available, fall back to raw job prompt
-  const commandText = composedPrompt || claimed.command || claimed.prompt_text;
+  // Shell jobs always use raw prompt_text — composed prompts add agent instructions that break shell commands
+  const commandText = claimed.engine === 'shell'
+    ? (claimed.command || claimed.prompt_text)
+    : (composedPrompt || claimed.command || claimed.prompt_text);
 
   // Merge MCP servers: agent skills + job-level
   const jobMcpServers: string[] = claimed.mcp_servers || [];
@@ -162,9 +165,27 @@ export async function POST(req: NextRequest) {
 
   let parsed: Record<string, unknown> = {};
   try {
-    parsed = JSON.parse(raw.split('\n').filter(Boolean).pop() || '{}');
+    // Try last non-empty line first (normal case)
+    const lastLine = raw.split('\n').filter(Boolean).pop() || '{}';
+    parsed = JSON.parse(lastLine);
   } catch {
-    parsed = { ok: false, error: 'parse-failed', raw: raw.slice(0, 1000), stderr: proc.stderr.slice(0, 1000) };
+    // Fallback: scan all lines for a JSON object (handles debug output before JSON)
+    const lines = raw.split('\n');
+    let found = false;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (line.startsWith('{') && line.endsWith('}')) {
+        try {
+          parsed = JSON.parse(line);
+          found = true;
+          break;
+        } catch { /* try next line */ }
+      }
+    }
+    if (!found) {
+      parsed = { ok: false, error: 'parse-failed', raw: raw.slice(0, 1000), stderr: proc.stderr.slice(0, 1000) };
+      await appendRunnerLog(`parse-failed job=${claimed.id} raw=${raw.slice(0, 200)}`);
+    }
   }
 
   const doneTs = new Date().toISOString();
