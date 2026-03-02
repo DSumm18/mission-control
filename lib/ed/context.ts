@@ -96,6 +96,41 @@ export async function buildContextBlock(tier?: ModelTier): Promise<string> {
       }
     }
 
+    // Project deliverables (planning gate status)
+    if (projects?.length) {
+      const projectIds = projects.map(p => p.id);
+      const { data: deliverables } = await sb
+        .from('mc_project_deliverables')
+        .select('project_id, deliverable_type, status, title')
+        .in('project_id', projectIds)
+        .order('created_at', { ascending: false });
+
+      if (deliverables?.length) {
+        const byProject = new Map<string, typeof deliverables>();
+        for (const d of deliverables) {
+          const list = byProject.get(d.project_id) || [];
+          list.push(d);
+          byProject.set(d.project_id, list);
+        }
+
+        ctx += '\n**Project Deliverables:**\n';
+        const planningTypes = ['prd', 'spec', 'research'];
+        for (const [pid, dels] of byProject) {
+          const projName = projects.find(p => p.id === pid)?.name || pid;
+          const planning = dels.filter(d => planningTypes.includes(d.deliverable_type));
+          const approved = planning.filter(d => d.status === 'approved').length;
+          const gateStatus = planning.length > 0
+            ? (approved === planning.length ? '✅ gate passed' : `⏳ ${approved}/${planning.length} approved`)
+            : 'no planning docs';
+          ctx += `- **${projName}** — ${dels.length} deliverables (${gateStatus})\n`;
+          for (const d of dels.slice(0, 5)) {
+            ctx += `  - [${d.status}] ${d.deliverable_type.toUpperCase()}: ${d.title}\n`;
+          }
+          if (dels.length > 5) ctx += `  - ... and ${dels.length - 5} more\n`;
+        }
+      }
+    }
+
     // Agent summary
     const { data: agents } = await sb
       .from('mc_agents')

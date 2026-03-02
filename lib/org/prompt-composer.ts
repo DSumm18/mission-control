@@ -69,6 +69,34 @@ export async function composePrompt(jobId: string, agentId: string): Promise<str
         parts.push('');
         parts.push(formatSpecForPrompt(spec, project.name));
       }
+
+      // Approved deliverables — give agents access to existing planning docs
+      const { data: deliverables } = await sb
+        .from('mc_project_deliverables')
+        .select('title, deliverable_type, status, content')
+        .eq('project_id', job.project_id)
+        .in('status', ['approved', 'review'])
+        .order('created_at', { ascending: true });
+
+      if (deliverables?.length) {
+        parts.push('');
+        parts.push('## Project Deliverables');
+        const planningTypes = ['prd', 'spec', 'research'];
+        const planning = deliverables.filter(d => planningTypes.includes(d.deliverable_type));
+        const approved = planning.filter(d => d.status === 'approved').length;
+        if (planning.length > 0) {
+          parts.push(`**Planning gate:** ${approved}/${planning.length} approved`);
+        }
+        for (const d of deliverables) {
+          parts.push('');
+          parts.push(`### ${d.deliverable_type.toUpperCase()}: ${d.title} [${d.status}]`);
+          // Include content for approved docs (truncate to keep prompt manageable)
+          if (d.status === 'approved') {
+            const truncated = d.content.length > 2000 ? d.content.slice(0, 2000) + '\n...(truncated)' : d.content;
+            parts.push(truncated);
+          }
+        }
+      }
     }
   }
 
