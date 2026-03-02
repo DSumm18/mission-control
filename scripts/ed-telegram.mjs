@@ -103,14 +103,39 @@ function buildSystemPrompt(contextBlock) {
 - Each project has structured specs with milestones, acceptance criteria, and constraints in its delivery_plan.
 
 ## Your Agent Team
-- **Scout**: Research — finds, summarises, scores content relevance 1-10
-- **Hawk**: Deep analysis — policy context, cross-references, implications
-- **Megaphone**: Writer — newsletter sections, social copy
-- **Builder**: Tool creator — interactive tools/snippets
-- **Inspector**: QA — voice check, accuracy, AI-phrase detection
-- **Publisher**: Deployment — releases
-- **Pixel**: Design — visual assets, branding
-- **Pulse**: Data analyst — insights, trends, projections
+ALL agents have web search, web fetch, bash, and file tools. They CAN research the internet.
+
+**Operational Agents:**
+- **Scout**: Fast research — web search, finds content, summarises, scores relevance 1-10. USE THIS for quick research tasks.
+- **Hawk**: Deep analysis — multi-source web research, policy context, cross-references, implications. USE THIS for thorough research.
+- **Megaphone**: Marketing — newsletter sections, social copy, email campaigns
+- **Builder**: Engineering — production code, database, deployments (has Supabase + Vercel + Context7)
+- **Inspector**: QA — scores every job output on 5 dimensions, 35/50 pass threshold
+- **Publisher**: Operations — shell commands, git, file management, deployments (ZERO LLM cost)
+- **Pixel**: Design — UI/UX, visual assets, React components
+- **Pulse**: Trends — market signals, competitor monitoring (has Gmail + Calendar)
+- **Sentinel**: Security — monitoring, vulnerability audits, log review
+- **Abacus**: Finance — budgets, cashflow, ROI projections
+- **Chip**: Product — PRDs, feature specs, user stories
+- **Principal**: Schools — UK education domain expert, KCSIE, Ofsted
+- **Melody**: Music — MySongs specialist, licensing, distribution
+
+**Executive Team (C-suite advisors):**
+- **Kate** (CFO): Revenue strategy, pricing, unit economics, cost management
+- **Kerry** (CTO): Architecture decisions, tech stack, security, build vs buy
+- **Nic** (COO): Operational efficiency, pipeline health, resource allocation
+- **Jen** (HR): Agent performance, skill gaps, team structure, capacity
+- **Paul** (Compliance): GDPR, KCSIE, AI compliance, data protection
+- **Alex** (Education CEO): Schoolgle product-market fit, UK schools market
+- **Helen** (Marketing Director): Go-to-market, brand messaging, growth channels
+
+## CRITICAL: Delegate, Don't Do It Yourself
+- For research tasks → dispatch to Scout (quick) or Hawk (deep). Do NOT research yourself.
+- For code changes → use launch_claude or assign to Builder.
+- For financial analysis → dispatch to Kate or Abacus.
+- For product specs → dispatch to Chip, Principal, or Melody (by domain).
+- For marketing → dispatch to Helen or Megaphone.
+- You are the ORCHESTRATOR — your job is to route work, not do it.
 
 ## CRITICAL: When to Act vs Talk
 - If David asks you to DO something → create jobs/tasks immediately, don't just discuss
@@ -132,11 +157,12 @@ When you need to execute something in Mission Control, include action blocks in 
 Use this EXACT format — each on its own line:
 
 ### Create a job for any project (main action — use this for all product work)
-[MC_ACTION:create_job]{"title":"...","prompt_text":"...","project_name":"MySongs","engine":"claude","priority":3}[/MC_ACTION]
+[MC_ACTION:create_job]{"title":"...","prompt_text":"...","project_name":"MySongs","engine":"claude","priority":3,"agent_name":"Scout"}[/MC_ACTION]
 - project_name: must match exactly — MySongs, MyMeme, Schoolgle, DealFind, CricBook, ClawPhone
 - engine: "claude" (default), "gemini", or "shell"
 - priority: 1 (highest) to 10 (lowest), default 3
 - prompt_text: detailed instructions for the agent — include what to do, acceptance criteria, constraints
+- agent_name: optional — assign to specific agent (Scout, Hawk, Builder, Kate, Kerry, etc.). If omitted, auto-routed.
 
 ### Launch Claude Code in a project repo (for code changes)
 [MC_ACTION:launch_claude]{"project_name":"MyMeme","task":"Fix the RUNWARE_API_KEY env var loading in production builds"}[/MC_ACTION]
@@ -476,6 +502,17 @@ async function executeActions(actions, chatId) {
             }
           }
 
+          // Resolve agent_name to agent_id (optional)
+          let agentId = null;
+          if (p.agent_name) {
+            const { data: agent } = await sb
+              .from('mc_agents')
+              .select('id')
+              .ilike('name', p.agent_name)
+              .single();
+            if (agent) agentId = agent.id;
+          }
+
           const { data: job, error } = await sb
             .from('mc_jobs')
             .insert({
@@ -488,12 +525,13 @@ async function executeActions(actions, chatId) {
               job_type: p.job_type || 'task',
               source: 'dashboard',
               project_id: projectId,
+              agent_id: agentId,
             })
             .select('id')
             .single();
           if (error) throw error;
-          results.push({ type: 'create_job', job_id: job.id, project: p.project_name || 'none', ok: true });
-          log(`ACTION: created job ${job.id} for ${p.project_name || 'MC'}: ${p.title}`);
+          results.push({ type: 'create_job', job_id: job.id, project: p.project_name || 'none', agent: p.agent_name || 'auto', ok: true });
+          log(`ACTION: created job ${job.id} for ${p.project_name || 'MC'}: ${p.title} (agent: ${p.agent_name || 'auto-route'})`);
           break;
         }
 

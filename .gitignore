@@ -17,3 +17,7 @@ out/
 tmp/
 # job outputs
 outputs/
+# runtime data (youtube state, transcripts)
+data/
+# supabase cli temp
+supabase/.temp/
