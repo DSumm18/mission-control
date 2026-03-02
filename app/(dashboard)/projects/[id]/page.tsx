@@ -90,7 +90,21 @@ type ActivityItem = {
   timestamp: string;
 };
 
-type Tab = 'overview' | 'tasks' | 'jobs' | 'activity' | 'env' | 'settings';
+type Deliverable = {
+  id: string;
+  title: string;
+  deliverable_type: string;
+  content: string;
+  status: string;
+  feedback: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  source_job_id: string | null;
+  created_at: string;
+  mc_jobs: { title: string } | null;
+};
+
+type Tab = 'overview' | 'deliverables' | 'tasks' | 'jobs' | 'activity' | 'env' | 'settings';
 
 type EnvRow = {
   key: string;
@@ -130,6 +144,11 @@ export default function ProjectCommandCenter() {
   const [addingEnv, setAddingEnv] = useState(false);
   const [launching, setLaunching] = useState(false);
   const [launchTask, setLaunchTask] = useState('');
+  const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
+  const [delActing, setDelActing] = useState<string | null>(null);
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [rejectFeedback, setRejectFeedback] = useState('');
+  const [expandedDel, setExpandedDel] = useState<string | null>(null);
 
   const fetchProject = useCallback(() => {
     if (!params.id) return;
@@ -164,11 +183,20 @@ export default function ProjectCommandCenter() {
       .catch(() => {});
   }, [params.id]);
 
+  const fetchDeliverables = useCallback(() => {
+    if (!params.id) return;
+    fetch(`/api/deliverables?project_id=${params.id}`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => setDeliverables(d.deliverables || []))
+      .catch(() => {});
+  }, [params.id]);
+
   useEffect(() => {
     fetchProject();
     fetchTasks();
     fetchActivity();
-  }, [fetchProject, fetchTasks, fetchActivity]);
+    fetchDeliverables();
+  }, [fetchProject, fetchTasks, fetchActivity, fetchDeliverables]);
 
   if (!project) {
     return (
@@ -194,6 +222,45 @@ export default function ProjectCommandCenter() {
   const todoTasks = tasks.filter(t => t.status === 'todo');
   const inProgressTasks = tasks.filter(t => t.status === 'in_progress');
   const completedTasks = tasks.filter(t => ['done', 'completed'].includes(t.status));
+
+  // Deliverables gate
+  const planningDels = deliverables.filter(d => ['prd', 'spec', 'research'].includes(d.deliverable_type));
+  const approvedDels = planningDels.filter(d => d.status === 'approved').length;
+  const gateTotal = planningDels.length;
+  const gateAllApproved = gateTotal > 0 && approvedDels === gateTotal;
+
+  async function updateDeliverable(id: string, patch: Record<string, unknown>) {
+    setDelActing(id);
+    try {
+      const res = await fetch(`/api/deliverables/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        toast(d.error || 'Failed to update', 'bad');
+        return;
+      }
+      toast('Deliverable updated', 'good');
+      setRejectId(null);
+      setRejectFeedback('');
+      fetchDeliverables();
+    } catch {
+      toast('Network error', 'bad');
+    } finally {
+      setDelActing(null);
+    }
+  }
+
+  function typeBadgeColor(t: string) {
+    if (t === 'prd') return '#7c3aed';
+    if (t === 'spec') return '#2563eb';
+    if (t === 'research') return '#059669';
+    if (t === 'analysis') return '#d97706';
+    if (t === 'design') return '#db2777';
+    return 'var(--muted)';
+  }
 
   async function savePlan() {
     if (!project) return;
@@ -379,6 +446,7 @@ export default function ProjectCommandCenter() {
 
   const tabs: { key: Tab; label: string; icon: typeof FolderOpen }[] = [
     { key: 'overview', label: 'Overview', icon: FolderOpen },
+    { key: 'deliverables', label: 'Deliverables', icon: FileText },
     { key: 'tasks', label: 'Tasks', icon: CheckCircle },
     { key: 'jobs', label: 'Jobs', icon: Briefcase },
     { key: 'activity', label: 'Activity', icon: Activity },
@@ -425,6 +493,26 @@ export default function ProjectCommandCenter() {
       {/* OVERVIEW TAB */}
       {tab === 'overview' && (
         <>
+          {/* Planning Gate Warning */}
+          {gateTotal > 0 && !gateAllApproved && (
+            <div style={{
+              padding: '10px 16px', marginBottom: 14, borderRadius: 8,
+              background: 'rgba(247,201,72,0.1)', border: '1px solid rgba(247,201,72,0.3)',
+              display: 'flex', alignItems: 'center', gap: 10, fontSize: 13,
+            }}>
+              <Zap size={16} color="var(--warn)" />
+              <span>
+                <strong>Planning gate:</strong> {approvedDels}/{gateTotal} planning deliverables approved.
+                <button
+                  onClick={() => setTab('deliverables')}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 600, marginLeft: 6 }}
+                >
+                  Review deliverables &rarr;
+                </button>
+              </span>
+            </div>
+          )}
+
           {/* KPIs */}
           <section className="grid" style={{ marginBottom: 14 }}>
             <article className="card card-glow-active card-animated" style={{ gridColumn: 'span 3' }}>
@@ -529,6 +617,179 @@ export default function ProjectCommandCenter() {
             </div>
           </section>
         </>
+      )}
+
+      {/* DELIVERABLES TAB */}
+      {tab === 'deliverables' && (
+        <div>
+          {/* Planning Gate KPI */}
+          {gateTotal > 0 && (
+            <div className="card card-animated" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Planning Gate</div>
+                <div className="progress-bar" style={{ height: 8 }}>
+                  <div className="progress-fill" style={{
+                    width: `${gateTotal > 0 ? (approvedDels / gateTotal) * 100 : 0}%`,
+                    background: gateAllApproved ? 'var(--good)' : 'var(--warn)',
+                  }} />
+                </div>
+                <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                  {approvedDels}/{gateTotal} planning deliverables approved
+                  {gateAllApproved && ' — Ready for dev!'}
+                </div>
+              </div>
+              <div style={{
+                fontSize: 28, fontWeight: 700,
+                color: gateAllApproved ? 'var(--good)' : 'var(--warn)',
+              }}>
+                {approvedDels}/{gateTotal}
+              </div>
+            </div>
+          )}
+
+          {deliverables.length === 0 ? (
+            <div className="card" style={{ padding: 30, textAlign: 'center' }}>
+              <div className="muted">No deliverables yet. Complete planning jobs or save job outputs as deliverables.</div>
+            </div>
+          ) : (
+            ['draft', 'review', 'rejected', 'approved'].map(groupStatus => {
+              const items = deliverables.filter(d => d.status === groupStatus);
+              if (items.length === 0) return null;
+              const groupLabel = groupStatus === 'draft' ? 'Drafts' : groupStatus === 'review' ? 'In Review' : groupStatus === 'rejected' ? 'Rejected' : 'Approved';
+              const groupColor = groupStatus === 'approved' ? 'var(--good)' : groupStatus === 'rejected' ? 'var(--bad)' : groupStatus === 'review' ? 'var(--accent)' : 'var(--muted)';
+              return (
+                <div key={groupStatus} style={{ marginBottom: 16 }}>
+                  <h3 style={{ fontSize: 14, margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="status-dot" style={{ background: groupColor }} />
+                    {groupLabel} ({items.length})
+                  </h3>
+                  {items.map(d => (
+                    <div key={d.id} className="card card-animated" style={{ marginBottom: 8, padding: 14 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <span style={{
+                          display: 'inline-block', padding: '2px 8px', borderRadius: 4,
+                          fontSize: 11, fontWeight: 600, color: '#fff',
+                          background: typeBadgeColor(d.deliverable_type),
+                        }}>
+                          {d.deliverable_type.toUpperCase()}
+                        </span>
+                        <span className={`badge ${statusBadge(d.status)}`}>{d.status}</span>
+                        <span style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{d.title}</span>
+                        {d.source_job_id && d.mc_jobs && (
+                          <Link href={`/jobs/${d.source_job_id}`} style={{ fontSize: 11, color: 'var(--accent)' }}>
+                            Source: {d.mc_jobs.title.slice(0, 40)}
+                          </Link>
+                        )}
+                      </div>
+
+                      {/* Content preview */}
+                      <div style={{
+                        background: 'var(--panel-2)', padding: 10, borderRadius: 6,
+                        fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                        maxHeight: expandedDel === d.id ? 'none' : 120, overflow: 'hidden',
+                        position: 'relative',
+                      }}>
+                        {d.content || 'No content'}
+                        {d.content.length > 300 && expandedDel !== d.id && (
+                          <div style={{
+                            position: 'absolute', bottom: 0, left: 0, right: 0, height: 40,
+                            background: 'linear-gradient(transparent, var(--panel-2))',
+                          }} />
+                        )}
+                      </div>
+                      {d.content.length > 300 && (
+                        <button
+                          className="btn-sm"
+                          style={{ marginTop: 6, fontSize: 11 }}
+                          onClick={() => setExpandedDel(expandedDel === d.id ? null : d.id)}
+                        >
+                          {expandedDel === d.id ? 'Show less' : 'Show more'}
+                        </button>
+                      )}
+
+                      {/* Rejected feedback */}
+                      {d.status === 'rejected' && d.feedback && (
+                        <div style={{
+                          marginTop: 8, padding: 10, borderRadius: 6,
+                          background: 'rgba(255,107,107,0.08)', borderLeft: '3px solid var(--bad)',
+                          fontSize: 12,
+                        }}>
+                          <strong>Feedback:</strong> {d.feedback}
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                        {d.status === 'draft' && (
+                          <button
+                            className="btn-sm btn-primary"
+                            disabled={delActing === d.id}
+                            onClick={() => updateDeliverable(d.id, { status: 'review' })}
+                          >
+                            Submit for Review
+                          </button>
+                        )}
+                        {d.status === 'review' && (
+                          <>
+                            <button
+                              className="btn-sm"
+                              style={{ background: 'var(--good)', color: '#fff' }}
+                              disabled={delActing === d.id}
+                              onClick={() => updateDeliverable(d.id, { status: 'approved' })}
+                            >
+                              Approve
+                            </button>
+                            {rejectId === d.id ? (
+                              <div style={{ display: 'flex', gap: 4, alignItems: 'center', flex: 1 }}>
+                                <input
+                                  value={rejectFeedback}
+                                  onChange={e => setRejectFeedback(e.target.value)}
+                                  placeholder="Feedback..."
+                                  style={{ flex: 1, fontSize: 12 }}
+                                />
+                                <button
+                                  className="btn-sm"
+                                  style={{ background: 'var(--bad)', color: '#fff' }}
+                                  disabled={delActing === d.id}
+                                  onClick={() => updateDeliverable(d.id, { status: 'rejected', feedback: rejectFeedback })}
+                                >
+                                  Confirm Reject
+                                </button>
+                                <button className="btn-sm" onClick={() => { setRejectId(null); setRejectFeedback(''); }}>Cancel</button>
+                              </div>
+                            ) : (
+                              <button
+                                className="btn-sm"
+                                style={{ color: 'var(--bad)' }}
+                                onClick={() => setRejectId(d.id)}
+                              >
+                                Reject
+                              </button>
+                            )}
+                          </>
+                        )}
+                        {d.status === 'rejected' && (
+                          <button
+                            className="btn-sm btn-primary"
+                            disabled={delActing === d.id}
+                            onClick={() => updateDeliverable(d.id, { status: 'draft' })}
+                          >
+                            Resubmit as Draft
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="muted" style={{ fontSize: 10, marginTop: 6 }}>
+                        Created {new Date(d.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        {d.reviewed_at && ` · Reviewed ${new Date(d.reviewed_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })
+          )}
+        </div>
       )}
 
       {/* TASKS TAB */}

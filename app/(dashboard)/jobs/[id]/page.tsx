@@ -98,6 +98,8 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<Job | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [acting, setActing] = useState(false);
+  const [delType, setDelType] = useState('other');
+  const [savingDel, setSavingDel] = useState(false);
 
   function loadJob() {
     if (!params.id) return;
@@ -158,6 +160,38 @@ export default function JobDetailPage() {
     }
   }
 
+  async function saveAsDeliverable() {
+    if (!job?.project_id || !job?.result) return;
+    setSavingDel(true);
+    try {
+      const res = await fetch('/api/deliverables', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project_id: job.project_id,
+          title: job.title,
+          deliverable_type: delType,
+          content: job.result,
+          source_job_id: job.id,
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        toast(d.error || 'Failed to save', 'bad');
+        return;
+      }
+      const d = await res.json();
+      toast('Saved as deliverable — view in project', 'good');
+      if (d.deliverable?.project_id) {
+        // Could navigate but keep it simple with toast
+      }
+    } catch {
+      toast('Network error', 'bad');
+    } finally {
+      setSavingDel(false);
+    }
+  }
+
   if (!job) {
     return (
       <div>
@@ -207,14 +241,35 @@ export default function JobDetailPage() {
         <article className="card" style={{ gridColumn: 'span 8' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <h3 style={{ margin: 0 }}>Output</h3>
-            {(job.status === 'failed' || job.status === 'rejected') && (
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button className="btn-sm btn-primary" onClick={requeue} disabled={acting}>Re-run</button>
-                {job.status === 'rejected' && (
-                  <button className="btn-sm" onClick={forceApprove} disabled={acting}>Force Approve</button>
-                )}
-              </div>
-            )}
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              {job.result && job.project_id && (
+                <>
+                  <select
+                    value={delType}
+                    onChange={e => setDelType(e.target.value)}
+                    style={{ fontSize: 11, padding: '4px 6px', borderRadius: 4 }}
+                  >
+                    <option value="prd">PRD</option>
+                    <option value="spec">Spec</option>
+                    <option value="research">Research</option>
+                    <option value="analysis">Analysis</option>
+                    <option value="design">Design</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <button className="btn-sm" onClick={saveAsDeliverable} disabled={savingDel}>
+                    {savingDel ? 'Saving...' : 'Save as Deliverable'}
+                  </button>
+                </>
+              )}
+              {(job.status === 'failed' || job.status === 'rejected') && (
+                <>
+                  <button className="btn-sm btn-primary" onClick={requeue} disabled={acting}>Re-run</button>
+                  {job.status === 'rejected' && (
+                    <button className="btn-sm" onClick={forceApprove} disabled={acting}>Force Approve</button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
           {job.result ? (
             <pre style={{

@@ -6,6 +6,7 @@ import { scoreJob, type QAScores } from '@/lib/org/quality-scorer';
 import { decomposeJob } from '@/lib/org/decomposer';
 import { createNotification } from '@/lib/ed/notifications';
 import { checkAutoDispatch } from '@/lib/ed/auto-dispatch';
+import { maybeCreateDeliverable } from '@/lib/deliverables/auto-extract';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -277,6 +278,18 @@ export async function POST(req: NextRequest) {
       }
     } catch (postErr) {
       await appendRunnerLog(`post-exec-error job=${claimed.id} err=${postErr}`);
+    }
+
+    // Auto-create deliverable from planning jobs
+    if (claimed.project_id) {
+      try {
+        const created = await maybeCreateDeliverable(claimed, result);
+        if (created) {
+          await appendRunnerLog(`deliverable-created job=${claimed.id} project=${claimed.project_id}`);
+        }
+      } catch (delErr) {
+        await appendRunnerLog(`deliverable-error job=${claimed.id} err=${delErr}`);
+      }
     }
   }
 
