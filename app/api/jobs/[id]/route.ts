@@ -4,8 +4,8 @@
  * PATCH /api/jobs/[id] — updates job status (for drag-and-drop pipeline)
  */
 
-import { NextRequest } from 'next/server';
-import { supabaseAdmin } from '@/lib/db/supabase-server';
+import { NextRequest } from "next/server";
+import { supabaseAdmin } from "@/lib/db/supabase-server";
 
 export async function GET(
   _req: NextRequest,
@@ -15,29 +15,37 @@ export async function GET(
   const sb = supabaseAdmin();
 
   const { data: job, error } = await sb
-    .from('mc_jobs')
-    .select('*, mc_agents(name, avatar_emoji), mc_projects(name)')
-    .eq('id', id)
+    .from("mc_jobs")
+    .select("*, mc_agents(name, avatar_emoji), mc_projects(name)")
+    .eq("id", id)
     .single();
 
   if (error || !job) {
-    return Response.json({ error: 'Job not found' }, { status: 404 });
+    return Response.json({ error: "Job not found" }, { status: 404 });
   }
 
   return Response.json({ job });
 }
 
-const VALID_STATUSES = ['queued', 'assigned', 'running', 'reviewing', 'done', 'rejected', 'failed'];
+const VALID_STATUSES = [
+  "queued",
+  "assigned",
+  "running",
+  "reviewing",
+  "done",
+  "rejected",
+  "failed",
+];
 
 /** Valid status transitions — prevents state corruption */
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  queued:     ['assigned', 'running', 'failed'],
-  assigned:   ['running', 'queued', 'failed'],
-  running:    ['done', 'failed', 'reviewing', 'paused_human', 'paused_quota'],
-  reviewing:  ['done', 'rejected', 'failed'],
-  done:       [], // terminal
-  rejected:   ['queued'], // allow re-queue
-  failed:     ['queued'], // allow retry
+  queued: ["assigned", "running", "failed"],
+  assigned: ["running", "queued", "failed"],
+  running: ["done", "failed", "reviewing", "paused_human", "paused_quota"],
+  reviewing: ["done", "rejected", "failed"],
+  done: [], // terminal
+  rejected: ["queued", "done"], // allow re-queue or dismiss
+  failed: ["queued", "done"], // allow retry or dismiss
 };
 
 export async function PATCH(
@@ -51,18 +59,25 @@ export async function PATCH(
   try {
     body = await req.json();
   } catch {
-    return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+    return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const updates: Record<string, unknown> = {};
 
   if (body.status) {
     if (!VALID_STATUSES.includes(body.status)) {
-      return Response.json({ error: `Invalid status: ${body.status}` }, { status: 400 });
+      return Response.json(
+        { error: `Invalid status: ${body.status}` },
+        { status: 400 },
+      );
     }
 
     // Validate transition
-    const { data: current } = await sb.from('mc_jobs').select('status').eq('id', id).single();
+    const { data: current } = await sb
+      .from("mc_jobs")
+      .select("status")
+      .eq("id", id)
+      .single();
     if (current) {
       const allowed = VALID_TRANSITIONS[current.status] || [];
       if (allowed.length > 0 && !allowed.includes(body.status)) {
@@ -76,10 +91,10 @@ export async function PATCH(
     updates.status = body.status;
 
     // Set timestamps based on status
-    if (body.status === 'running') {
+    if (body.status === "running") {
       updates.started_at = new Date().toISOString();
     }
-    if (['done', 'failed', 'rejected'].includes(body.status)) {
+    if (["done", "failed", "rejected"].includes(body.status)) {
       updates.completed_at = new Date().toISOString();
     }
   }
@@ -89,14 +104,17 @@ export async function PATCH(
   }
 
   if (Object.keys(updates).length === 0) {
-    return Response.json({ error: 'No valid fields to update' }, { status: 400 });
+    return Response.json(
+      { error: "No valid fields to update" },
+      { status: 400 },
+    );
   }
 
   const { data, error } = await sb
-    .from('mc_jobs')
+    .from("mc_jobs")
     .update(updates)
-    .eq('id', id)
-    .select('id, title, status, priority')
+    .eq("id", id)
+    .select("id, title, status, priority")
     .single();
 
   if (error) {
