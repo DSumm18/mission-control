@@ -3,8 +3,8 @@
  * Creates debates, dispatches executive challengers, synthesises results.
  */
 
-import { supabaseAdmin } from '@/lib/db/supabase-server';
-import { EXECUTIVES, buildChallengePrompt } from './executive-prompts';
+import { supabaseAdmin } from "@/lib/db/supabase-server";
+import { EXECUTIVES, buildChallengePrompt } from "./executive-prompts";
 
 interface CreateBoardParams {
   title: string;
@@ -57,16 +57,16 @@ export async function createChallengeBoard(params: CreateBoardParams): Promise<{
 
   // Create the board
   const { data: board, error: boardErr } = await sb
-    .from('mc_challenge_board')
+    .from("mc_challenge_board")
     .insert({
       decision_title: params.title,
       decision_context: params.context,
       project_id: params.projectId || null,
-      requested_by: 'ed',
-      status: 'deliberating',
+      requested_by: "ed",
+      status: "deliberating",
       options: optionsJson,
     })
-    .select('id')
+    .select("id")
     .single();
 
   if (boardErr) throw boardErr;
@@ -79,29 +79,35 @@ export async function createChallengeBoard(params: CreateBoardParams): Promise<{
 
     // Find agent ID
     const { data: agent } = await sb
-      .from('mc_agents')
-      .select('id')
-      .eq('name', name)
+      .from("mc_agents")
+      .select("id")
+      .eq("name", name)
       .single();
 
     if (!agent) continue;
 
-    const prompt = buildChallengePrompt(exec, params.title, params.context, params.options);
+    const prompt = buildChallengePrompt(
+      exec,
+      params.title,
+      params.context,
+      params.options,
+    );
 
     const { data: job, error: jobErr } = await sb
-      .from('mc_jobs')
+      .from("mc_jobs")
       .insert({
         title: `Challenge: ${name} on "${params.title}"`,
         prompt_text: prompt,
-        repo_path: '/Users/david/.openclaw/workspace/mission-control',
-        engine: 'claude',
-        status: 'queued',
+        repo_path: "/Users/david/.openclaw/workspace/mission-control",
+        engine: "claude",
+        status: "queued",
         priority: 2,
         agent_id: agent.id,
-        job_type: 'review',
-        source: 'orchestrator',
+        job_type: "review",
+        source: "challenge_board",
+        args: { board_id: board.id },
       })
-      .select('id')
+      .select("id")
       .single();
 
     if (jobErr) continue;
@@ -117,23 +123,27 @@ export async function createChallengeBoard(params: CreateBoardParams): Promise<{
 export async function recordChallengeResponse(
   boardId: string,
   agentName: string,
-  response: { position: string; argument: string; risk_flags?: { risk: string; severity: string; mitigation: string }[] },
+  response: {
+    position: string;
+    argument: string;
+    risk_flags?: { risk: string; severity: string; mitigation: string }[];
+  },
 ): Promise<void> {
   const sb = supabaseAdmin();
   const exec = EXECUTIVES[agentName];
 
   const { data: agent } = await sb
-    .from('mc_agents')
-    .select('id')
-    .eq('name', agentName)
+    .from("mc_agents")
+    .select("id")
+    .eq("name", agentName)
     .single();
 
   if (!agent) return;
 
-  await sb.from('mc_challenge_responses').insert({
+  await sb.from("mc_challenge_responses").insert({
     board_id: boardId,
     agent_id: agent.id,
-    perspective: exec?.perspective || 'balanced',
+    perspective: exec?.perspective || "balanced",
     position: response.position,
     argument: response.argument,
     risk_flags: response.risk_flags || [],
@@ -144,42 +154,59 @@ export async function recordChallengeResponse(
  * Synthesise a board's responses into ranked options.
  * Called after all challenger jobs complete.
  */
-export async function synthesiseBoard(boardId: string): Promise<BoardSummary | null> {
+export async function synthesiseBoard(
+  boardId: string,
+): Promise<BoardSummary | null> {
   const sb = supabaseAdmin();
 
   const { data: board } = await sb
-    .from('mc_challenge_board')
-    .select('*')
-    .eq('id', boardId)
+    .from("mc_challenge_board")
+    .select("*")
+    .eq("id", boardId)
     .single();
 
   if (!board) return null;
 
   const { data: responses } = await sb
-    .from('mc_challenge_responses')
-    .select('*, mc_agents(name, notes)')
-    .eq('board_id', boardId)
-    .order('created_at');
+    .from("mc_challenge_responses")
+    .select("*, mc_agents(name, notes)")
+    .eq("board_id", boardId)
+    .order("created_at");
 
   if (!responses?.length) return null;
 
   // Build enriched options from responses
-  const options = (board.options as { label: string; summary: string; recommended_by: string[]; pros: string[]; cons: string[] }[]) || [];
+  const options =
+    (board.options as {
+      label: string;
+      summary: string;
+      recommended_by: string[];
+      pros: string[];
+      cons: string[];
+    }[]) || [];
 
   for (const r of responses) {
-    const agentName = (r.mc_agents as { name: string; notes: string } | null)?.name || 'Unknown';
-    const agentTitle = (r.mc_agents as { name: string; notes: string } | null)?.notes || '';
-    const opt = options.find(o => o.label === r.position);
+    const agentName =
+      (r.mc_agents as { name: string; notes: string } | null)?.name ||
+      "Unknown";
+    const agentTitle =
+      (r.mc_agents as { name: string; notes: string } | null)?.notes || "";
+    const opt = options.find((o) => o.label === r.position);
     if (opt) {
       opt.recommended_by.push(agentName);
       opt.pros.push(`${agentName}: ${r.argument}`);
     }
 
     // Add risks as cons to other options
-    const risks = (r.risk_flags as { risk: string; severity: string; mitigation: string }[]) || [];
+    const risks =
+      (r.risk_flags as {
+        risk: string;
+        severity: string;
+        mitigation: string;
+      }[]) || [];
     for (const risk of risks) {
-      if (risk.severity === 'high') {
-        const otherOpts = options.filter(o => o.label === r.position);
+      if (risk.severity === "high") {
+        const otherOpts = options.filter((o) => o.label === r.position);
         for (const oo of otherOpts) {
           oo.cons.push(`${agentName} flags: ${risk.risk}`);
         }
@@ -192,23 +219,30 @@ export async function synthesiseBoard(boardId: string): Promise<BoardSummary | n
 
   // Update board with synthesised options
   await sb
-    .from('mc_challenge_board')
-    .update({ options, status: 'open' })
-    .eq('id', boardId);
+    .from("mc_challenge_board")
+    .update({ options, status: "open" })
+    .eq("id", boardId);
 
   return {
     board_id: boardId,
     title: board.decision_title,
     options,
-    responses: responses.map(r => ({
-      agent_name: (r.mc_agents as { name: string; notes: string } | null)?.name || 'Unknown',
-      agent_title: (r.mc_agents as { name: string; notes: string } | null)?.notes || '',
+    responses: responses.map((r) => ({
+      agent_name:
+        (r.mc_agents as { name: string; notes: string } | null)?.name ||
+        "Unknown",
+      agent_title:
+        (r.mc_agents as { name: string; notes: string } | null)?.notes || "",
       perspective: r.perspective,
       position: r.position,
       argument: r.argument,
-      risk_flags: r.risk_flags as { risk: string; severity: string; mitigation: string }[],
+      risk_flags: r.risk_flags as {
+        risk: string;
+        severity: string;
+        mitigation: string;
+      }[],
     })),
-    status: 'open',
+    status: "open",
   };
 }
 
@@ -222,14 +256,14 @@ export async function recordDecision(
 ): Promise<void> {
   const sb = supabaseAdmin();
   await sb
-    .from('mc_challenge_board')
+    .from("mc_challenge_board")
     .update({
       final_decision: decision,
       rationale,
-      status: 'decided',
+      status: "decided",
       decided_at: new Date().toISOString(),
     })
-    .eq('id', boardId);
+    .eq("id", boardId);
 }
 
 /**
@@ -239,10 +273,10 @@ export async function getOpenBoards(): Promise<BoardSummary[]> {
   const sb = supabaseAdmin();
 
   const { data: boards } = await sb
-    .from('mc_challenge_board')
-    .select('*')
-    .in('status', ['open', 'deliberating'])
-    .order('created_at', { ascending: false })
+    .from("mc_challenge_board")
+    .select("*")
+    .in("status", ["open", "deliberating"])
+    .order("created_at", { ascending: false })
     .limit(5);
 
   if (!boards?.length) return [];
@@ -250,21 +284,28 @@ export async function getOpenBoards(): Promise<BoardSummary[]> {
   const summaries: BoardSummary[] = [];
   for (const board of boards) {
     const { data: responses } = await sb
-      .from('mc_challenge_responses')
-      .select('*, mc_agents(name, notes)')
-      .eq('board_id', board.id);
+      .from("mc_challenge_responses")
+      .select("*, mc_agents(name, notes)")
+      .eq("board_id", board.id);
 
     summaries.push({
       board_id: board.id,
       title: board.decision_title,
-      options: board.options as BoardSummary['options'],
-      responses: (responses || []).map(r => ({
-        agent_name: (r.mc_agents as { name: string; notes: string } | null)?.name || 'Unknown',
-        agent_title: (r.mc_agents as { name: string; notes: string } | null)?.notes || '',
+      options: board.options as BoardSummary["options"],
+      responses: (responses || []).map((r) => ({
+        agent_name:
+          (r.mc_agents as { name: string; notes: string } | null)?.name ||
+          "Unknown",
+        agent_title:
+          (r.mc_agents as { name: string; notes: string } | null)?.notes || "",
         perspective: r.perspective,
         position: r.position,
         argument: r.argument,
-        risk_flags: r.risk_flags as { risk: string; severity: string; mitigation: string }[],
+        risk_flags: r.risk_flags as {
+          risk: string;
+          severity: string;
+          mitigation: string;
+        }[],
       })),
       status: board.status,
     });
@@ -276,25 +317,27 @@ export async function getOpenBoards(): Promise<BoardSummary[]> {
 /**
  * Get recent decisions for learning context.
  */
-export async function getRecentDecisions(limit = 5): Promise<{
-  title: string;
-  decision: string;
-  rationale: string;
-  decided_at: string;
-}[]> {
+export async function getRecentDecisions(limit = 5): Promise<
+  {
+    title: string;
+    decision: string;
+    rationale: string;
+    decided_at: string;
+  }[]
+> {
   const sb = supabaseAdmin();
 
   const { data } = await sb
-    .from('mc_challenge_board')
-    .select('decision_title, final_decision, rationale, decided_at')
-    .eq('status', 'decided')
-    .order('decided_at', { ascending: false })
+    .from("mc_challenge_board")
+    .select("decision_title, final_decision, rationale, decided_at")
+    .eq("status", "decided")
+    .order("decided_at", { ascending: false })
     .limit(limit);
 
-  return (data || []).map(d => ({
+  return (data || []).map((d) => ({
     title: d.decision_title,
-    decision: d.final_decision || '',
-    rationale: d.rationale || '',
-    decided_at: d.decided_at || '',
+    decision: d.final_decision || "",
+    rationale: d.rationale || "",
+    decided_at: d.decided_at || "",
   }));
 }
