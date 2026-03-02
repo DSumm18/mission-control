@@ -138,8 +138,9 @@ export async function POST(req: NextRequest) {
   }
 
   // --- Compose prompt using prompt-composer ---
+  // Skip for challenge_board jobs — they have self-contained prompts from buildChallengePrompt
   let composedPrompt: string | null = null;
-  if (agentId) {
+  if (agentId && claimed.source !== "challenge_board") {
     try {
       composedPrompt = await composePrompt(claimed.id, agentId);
     } catch (err) {
@@ -150,8 +151,9 @@ export async function POST(req: NextRequest) {
   }
 
   // --- Get agent's MCP servers from skill assignments ---
+  // Skip for challenge_board jobs — they should respond quickly without tools
   let agentMcpServers = "";
-  if (agentId) {
+  if (agentId && claimed.source !== "challenge_board") {
     try {
       agentMcpServers = await getAgentMCPServers(agentId);
     } catch {
@@ -188,7 +190,9 @@ export async function POST(req: NextRequest) {
     JSON.stringify(claimed.args || []),
     ...(mcpServersStr ? ["--mcp-servers", mcpServersStr] : []),
     ...(modelId && claimed.engine === "claude" ? ["--model", modelId] : []),
-    ...(agentSystemPrompt && claimed.engine === "claude"
+    ...(agentSystemPrompt &&
+    claimed.engine === "claude" &&
+    claimed.source !== "challenge_board"
       ? ["--system-prompt", agentSystemPrompt]
       : []),
   ];
@@ -594,7 +598,7 @@ async function handleChallengeResponse(
       .from("mc_jobs")
       .select("id, status")
       .eq("source", "challenge_board")
-      .filter("args->board_id", "eq", boardId);
+      .eq("args->>board_id", boardId);
 
     const allDone = boardJobs?.every((j) => j.status === "done");
     if (allDone && boardJobs && boardJobs.length > 0) {

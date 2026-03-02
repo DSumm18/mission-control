@@ -110,7 +110,13 @@ export async function createChallengeBoard(params: CreateBoardParams): Promise<{
       .select("id")
       .single();
 
-    if (jobErr) continue;
+    if (jobErr) {
+      console.error(
+        `[challenge-board] Job insert failed for ${name}:`,
+        jobErr.message,
+      );
+      continue;
+    }
     jobIds.push(job.id);
   }
 
