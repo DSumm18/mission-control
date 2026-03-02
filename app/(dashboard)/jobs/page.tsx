@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import PageInfo from '@/components/ui/PageInfo';
 
 type Job = {
@@ -145,7 +146,7 @@ export default function JobsPage() {
               <tbody>
                 {jobs.map((job) => (
                   <tr key={job.id}>
-                    <td>{job.title}</td>
+                    <td><Link href={`/jobs/${job.id}`} style={{ color: 'var(--accent)' }}>{job.title}</Link></td>
                     <td>{job.engine}</td>
                     <td>{job.job_type || 'task'}</td>
                     <td>{job.priority || 5}</td>

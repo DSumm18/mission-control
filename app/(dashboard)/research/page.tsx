@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import PageInfo from '@/components/ui/PageInfo';
 
 /* ── types ───────────────────────────────────────────────── */
@@ -236,9 +237,11 @@ export default function ResearchPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {/* Title row */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <strong style={{ fontSize: 15 }}>
-                        {item.title || '(untitled)'}
-                      </strong>
+                      <Link href={`/research/${item.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                        <strong style={{ fontSize: 15, cursor: 'pointer' }}>
+                          {item.title || '(untitled)'}
+                        </strong>
+                      </Link>
                       {item.topic_area && (
                         <span className="badge" style={{
                           color: TOPIC_COLORS[item.topic_area] || 'var(--muted)',

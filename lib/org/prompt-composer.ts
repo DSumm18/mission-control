@@ -100,7 +100,19 @@ export async function composePrompt(jobId: string, agentId: string): Promise<str
     parts.push('Address the above feedback in this attempt. Improve on the areas flagged.');
   }
 
-  // 5. Available skills/tools
+  // 5. Built-in tools (always available via Claude CLI)
+  parts.push('');
+  parts.push('## Built-in Tools (always available)');
+  parts.push('You have these tools available automatically:');
+  parts.push('- **Web Search** — search the internet for current information, news, data, government publications. USE THIS for any research task.');
+  parts.push('- **Web Fetch** — fetch and read the contents of any URL (articles, gov.uk pages, PDFs, documentation).');
+  parts.push('- **Bash** — run shell commands, scripts, build tools, git operations.');
+  parts.push('- **File Read/Write/Edit** — read, create, and modify files in the project repo.');
+  parts.push('- **Grep/Glob** — search file contents and find files by pattern.');
+  parts.push('');
+  parts.push('When researching topics, ALWAYS use Web Search to find current data and sources. Do not rely solely on your training data.');
+
+  // 6. Additional skills/tools (from MCP assignments)
   const { data: agentSkills } = await sb
     .from('mc_agent_skills')
     .select('skill_id, mc_skills(key, usage_guidelines, mcp_server_name)')
@@ -109,7 +121,7 @@ export async function composePrompt(jobId: string, agentId: string): Promise<str
 
   if (agentSkills && agentSkills.length > 0) {
     parts.push('');
-    parts.push('## Available Tools');
+    parts.push('## Additional Tools (MCP)');
     for (const as of agentSkills) {
       const skill = as.mc_skills as unknown as {
         key: string;
