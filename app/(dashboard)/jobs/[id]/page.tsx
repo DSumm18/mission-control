@@ -254,6 +254,10 @@ export default function JobDetailPage() {
                     <option value="research">Research</option>
                     <option value="analysis">Analysis</option>
                     <option value="design">Design</option>
+                    <option value="guide">Guide</option>
+                    <option value="runbook">Runbook</option>
+                    <option value="architecture">Architecture</option>
+                    <option value="changelog">Changelog</option>
                     <option value="other">Other</option>
                   </select>
                   <button className="btn-sm" onClick={saveAsDeliverable} disabled={savingDel}>

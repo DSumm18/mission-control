@@ -149,6 +149,7 @@ export default function ProjectCommandCenter() {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectFeedback, setRejectFeedback] = useState('');
   const [expandedDel, setExpandedDel] = useState<string | null>(null);
+  const [delFilter, setDelFilter] = useState<'all' | 'planning' | 'docs'>('all');
 
   const fetchProject = useCallback(() => {
     if (!params.id) return;
@@ -259,8 +260,18 @@ export default function ProjectCommandCenter() {
     if (t === 'research') return '#059669';
     if (t === 'analysis') return '#d97706';
     if (t === 'design') return '#db2777';
+    if (t === 'guide') return '#0891b2';
+    if (t === 'runbook') return '#4f46e5';
+    if (t === 'architecture') return '#6366f1';
+    if (t === 'changelog') return '#0d9488';
     return 'var(--muted)';
   }
+
+  const PLANNING_TYPES = ['prd', 'spec', 'research'];
+  const DOC_TYPES = ['guide', 'runbook', 'architecture', 'changelog'];
+  const filteredDeliverables = delFilter === 'all' ? deliverables
+    : delFilter === 'planning' ? deliverables.filter(d => PLANNING_TYPES.includes(d.deliverable_type))
+    : deliverables.filter(d => DOC_TYPES.includes(d.deliverable_type) || d.deliverable_type === 'other');
 
   async function savePlan() {
     if (!project) return;
@@ -647,13 +658,32 @@ export default function ProjectCommandCenter() {
             </div>
           )}
 
-          {deliverables.length === 0 ? (
+          {/* Filter toggle */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
+            {(['all', 'planning', 'docs'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setDelFilter(f)}
+                className="btn-sm"
+                style={{
+                  background: delFilter === f ? 'rgba(110,168,254,0.15)' : 'transparent',
+                  color: delFilter === f ? 'var(--accent)' : 'var(--muted)',
+                  fontWeight: delFilter === f ? 600 : 400,
+                  fontSize: 12,
+                }}
+              >
+                {f === 'all' ? `All (${deliverables.length})` : f === 'planning' ? `Planning (${deliverables.filter(d => PLANNING_TYPES.includes(d.deliverable_type)).length})` : `Docs (${deliverables.filter(d => DOC_TYPES.includes(d.deliverable_type) || d.deliverable_type === 'other').length})`}
+              </button>
+            ))}
+          </div>
+
+          {filteredDeliverables.length === 0 ? (
             <div className="card" style={{ padding: 30, textAlign: 'center' }}>
               <div className="muted">No deliverables yet. Complete planning jobs or save job outputs as deliverables.</div>
             </div>
           ) : (
             ['draft', 'review', 'rejected', 'approved'].map(groupStatus => {
-              const items = deliverables.filter(d => d.status === groupStatus);
+              const items = filteredDeliverables.filter(d => d.status === groupStatus);
               if (items.length === 0) return null;
               const groupLabel = groupStatus === 'draft' ? 'Drafts' : groupStatus === 'review' ? 'In Review' : groupStatus === 'rejected' ? 'Rejected' : 'Approved';
               const groupColor = groupStatus === 'approved' ? 'var(--good)' : groupStatus === 'rejected' ? 'var(--bad)' : groupStatus === 'review' ? 'var(--accent)' : 'var(--muted)';

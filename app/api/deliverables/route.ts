@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'project_id and title are required' }, { status: 400 });
   }
 
-  const validTypes = ['prd', 'spec', 'research', 'analysis', 'design', 'other'];
+  const validTypes = ['prd', 'spec', 'research', 'analysis', 'design', 'other', 'guide', 'runbook', 'architecture', 'changelog'];
   const type = validTypes.includes(deliverable_type) ? deliverable_type : 'other';
 
   const sb = supabaseAdmin();

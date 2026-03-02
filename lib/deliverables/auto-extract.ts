@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/db/supabase-server';
 
-type DeliverableType = 'prd' | 'spec' | 'research' | 'analysis' | 'design' | 'other';
+type DeliverableType = 'prd' | 'spec' | 'research' | 'analysis' | 'design' | 'other' | 'guide' | 'runbook' | 'architecture' | 'changelog';
 
 const TITLE_PATTERNS: [RegExp, DeliverableType][] = [
   [/\bPRD\b/i, 'prd'],
@@ -10,6 +10,14 @@ const TITLE_PATTERNS: [RegExp, DeliverableType][] = [
   [/\bresearch\b/i, 'research'],
   [/\banalysis\b/i, 'analysis'],
   [/\bdesign\b/i, 'design'],
+  [/\buser\s+guide\b/i, 'guide'],
+  [/\bguide\b/i, 'guide'],
+  [/\bdocumentation\b/i, 'guide'],
+  [/\brunbook\b/i, 'runbook'],
+  [/\bplaybook\b/i, 'runbook'],
+  [/\barchitecture\b/i, 'architecture'],
+  [/\bchangelog\b/i, 'changelog'],
+  [/\brelease\s+notes?\b/i, 'changelog'],
 ];
 
 function detectType(title: string, jobType: string | null): DeliverableType | null {
