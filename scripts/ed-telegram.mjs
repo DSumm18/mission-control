@@ -295,7 +295,7 @@ function formatHistory(history) {
 
 function callClaude(systemPrompt, userMessage) {
   return new Promise((resolve, reject) => {
-    const args = ['-p', '--system-prompt', systemPrompt];
+    const args = ['-p', '--permission-mode', 'bypassPermissions', '--system-prompt', systemPrompt];
     // Unset CLAUDECODE to allow nested CLI calls from launchd
     const env = { ...process.env };
     delete env.CLAUDECODE;
