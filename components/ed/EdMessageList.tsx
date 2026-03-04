@@ -185,13 +185,37 @@ export default function EdMessageList({
   isLoading,
 }: EdMessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const userScrolledRef = useRef(false);
 
+  // Detect if user has scrolled up (away from bottom)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingContent]);
+    const el = containerRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      userScrolledRef.current = distFromBottom > 80;
+    };
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Only auto-scroll if user hasn't scrolled up
+  useEffect(() => {
+    if (!userScrolledRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  // Reset scroll lock when streaming ends
+  useEffect(() => {
+    if (!isStreaming) {
+      userScrolledRef.current = false;
+    }
+  }, [isStreaming]);
 
   return (
-    <div className="ed-messages">
+    <div className="ed-messages" ref={containerRef}>
       {messages.length === 0 && !isStreaming && (
         <div className="ed-empty">
           {isLoading ? (
