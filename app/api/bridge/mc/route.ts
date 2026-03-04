@@ -21,7 +21,8 @@ type BridgeAction =
   | "list_tasks"
   | "create_task"
   | "update_task"
-  | "system_health";
+  | "system_health"
+  | "query";
 
 interface BridgeRequest {
   action: BridgeAction;
@@ -233,6 +234,74 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      case "query": {
+        const table = params.table as string;
+        if (!table) {
+          return Response.json({ error: "table is required" }, { status: 400 });
+        }
+
+        // Allowlist of MC tables Jarvis can read
+        const ALLOWED_TABLES = [
+          "mc_agents",
+          "mc_agent_skills",
+          "mc_jobs",
+          "mc_tasks",
+          "mc_projects",
+          "mc_project_deliverables",
+          "mc_research_items",
+          "mc_newsletters",
+          "mc_challenge_board",
+          "mc_challenge_responses",
+          "mc_ed_messages",
+          "mc_ed_conversations",
+          "mc_ed_notifications",
+          "mc_runs",
+          "mc_settings",
+          "mc_skills",
+          "mc_token_usage",
+          "mc_env_health",
+        ];
+
+        if (!ALLOWED_TABLES.includes(table)) {
+          return Response.json(
+            { error: `Table not allowed. Valid: ${ALLOWED_TABLES.join(", ")}` },
+            { status: 400 },
+          );
+        }
+
+        const select = (params.select as string) || "*";
+        const limit = (params.limit as number) || 50;
+        const orderBy = params.order_by as string | undefined;
+        const ascending = (params.ascending as boolean) ?? false;
+        const filters = (params.filters as Record<string, unknown>) || {};
+
+        let query = sb.from(table).select(select).limit(limit);
+
+        if (orderBy) {
+          query = query.order(orderBy, { ascending });
+        }
+
+        // Apply simple eq filters
+        for (const [key, value] of Object.entries(filters)) {
+          if (
+            typeof value === "string" ||
+            typeof value === "number" ||
+            typeof value === "boolean"
+          ) {
+            query = query.eq(key, value);
+          }
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return Response.json({
+          ok: true,
+          table,
+          count: data?.length || 0,
+          rows: data,
+        });
+      }
+
       default:
         return Response.json(
           {
@@ -246,6 +315,7 @@ export async function POST(req: NextRequest) {
               "create_task",
               "update_task",
               "system_health",
+              "query",
             ],
           },
           { status: 400 },
