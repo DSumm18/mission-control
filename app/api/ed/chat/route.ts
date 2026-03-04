@@ -437,7 +437,11 @@ export async function POST(req: NextRequest) {
           ]);
           const context = pageCtx + jarvisCtx;
           let fullText = "";
-          for await (const chunk of openclawStream({ message, context })) {
+          for await (const chunk of openclawStream({
+            message,
+            context,
+            sessionId: `jarvis-${conversation_id.slice(0, 8)}`,
+          })) {
             fullText += chunk;
             controller.enqueue(
               encoder.encode(sseEncode({ type: "text", content: chunk })),
@@ -522,6 +526,7 @@ export async function POST(req: NextRequest) {
         for await (const chunk of openclawStream({
           message: userContent,
           context: edContext,
+          sessionId: `ed-${conversation_id.slice(0, 8)}`,
         })) {
           fullText += chunk;
           controller.enqueue(

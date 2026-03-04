@@ -145,7 +145,7 @@ export default function EdPanel({ onClose, pathname }: EdPanelProps) {
     [activeConv, voiceMode], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const [streamingSender, setStreamingSender] = useState<string>("ed");
+  const [streamingSender, setStreamingSender] = useState<string>("jarvis");
 
   const sendMessage = async (
     convId: string,
