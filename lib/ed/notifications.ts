@@ -78,7 +78,8 @@ export async function createNotification(
 }
 
 /**
- * Get pending/delivered notifications (newest first).
+ * Get pending notifications (newest first).
+ * Only shows pending — delivered notifications have already been sent via Telegram etc.
  */
 export async function getPendingNotifications(
   limit = 20,
@@ -88,7 +89,7 @@ export async function getPendingNotifications(
   const { data } = await sb
     .from("mc_ed_notifications")
     .select("*")
-    .in("status", ["pending", "delivered"])
+    .eq("status", "pending")
     .order("priority", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -105,7 +106,7 @@ export async function getNotificationCount(): Promise<number> {
   const { count } = await sb
     .from("mc_ed_notifications")
     .select("*", { count: "exact", head: true })
-    .in("status", ["pending", "delivered"]);
+    .eq("status", "pending");
 
   return count || 0;
 }

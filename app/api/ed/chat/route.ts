@@ -338,6 +338,21 @@ export async function POST(req: NextRequest) {
   const target: ChatTarget =
     rawTarget === "ed" ? "ed" : /@ed\b/i.test(message) ? "ed" : "jarvis";
 
+  // Ensure conversation exists (auto-create if deleted or missing)
+  const { data: convExists } = await sb
+    .from("mc_ed_conversations")
+    .select("id")
+    .eq("id", conversation_id)
+    .single();
+
+  if (!convExists) {
+    await sb.from("mc_ed_conversations").insert({
+      id: conversation_id,
+      title: message.slice(0, 50) || "New conversation",
+      is_active: true,
+    });
+  }
+
   // Store user message with sender metadata
   const { error: insertErr } = await sb
     .from("mc_ed_messages")
