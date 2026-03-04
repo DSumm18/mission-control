@@ -258,6 +258,7 @@ export default function EdPanel({ onClose, pathname }: EdPanelProps) {
           role: "assistant",
           content: `Something went wrong: ${errorMsg}. Try again.`,
           created_at: new Date().toISOString(),
+          sender: target,
         },
       ]);
     } finally {

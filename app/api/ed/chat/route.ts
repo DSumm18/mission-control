@@ -11,7 +11,7 @@
  */
 
 export const runtime = "nodejs";
-export const maxDuration = 180;
+export const maxDuration = 600;
 
 import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/db/supabase-server";

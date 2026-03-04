@@ -17,7 +17,7 @@ const GATEWAY_URL = "ws://127.0.0.1:18789";
 const GATEWAY_TOKEN =
   process.env.OPENCLAW_GATEWAY_TOKEN ||
   "e86dfe5a59f0bac1f86bf86b532a05776e128a7cfa46d5f0";
-const OPENCLAW_TIMEOUT = 180_000; // ms
+const OPENCLAW_TIMEOUT = 600_000; // 10 mins — Jarvis may do multi-step work (Suno, deploys, etc)
 
 export interface OpenClawStreamOptions {
   message: string;
