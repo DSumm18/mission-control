@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/db/supabase-server';
+import { supabaseAdmin } from "@/lib/db/supabase-server";
 
 type SubTask = {
   title: string;
@@ -23,25 +23,25 @@ type DecomposeResult = {
  */
 export async function decomposeJob(
   parentJobId: string,
-  subTasks: SubTask[]
+  subTasks: SubTask[],
 ): Promise<DecomposeResult> {
   const sb = supabaseAdmin();
 
   // Get parent job for context
   const { data: parentJob } = await sb
-    .from('mc_jobs')
-    .select('id, project_id, engine, repo_path, output_dir')
-    .eq('id', parentJobId)
+    .from("mc_jobs")
+    .select("id, project_id, engine, repo_path, output_dir")
+    .eq("id", parentJobId)
     .single();
 
-  if (!parentJob) throw new Error('Parent job not found');
+  if (!parentJob) throw new Error("Parent job not found");
 
   // Resolve agent names to IDs
   const agentNames = [...new Set(subTasks.map((t) => t.suggested_agent))];
   const { data: agents } = await sb
-    .from('mc_agents')
-    .select('id, name')
-    .in('name', agentNames);
+    .from("mc_agents")
+    .select("id, name")
+    .in("name", agentNames);
 
   const agentMap = new Map<string, string>();
   for (const a of agents || []) {
@@ -54,22 +54,22 @@ export async function decomposeJob(
     const agentId = agentMap.get(task.suggested_agent) || null;
 
     const { data: created, error } = await sb
-      .from('mc_jobs')
+      .from("mc_jobs")
       .insert({
         title: task.title,
         engine: task.estimated_engine,
         repo_path: parentJob.repo_path,
         prompt_text: task.prompt_text,
         output_dir: parentJob.output_dir,
-        status: 'queued',
+        status: "queued",
         parent_job_id: parentJobId,
         project_id: parentJob.project_id,
         agent_id: agentId,
         priority: task.priority,
-        job_type: 'task',
-        source: 'orchestrator',
+        job_type: "task",
+        source: "orchestrator",
       })
-      .select('id')
+      .select("id")
       .single();
 
     if (error) throw new Error(`Failed to create sub-task: ${error.message}`);
@@ -78,9 +78,9 @@ export async function decomposeJob(
 
   // Update parent job type to decomposition
   await sb
-    .from('mc_jobs')
-    .update({ job_type: 'decomposition' })
-    .eq('id', parentJobId);
+    .from("mc_jobs")
+    .update({ job_type: "decomposition" })
+    .eq("id", parentJobId);
 
   return { job_ids: jobIds, sub_tasks: subTasks };
 }
@@ -98,8 +98,8 @@ export function buildDecompositionPrompt(job: {
 
 ## Job to Decompose
 **Title:** ${job.title}
-${job.prompt_text ? `**Description:** ${job.prompt_text}` : ''}
-${job.project_name ? `**Project:** ${job.project_name}` : ''}
+${job.prompt_text ? `**Description:** ${job.prompt_text}` : ""}
+${job.project_name ? `**Project:** ${job.project_name}` : ""}
 
 ## Available Agents
 - Scout (researcher, haiku) — fast discovery, 3-5 bullet findings
@@ -114,6 +114,9 @@ ${job.project_name ? `**Project:** ${job.project_name}` : ''}
 - Publisher (operations, shell) — deploy, git ops, ZERO LLM cost
 - Sentinel (operations, haiku) — security monitoring, log auditing
 - Abacus (finance, haiku) — budgets, cashflow, ROI projections, has Supabase
+- Databot (data, haiku) — SQL queries, dashboards, KPI monitoring, has Supabase + Context7
+- Quill (marketing, sonnet) — newsletters, documentation, long-form content, has Gmail + Context7
+- Triage (operations, haiku) — ticket triage, customer responses, escalation, has Gmail + Supabase
 
 ## Output Format
 Return ONLY a JSON array of sub-tasks:

@@ -75,7 +75,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [edOpen, setEdOpen] = useState(false);
+  const [edOpen, setEdOpen] = useState(true);
   const [navOpen, setNavOpen] = useState(false);
 
   // Close mobile nav on route change
@@ -166,7 +166,9 @@ export default function DashboardLayout({
         </nav>
       </aside>
       <main className="main">{children}</main>
-      {edOpen && <EdPanel onClose={() => setEdOpen(false)} />}
+      {edOpen && (
+        <EdPanel onClose={() => setEdOpen(false)} pathname={pathname} />
+      )}
       <GlobalSearch />
     </div>
   );

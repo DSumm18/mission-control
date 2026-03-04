@@ -12,7 +12,7 @@ export async function GET() {
   const sb = supabaseAdmin();
   const items: {
     id: string;
-    type: "deliverable" | "decision" | "job" | "task";
+    type: "deliverable" | "decision" | "job" | "task" | "research";
     title: string;
     subtitle: string | null;
     status: string;
@@ -43,7 +43,7 @@ export async function GET() {
       status: "review",
       priority: 2,
       created_at: d.created_at,
-      link: `/projects/${d.project_id}`,
+      link: `/projects/${d.project_id}?tab=deliverables`,
       meta: { deliverable_type: d.deliverable_type, project_id: d.project_id },
     });
   }
@@ -119,6 +119,30 @@ export async function GET() {
     });
   }
 
+  // 5. Research items awaiting review (captured or assessed)
+  const { data: research } = await sb
+    .from("mc_research_items")
+    .select("id, title, status, relevance_score, topic_area, created_at")
+    .in("status", ["captured", "assessed"])
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  for (const r of research || []) {
+    items.push({
+      id: r.id,
+      type: "research",
+      title: r.title || "Untitled research",
+      subtitle: r.topic_area
+        ? `${r.topic_area} · relevance ${r.relevance_score || "?"}/10`
+        : r.status,
+      status: r.status,
+      priority: (r.relevance_score || 0) >= 7 ? 2 : 3,
+      created_at: r.created_at,
+      link: `/research/${r.id}`,
+      meta: { relevance_score: r.relevance_score, topic_area: r.topic_area },
+    });
+  }
+
   // Sort: priority asc (1=urgent first), then newest first
   items.sort((a, b) => {
     if (a.priority !== b.priority) return a.priority - b.priority;
@@ -132,6 +156,7 @@ export async function GET() {
       decisions: (boards || []).length,
       jobs: (failedJobs || []).length,
       tasks: (tasks || []).length,
+      research: (research || []).length,
       total: items.length,
     },
   });

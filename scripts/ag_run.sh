@@ -131,7 +131,8 @@ PYFILTER
     unset CLAUDECODE 2>/dev/null || true
 
     # Assemble final args array (avoids unbound variable errors with empty arrays)
-    CLAUDE_ARGS=(-p --permission-mode bypassPermissions)
+    # Use --output-format json to capture usage data
+    CLAUDE_ARGS=(-p --output-format json --permission-mode bypassPermissions)
     [[ ${#MODEL_FLAGS[@]} -gt 0 ]] && CLAUDE_ARGS+=("${MODEL_FLAGS[@]}")
     [[ ${#SYSTEM_FLAGS[@]} -gt 0 ]] && CLAUDE_ARGS+=("${SYSTEM_FLAGS[@]}")
     [[ ${#MCP_FLAGS[@]} -gt 0 ]] && CLAUDE_ARGS+=("${MCP_FLAGS[@]}")
@@ -153,9 +154,26 @@ PY
       exit 20
     fi
 
+    # Parse JSON output to extract result text and usage data
     OUT="$OUT" python3 - <<'PY'
 import json, os
-print(json.dumps({"ok": True, "engine": "claude", "result": os.environ.get("OUT","")[:12000]}))
+raw = os.environ.get("OUT", "")
+result_text = raw[:12000]
+tokens_in = 0
+tokens_out = 0
+try:
+    parsed = json.loads(raw)
+    result_text = (parsed.get("result") or "")[:12000]
+    usage = parsed.get("usage") or {}
+    tokens_in = usage.get("input_tokens", 0)
+    tokens_out = usage.get("output_tokens", 0)
+except Exception:
+    pass
+out = {"ok": True, "engine": "claude", "result": result_text}
+if tokens_in or tokens_out:
+    out["tokens_in"] = tokens_in
+    out["tokens_out"] = tokens_out
+print(json.dumps(out))
 PY
     ;;
 

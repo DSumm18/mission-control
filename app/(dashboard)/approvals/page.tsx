@@ -6,7 +6,7 @@ import { useToast } from "@/components/ui/ToastContext";
 
 type QueueItem = {
   id: string;
-  type: "deliverable" | "decision" | "job" | "task";
+  type: "deliverable" | "decision" | "job" | "task" | "research";
   title: string;
   subtitle: string | null;
   status: string;
@@ -21,10 +21,11 @@ type Counts = {
   decisions: number;
   jobs: number;
   tasks: number;
+  research: number;
   total: number;
 };
 
-type Filter = "all" | "deliverable" | "decision" | "job" | "task";
+type Filter = "all" | "deliverable" | "decision" | "job" | "task" | "research";
 
 function typeBadge(type: string) {
   switch (type) {
@@ -36,6 +37,8 @@ function typeBadge(type: string) {
       return { label: "Job", color: "#f59e0b" };
     case "task":
       return { label: "Task", color: "#10b981" };
+    case "research":
+      return { label: "Research", color: "#8b5cf6" };
     default:
       return { label: type, color: "#6b7280" };
   }
@@ -65,6 +68,7 @@ export default function ApprovalsPage() {
     decisions: 0,
     jobs: 0,
     tasks: 0,
+    research: 0,
     total: 0,
   });
   const [filter, setFilter] = useState<Filter>("all");
@@ -139,6 +143,44 @@ export default function ApprovalsPage() {
     }
   }
 
+  async function approveResearch(id: string) {
+    setActing(id);
+    try {
+      const res = await fetch(`/api/research/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved" }),
+      });
+      if (!res.ok) {
+        toast("Failed to approve", "bad");
+        return;
+      }
+      toast("Research approved for draft", "good");
+      load();
+    } finally {
+      setActing(null);
+    }
+  }
+
+  async function rejectResearch(id: string) {
+    setActing(id);
+    try {
+      const res = await fetch(`/api/research/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "rejected" }),
+      });
+      if (!res.ok) {
+        toast("Failed to reject", "bad");
+        return;
+      }
+      toast("Research rejected", "warn");
+      load();
+    } finally {
+      setActing(null);
+    }
+  }
+
   async function requeueJob(id: string) {
     setActing(id);
     try {
@@ -170,7 +212,7 @@ export default function ApprovalsPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
+          gridTemplateColumns: "repeat(6, 1fr)",
           gap: 10,
           marginBottom: 20,
         }}
@@ -180,6 +222,7 @@ export default function ApprovalsPage() {
             ["Total", counts.total, "all"],
             ["Deliverables", counts.deliverables, "deliverable"],
             ["Decisions", counts.decisions, "decision"],
+            ["Research", counts.research, "research"],
             ["Failed Jobs", counts.jobs, "job"],
             ["Tasks", counts.tasks, "task"],
           ] as [string, number, Filter][]
@@ -335,6 +378,27 @@ export default function ApprovalsPage() {
                         disabled={isActing}
                       >
                         Re-run
+                      </button>
+                      <Link href={item.link} className="btn-sm">
+                        View
+                      </Link>
+                    </>
+                  )}
+                  {item.type === "research" && (
+                    <>
+                      <button
+                        className="btn-sm btn-primary"
+                        onClick={() => approveResearch(item.id)}
+                        disabled={isActing}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="btn-sm"
+                        onClick={() => rejectResearch(item.id)}
+                        disabled={isActing}
+                      >
+                        Reject
                       </button>
                       <Link href={item.link} className="btn-sm">
                         View

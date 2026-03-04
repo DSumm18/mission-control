@@ -11,12 +11,34 @@ import {
   recordChallengeResponse,
   synthesiseBoard,
 } from "@/lib/ed/challenge-board";
+import { getSettingJson } from "@/lib/db/settings";
+import {
+  recordUsage,
+  checkTokenBudget,
+  estimateTokens,
+} from "@/lib/ed/token-budget";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 
 export const runtime = "nodejs";
+
+/**
+ * Normalise model IDs to short aliases. Dated IDs (e.g. claude-haiku-4-5-20251001)
+ * get deprecated by Anthropic — short aliases (haiku, sonnet, opus) always resolve
+ * to the latest available version via the CLI.
+ */
+function normaliseModelId(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const lower = raw.toLowerCase().trim();
+  if (lower === "haiku" || lower === "sonnet" || lower === "opus") return lower;
+  if (lower.includes("opus")) return "opus";
+  if (lower.includes("sonnet")) return "sonnet";
+  if (lower.includes("haiku")) return "haiku";
+  // Unknown model — pass through (could be gemini/openai)
+  return raw;
+}
 
 const LOG_PATH = path.join(process.cwd(), "logs", "jobs-runner.log");
 
@@ -132,7 +154,8 @@ export async function POST(req: NextRequest) {
       .eq("id", agentId)
       .single();
     if (agent) {
-      modelId = agent.model_id || null;
+      // Normalise dated model IDs to short aliases — dated IDs get deprecated
+      modelId = normaliseModelId(agent.model_id) || null;
       agentSystemPrompt = agent.system_prompt || null;
     }
   }
@@ -267,6 +290,7 @@ export async function POST(req: NextRequest) {
       verified_at: status === "done" ? doneTs : null,
       evidence_log_path: status === "done" ? LOG_PATH : null,
       evidence_sha256: status === "done" ? evidenceSha : null,
+      engine_used: (parsed.engine as string) || claimed.engine,
     })
     .eq("id", claimed.id);
 
@@ -323,6 +347,42 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // --- Record token usage ---
+  if (agentId) {
+    try {
+      const tokensIn =
+        typeof parsed.tokens_in === "number"
+          ? parsed.tokens_in
+          : estimateTokens(commandText);
+      const tokensOut =
+        typeof parsed.tokens_out === "number"
+          ? parsed.tokens_out
+          : estimateTokens(result || "");
+
+      await recordUsage({
+        agentId,
+        sourceType: typeof parsed.tokens_in === "number" ? "job" : "estimate",
+        sourceId: claimed.id as string,
+        tokensIn,
+        tokensOut,
+        engine: (parsed.engine as string) || claimed.engine,
+        model: modelId || undefined,
+      });
+
+      // Also populate mc_job_runs token fields
+      await sb
+        .from("mc_jobs")
+        .update({ tokens_in: tokensIn, tokens_out: tokensOut })
+        .eq("id", claimed.id as string);
+
+      await checkTokenBudget(agentId);
+    } catch (budgetErr) {
+      await appendRunnerLog(
+        `token-budget-error job=${claimed.id} err=${budgetErr}`,
+      );
+    }
+  }
+
   // --- Post-execution: QA pipeline ---
   if (status === "done") {
     try {
@@ -342,13 +402,9 @@ export async function POST(req: NextRequest) {
         await handleDecompositionResult(claimed, result);
       }
       // Skip QA for operational jobs that don't produce business content
-      else if (
-        claimed.engine === "shell" ||
-        claimed.job_type === "integration" ||
-        ((claimed.title as string) || "").startsWith("__SMOKE_TEST")
-      ) {
+      else if (await shouldSkipQA(claimed, agentId)) {
         await appendRunnerLog(
-          `qa-skipped job=${claimed.id} reason=${claimed.engine === "shell" ? "shell-job" : "operational"}`,
+          `qa-skipped job=${claimed.id} reason=low-risk-auto-skip`,
         );
       }
       // Regular task: send to QA review
@@ -622,6 +678,40 @@ async function handleChallengeResponse(
       `challenge-synth-error board=${boardId} err=${synthErr}`,
     );
   }
+}
+
+async function shouldSkipQA(
+  claimed: Record<string, unknown>,
+  agentId: string | null,
+): Promise<boolean> {
+  // Always skip for shell, integration, and smoke tests
+  if (
+    claimed.engine === "shell" ||
+    claimed.job_type === "integration" ||
+    ((claimed.title as string) || "").startsWith("__SMOKE_TEST")
+  ) {
+    return true;
+  }
+
+  // Check agent cost tier — free-tier agents auto-pass QA
+  if (agentId) {
+    const sb = supabaseAdmin();
+    const { data: agentInfo } = await sb
+      .from("mc_agents")
+      .select("cost_tier")
+      .eq("id", agentId)
+      .single();
+
+    const skipTiers: string[] = (await getSettingJson<string[]>(
+      "auto_approve_skip_qa_cost_tiers",
+    )) || ["free"];
+
+    if (agentInfo && skipTiers.includes(agentInfo.cost_tier)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function clampScore(v: unknown): number {

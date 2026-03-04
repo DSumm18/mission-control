@@ -1,29 +1,38 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
+import { useCallback, useEffect, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
-  FolderOpen, Target, Briefcase, Activity, Settings as SettingsIcon,
-  Play, Terminal, CheckCircle, Clock, Zap, Shield,
-} from 'lucide-react';
-import AnimatedKPI from '@/components/ui/AnimatedKPI';
-import { SkeletonKPI } from '@/components/ui/Skeleton';
-import { useToast } from '@/components/ui/ToastContext';
-import { FileText } from 'lucide-react';
+  FolderOpen,
+  Target,
+  Briefcase,
+  Activity,
+  Settings as SettingsIcon,
+  Play,
+  Terminal,
+  CheckCircle,
+  Clock,
+  Zap,
+  Shield,
+} from "lucide-react";
+import AnimatedKPI from "@/components/ui/AnimatedKPI";
+import { SkeletonKPI } from "@/components/ui/Skeleton";
+import { useToast } from "@/components/ui/ToastContext";
+import { FileText } from "lucide-react";
 
 const SPEC_TEMPLATE = {
-  overview: '',
-  target_audience: '',
+  overview: "",
+  target_audience: "",
   tech_stack: [],
-  revenue_model: '',
-  current_status: '',
+  revenue_model: "",
+  current_status: "",
   key_blockers: [],
   milestones: [
     {
-      name: 'Milestone 1',
-      target: '',
-      status: 'not_started',
+      name: "Milestone 1",
+      target: "",
+      status: "not_started",
       acceptance_criteria: [],
       features: [],
       constraints: {
@@ -34,11 +43,11 @@ const SPEC_TEMPLATE = {
       },
     },
   ],
-  decomposition_pattern: '',
+  decomposition_pattern: "",
   evaluation: {
     build_must_pass: true,
-    test_command: '',
-    verify_url: '',
+    test_command: "",
+    verify_url: "",
   },
 };
 
@@ -104,7 +113,14 @@ type Deliverable = {
   mc_jobs: { title: string } | null;
 };
 
-type Tab = 'overview' | 'deliverables' | 'tasks' | 'jobs' | 'activity' | 'env' | 'settings';
+type Tab =
+  | "overview"
+  | "deliverables"
+  | "tasks"
+  | "jobs"
+  | "activity"
+  | "env"
+  | "settings";
 
 type EnvRow = {
   key: string;
@@ -119,43 +135,57 @@ type EnvRow = {
 };
 
 function statusBadge(status: string) {
-  if (['done', 'active', 'completed'].includes(status)) return 'good';
-  if (['in_progress', 'paused', 'queued', 'running', 'reviewing', 'todo'].includes(status)) return 'warn';
-  return 'bad';
+  if (["done", "active", "completed"].includes(status)) return "good";
+  if (
+    [
+      "in_progress",
+      "paused",
+      "queued",
+      "running",
+      "reviewing",
+      "todo",
+    ].includes(status)
+  )
+    return "warn";
+  return "bad";
 }
 
 export default function ProjectCommandCenter() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
+  const initialTab = (searchParams.get("tab") as Tab) || "overview";
   const [project, setProject] = useState<Project | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
-  const [tab, setTab] = useState<Tab>('overview');
-  const [editPlan, setEditPlan] = useState('');
-  const [editRepoPath, setEditRepoPath] = useState('');
+  const [tab, setTab] = useState<Tab>(initialTab);
+  const [editPlan, setEditPlan] = useState("");
+  const [editRepoPath, setEditRepoPath] = useState("");
   const [saving, setSaving] = useState(false);
   const [envRows, setEnvRows] = useState<EnvRow[]>([]);
   const [envLoading, setEnvLoading] = useState(false);
   const [envScore, setEnvScore] = useState<number | null>(null);
-  const [newEnvKey, setNewEnvKey] = useState('');
-  const [newEnvValue, setNewEnvValue] = useState('');
+  const [newEnvKey, setNewEnvKey] = useState("");
+  const [newEnvValue, setNewEnvValue] = useState("");
   const [addingEnv, setAddingEnv] = useState(false);
   const [launching, setLaunching] = useState(false);
-  const [launchTask, setLaunchTask] = useState('');
+  const [launchTask, setLaunchTask] = useState("");
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
   const [delActing, setDelActing] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
-  const [rejectFeedback, setRejectFeedback] = useState('');
+  const [rejectFeedback, setRejectFeedback] = useState("");
   const [expandedDel, setExpandedDel] = useState<string | null>(null);
-  const [delFilter, setDelFilter] = useState<'all' | 'planning' | 'docs'>('all');
+  const [delFilter, setDelFilter] = useState<"all" | "planning" | "docs">(
+    "all",
+  );
 
   const fetchProject = useCallback(() => {
     if (!params.id) return;
-    fetch(`/api/projects/${params.id}`, { cache: 'no-store' })
-      .then(r => r.json())
-      .then(d => {
+    fetch(`/api/projects/${params.id}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
         setProject(d.project || null);
         setJobs(d.jobs || []);
         if (d.project?.delivery_plan) {
@@ -170,25 +200,27 @@ export default function ProjectCommandCenter() {
 
   const fetchTasks = useCallback(() => {
     if (!params.id) return;
-    fetch(`/api/tasks?project_id=${params.id}&limit=50`, { cache: 'no-store' })
-      .then(r => r.json())
-      .then(d => setTasks(d.tasks || []))
+    fetch(`/api/tasks?project_id=${params.id}&limit=50`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setTasks(d.tasks || []))
       .catch(() => {});
   }, [params.id]);
 
   const fetchActivity = useCallback(() => {
     if (!params.id) return;
-    fetch(`/api/activity?project_id=${params.id}&limit=20`, { cache: 'no-store' })
-      .then(r => r.json())
-      .then(d => setActivity(d.items || []))
+    fetch(`/api/activity?project_id=${params.id}&limit=20`, {
+      cache: "no-store",
+    })
+      .then((r) => r.json())
+      .then((d) => setActivity(d.items || []))
       .catch(() => {});
   }, [params.id]);
 
   const fetchDeliverables = useCallback(() => {
     if (!params.id) return;
-    fetch(`/api/deliverables?project_id=${params.id}`, { cache: 'no-store' })
-      .then(r => r.json())
-      .then(d => setDeliverables(d.deliverables || []))
+    fetch(`/api/deliverables?project_id=${params.id}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setDeliverables(d.deliverables || []))
       .catch(() => {});
   }, [params.id]);
 
@@ -204,8 +236,8 @@ export default function ProjectCommandCenter() {
       <div>
         <h1 className="page-title">Loading...</h1>
         <div className="grid">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="card" style={{ gridColumn: 'span 3' }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="card" style={{ gridColumn: "span 3" }}>
               <SkeletonKPI />
             </div>
           ))}
@@ -215,18 +247,27 @@ export default function ProjectCommandCenter() {
   }
 
   const milestones = project.delivery_plan?.milestones || [];
-  const doneMilestones = milestones.filter(m => m.status === 'done').length;
-  const milestoneProgress = milestones.length > 0 ? Math.round((doneMilestones / milestones.length) * 100) : 0;
-  const doneJobs = jobs.filter(j => j.status === 'done').length;
-  const failedJobs = jobs.filter(j => j.status === 'failed').length;
+  const doneMilestones = milestones.filter((m) => m.status === "done").length;
+  const milestoneProgress =
+    milestones.length > 0
+      ? Math.round((doneMilestones / milestones.length) * 100)
+      : 0;
+  const doneJobs = jobs.filter((j) => j.status === "done").length;
+  const failedJobs = jobs.filter((j) => j.status === "failed").length;
   const totalCost = jobs.reduce((s, j) => s + (j.cost_usd || 0), 0);
-  const todoTasks = tasks.filter(t => t.status === 'todo');
-  const inProgressTasks = tasks.filter(t => t.status === 'in_progress');
-  const completedTasks = tasks.filter(t => ['done', 'completed'].includes(t.status));
+  const todoTasks = tasks.filter((t) => t.status === "todo");
+  const inProgressTasks = tasks.filter((t) => t.status === "in_progress");
+  const completedTasks = tasks.filter((t) =>
+    ["done", "completed"].includes(t.status),
+  );
 
   // Deliverables gate
-  const planningDels = deliverables.filter(d => ['prd', 'spec', 'research'].includes(d.deliverable_type));
-  const approvedDels = planningDels.filter(d => d.status === 'approved').length;
+  const planningDels = deliverables.filter((d) =>
+    ["prd", "spec", "research"].includes(d.deliverable_type),
+  );
+  const approvedDels = planningDels.filter(
+    (d) => d.status === "approved",
+  ).length;
   const gateTotal = planningDels.length;
   const gateAllApproved = gateTotal > 0 && approvedDels === gateTotal;
 
@@ -234,44 +275,53 @@ export default function ProjectCommandCenter() {
     setDelActing(id);
     try {
       const res = await fetch(`/api/deliverables/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
       if (!res.ok) {
         const d = await res.json();
-        toast(d.error || 'Failed to update', 'bad');
+        toast(d.error || "Failed to update", "bad");
         return;
       }
-      toast('Deliverable updated', 'good');
+      toast("Deliverable updated", "good");
       setRejectId(null);
-      setRejectFeedback('');
+      setRejectFeedback("");
       fetchDeliverables();
     } catch {
-      toast('Network error', 'bad');
+      toast("Network error", "bad");
     } finally {
       setDelActing(null);
     }
   }
 
   function typeBadgeColor(t: string) {
-    if (t === 'prd') return '#7c3aed';
-    if (t === 'spec') return '#2563eb';
-    if (t === 'research') return '#059669';
-    if (t === 'analysis') return '#d97706';
-    if (t === 'design') return '#db2777';
-    if (t === 'guide') return '#0891b2';
-    if (t === 'runbook') return '#4f46e5';
-    if (t === 'architecture') return '#6366f1';
-    if (t === 'changelog') return '#0d9488';
-    return 'var(--muted)';
+    if (t === "prd") return "#7c3aed";
+    if (t === "spec") return "#2563eb";
+    if (t === "research") return "#059669";
+    if (t === "analysis") return "#d97706";
+    if (t === "design") return "#db2777";
+    if (t === "guide") return "#0891b2";
+    if (t === "runbook") return "#4f46e5";
+    if (t === "architecture") return "#6366f1";
+    if (t === "changelog") return "#0d9488";
+    return "var(--muted)";
   }
 
-  const PLANNING_TYPES = ['prd', 'spec', 'research'];
-  const DOC_TYPES = ['guide', 'runbook', 'architecture', 'changelog'];
-  const filteredDeliverables = delFilter === 'all' ? deliverables
-    : delFilter === 'planning' ? deliverables.filter(d => PLANNING_TYPES.includes(d.deliverable_type))
-    : deliverables.filter(d => DOC_TYPES.includes(d.deliverable_type) || d.deliverable_type === 'other');
+  const PLANNING_TYPES = ["prd", "spec", "research"];
+  const DOC_TYPES = ["guide", "runbook", "architecture", "changelog"];
+  const filteredDeliverables =
+    delFilter === "all"
+      ? deliverables
+      : delFilter === "planning"
+        ? deliverables.filter((d) =>
+            PLANNING_TYPES.includes(d.deliverable_type),
+          )
+        : deliverables.filter(
+            (d) =>
+              DOC_TYPES.includes(d.deliverable_type) ||
+              d.deliverable_type === "other",
+          );
 
   async function savePlan() {
     if (!project) return;
@@ -279,14 +329,14 @@ export default function ProjectCommandCenter() {
     try {
       const parsed = JSON.parse(editPlan);
       await fetch(`/api/projects/${params.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ delivery_plan: parsed }),
       });
-      toast('Project specification saved', 'good');
+      toast("Project specification saved", "good");
       fetchProject();
     } catch {
-      toast('Invalid JSON', 'bad');
+      toast("Invalid JSON", "bad");
     } finally {
       setSaving(false);
     }
@@ -296,14 +346,14 @@ export default function ProjectCommandCenter() {
     setSaving(true);
     try {
       await fetch(`/api/projects/${params.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ repo_path: editRepoPath }),
       });
-      toast('Repo path saved', 'good');
+      toast("Repo path saved", "good");
       fetchProject();
     } catch {
-      toast('Failed to save', 'bad');
+      toast("Failed to save", "bad");
     } finally {
       setSaving(false);
     }
@@ -311,26 +361,26 @@ export default function ProjectCommandCenter() {
 
   async function launchAutonomous() {
     if (!launchTask.trim()) {
-      toast('Describe the task first', 'warn');
+      toast("Describe the task first", "warn");
       return;
     }
     setLaunching(true);
     try {
       const res = await fetch(`/api/projects/${params.id}/launch-claude`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task: launchTask, mode: 'autonomous' }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task: launchTask, mode: "autonomous" }),
       });
       const data = await res.json();
       if (res.ok) {
-        toast(`Job created: ${data.job_id || 'queued'}`, 'good');
-        setLaunchTask('');
+        toast(`Job created: ${data.job_id || "queued"}`, "good");
+        setLaunchTask("");
         fetchProject();
       } else {
-        toast(data.error || 'Failed to launch', 'bad');
+        toast(data.error || "Failed to launch", "bad");
       }
     } catch {
-      toast('Network error', 'bad');
+      toast("Network error", "bad");
     } finally {
       setLaunching(false);
     }
@@ -343,17 +393,30 @@ export default function ProjectCommandCenter() {
       // Fetch all three sources in parallel
       const [vercelRes, localRes, manifestRes] = await Promise.all([
         project.vercel_project_id
-          ? fetch(`/api/env/vercel?vercel_project_id=${project.vercel_project_id}`).then(r => r.json())
+          ? fetch(
+              `/api/env/vercel?vercel_project_id=${project.vercel_project_id}`,
+            ).then((r) => r.json())
           : Promise.resolve({ envs: [] }),
         project.repo_path
-          ? fetch(`/api/env/local?repo_path=${encodeURIComponent(project.repo_path)}`).then(r => r.json())
+          ? fetch(
+              `/api/env/local?repo_path=${encodeURIComponent(project.repo_path)}`,
+            ).then((r) => r.json())
           : Promise.resolve({ keys: [] }),
-        fetch(`/api/env/manifest?project_id=${project.id}`).then(r => r.json()),
+        fetch(`/api/env/manifest?project_id=${project.id}`).then((r) =>
+          r.json(),
+        ),
       ]);
 
-      type VercelEntry = { key: string; id: string; type: string; target: string[] };
+      type VercelEntry = {
+        key: string;
+        id: string;
+        type: string;
+        target: string[];
+      };
       type ManifestEntry = { key_name: string; id: string; required: boolean };
-      const vercelKeys = new Map<string, VercelEntry>((vercelRes.envs || []).map((e: VercelEntry) => [e.key, e]));
+      const vercelKeys = new Map<string, VercelEntry>(
+        (vercelRes.envs || []).map((e: VercelEntry) => [e.key, e]),
+      );
       const localKeys = new Set<string>((localRes.keys || []) as string[]);
       const manifestEntries = new Map<string, ManifestEntry>(
         (manifestRes.manifest || []).map((m: ManifestEntry) => [m.key_name, m]),
@@ -366,7 +429,7 @@ export default function ProjectCommandCenter() {
         ...manifestEntries.keys(),
       ]);
 
-      const rows: EnvRow[] = ([...allKeys] as string[]).sort().map(key => {
+      const rows: EnvRow[] = ([...allKeys] as string[]).sort().map((key) => {
         const v = vercelKeys.get(key);
         const m = manifestEntries.get(key);
         return {
@@ -386,12 +449,14 @@ export default function ProjectCommandCenter() {
 
       // Compute simple health score
       const manifestKeys = [...manifestEntries.keys()];
-      const requiredMissing = manifestKeys.filter(k => manifestEntries.get(k)?.required && !vercelKeys.has(k));
+      const requiredMissing = manifestKeys.filter(
+        (k) => manifestEntries.get(k)?.required && !vercelKeys.has(k),
+      );
       let score = 100 - requiredMissing.length * 15;
       score = Math.max(0, Math.min(100, score));
       setEnvScore(score);
     } catch {
-      toast('Failed to load env data', 'bad');
+      toast("Failed to load env data", "bad");
     } finally {
       setEnvLoading(false);
     }
@@ -399,15 +464,15 @@ export default function ProjectCommandCenter() {
 
   async function addEnvToManifest(keyName: string) {
     try {
-      await fetch('/api/env/manifest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("/api/env/manifest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ project_id: project?.id, key_name: keyName }),
       });
-      toast(`Added ${keyName} to manifest`, 'good');
+      toast(`Added ${keyName} to manifest`, "good");
       loadEnvData();
     } catch {
-      toast('Failed to add to manifest', 'bad');
+      toast("Failed to add to manifest", "bad");
     }
   }
 
@@ -415,9 +480,9 @@ export default function ProjectCommandCenter() {
     if (!newEnvKey || !newEnvValue || !project?.vercel_project_id) return;
     setAddingEnv(true);
     try {
-      const res = await fetch('/api/env/vercel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/env/vercel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           vercel_project_id: project.vercel_project_id,
           key: newEnvKey,
@@ -425,74 +490,104 @@ export default function ProjectCommandCenter() {
         }),
       });
       if (res.ok) {
-        toast(`${newEnvKey} added to Vercel`, 'good');
-        setNewEnvKey('');
-        setNewEnvValue('');
+        toast(`${newEnvKey} added to Vercel`, "good");
+        setNewEnvKey("");
+        setNewEnvValue("");
         loadEnvData();
       } else {
         const data = await res.json();
-        toast(data.error || 'Failed', 'bad');
+        toast(data.error || "Failed", "bad");
       }
     } catch {
-      toast('Network error', 'bad');
+      toast("Network error", "bad");
     } finally {
       setAddingEnv(false);
     }
   }
 
   async function cycleTaskStatus(taskId: string, currentStatus: string) {
-    const nextStatus = currentStatus === 'todo' ? 'in_progress' : currentStatus === 'in_progress' ? 'done' : 'todo';
+    const nextStatus =
+      currentStatus === "todo"
+        ? "in_progress"
+        : currentStatus === "in_progress"
+          ? "done"
+          : "todo";
     try {
       await fetch(`/api/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: nextStatus }),
       });
-      toast(`Task moved to ${nextStatus}`, 'good');
+      toast(`Task moved to ${nextStatus}`, "good");
       fetchTasks();
     } catch {
-      toast('Failed to update task', 'bad');
+      toast("Failed to update task", "bad");
     }
   }
 
   const tabs: { key: Tab; label: string; icon: typeof FolderOpen }[] = [
-    { key: 'overview', label: 'Overview', icon: FolderOpen },
-    { key: 'deliverables', label: 'Deliverables', icon: FileText },
-    { key: 'tasks', label: 'Tasks', icon: CheckCircle },
-    { key: 'jobs', label: 'Jobs', icon: Briefcase },
-    { key: 'activity', label: 'Activity', icon: Activity },
-    { key: 'env', label: 'Env Vars', icon: Shield },
-    { key: 'settings', label: 'Settings', icon: SettingsIcon },
+    { key: "overview", label: "Overview", icon: FolderOpen },
+    { key: "deliverables", label: "Deliverables", icon: FileText },
+    { key: "tasks", label: "Tasks", icon: CheckCircle },
+    { key: "jobs", label: "Jobs", icon: Briefcase },
+    { key: "activity", label: "Activity", icon: Activity },
+    { key: "env", label: "Env Vars", icon: Shield },
+    { key: "settings", label: "Settings", icon: SettingsIcon },
   ];
 
   return (
     <div>
-      <Link href="/projects" style={{ fontSize: 13 }}>&larr; Back to Projects</Link>
-      <h1 className="page-title" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+      <Link href="/projects" style={{ fontSize: 13 }}>
+        &larr; Back to Projects
+      </Link>
+      <h1
+        className="page-title"
+        style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 10 }}
+      >
         {project.name}
-        <span className={`badge ${statusBadge(project.status)}`}>{project.status}</span>
+        <span className={`badge ${statusBadge(project.status)}`}>
+          {project.status}
+        </span>
       </h1>
       <p className="page-sub">
-        {project.description || 'No description'}
-        {project.mc_agents ? ` \u00B7 PM: ${project.mc_agents.avatar_emoji || '\uD83E\uDD16'} ${project.mc_agents.name}` : ''}
-        {project.revenue_target_monthly ? ` \u00B7 Target: \u00A3${project.revenue_target_monthly.toLocaleString()}/mo` : ''}
+        {project.description || "No description"}
+        {project.mc_agents
+          ? ` \u00B7 PM: ${project.mc_agents.avatar_emoji || "\uD83E\uDD16"} ${project.mc_agents.name}`
+          : ""}
+        {project.revenue_target_monthly
+          ? ` \u00B7 Target: \u00A3${project.revenue_target_monthly.toLocaleString()}/mo`
+          : ""}
       </p>
 
       {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid var(--line)', paddingBottom: 4 }}>
-        {tabs.map(t => {
+      <div
+        style={{
+          display: "flex",
+          gap: 4,
+          marginBottom: 16,
+          borderBottom: "1px solid var(--line)",
+          paddingBottom: 4,
+        }}
+      >
+        {tabs.map((t) => {
           const Icon = t.icon;
           return (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px', borderRadius: '8px 8px 0 0',
-                border: 'none', background: tab === t.key ? 'rgba(110,168,254,0.08)' : 'transparent',
-                color: tab === t.key ? 'var(--accent)' : 'var(--muted)',
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 14px",
+                borderRadius: "8px 8px 0 0",
+                border: "none",
+                background:
+                  tab === t.key ? "rgba(110,168,254,0.08)" : "transparent",
+                color: tab === t.key ? "var(--accent)" : "var(--muted)",
                 fontWeight: tab === t.key ? 600 : 400,
-                cursor: 'pointer', fontSize: 13,
+                cursor: "pointer",
+                fontSize: 13,
               }}
             >
               <Icon size={14} /> {t.label}
@@ -502,21 +597,37 @@ export default function ProjectCommandCenter() {
       </div>
 
       {/* OVERVIEW TAB */}
-      {tab === 'overview' && (
+      {tab === "overview" && (
         <>
           {/* Planning Gate Warning */}
           {gateTotal > 0 && !gateAllApproved && (
-            <div style={{
-              padding: '10px 16px', marginBottom: 14, borderRadius: 8,
-              background: 'rgba(247,201,72,0.1)', border: '1px solid rgba(247,201,72,0.3)',
-              display: 'flex', alignItems: 'center', gap: 10, fontSize: 13,
-            }}>
+            <div
+              style={{
+                padding: "10px 16px",
+                marginBottom: 14,
+                borderRadius: 8,
+                background: "rgba(247,201,72,0.1)",
+                border: "1px solid rgba(247,201,72,0.3)",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                fontSize: 13,
+              }}
+            >
               <Zap size={16} color="var(--warn)" />
               <span>
-                <strong>Planning gate:</strong> {approvedDels}/{gateTotal} planning deliverables approved.
+                <strong>Planning gate:</strong> {approvedDels}/{gateTotal}{" "}
+                planning deliverables approved.
                 <button
-                  onClick={() => setTab('deliverables')}
-                  style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 600, marginLeft: 6 }}
+                  onClick={() => setTab("deliverables")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--accent)",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    marginLeft: 6,
+                  }}
                 >
                   Review deliverables &rarr;
                 </button>
@@ -526,67 +637,159 @@ export default function ProjectCommandCenter() {
 
           {/* KPIs */}
           <section className="grid" style={{ marginBottom: 14 }}>
-            <article className="card card-glow-active card-animated" style={{ gridColumn: 'span 3' }}>
-              <div className="muted"><Target size={14} style={{ verticalAlign: 'middle' }} /> Revenue Target</div>
+            <article
+              className="card card-glow-active card-animated"
+              style={{ gridColumn: "span 3" }}
+            >
+              <div className="muted">
+                <Target size={14} style={{ verticalAlign: "middle" }} /> Revenue
+                Target
+              </div>
               <div className="kpi">
                 {project.revenue_target_monthly ? (
-                  <AnimatedKPI value={project.revenue_target_monthly} prefix={'\u00A3'} />
-                ) : '\u2014'}
+                  <AnimatedKPI
+                    value={project.revenue_target_monthly}
+                    prefix={"\u00A3"}
+                  />
+                ) : (
+                  "\u2014"
+                )}
               </div>
               <div className="muted">per month</div>
             </article>
-            <article className="card card-glow-active card-animated" style={{ gridColumn: 'span 3' }}>
+            <article
+              className="card card-glow-active card-animated"
+              style={{ gridColumn: "span 3" }}
+            >
               <div className="muted">Milestone Progress</div>
-              <div className="kpi"><AnimatedKPI value={milestoneProgress} suffix="%" /></div>
+              <div className="kpi">
+                <AnimatedKPI value={milestoneProgress} suffix="%" />
+              </div>
               <div className="progress-bar" style={{ marginTop: 4 }}>
-                <div className="progress-fill" style={{ width: `${milestoneProgress}%`, background: 'var(--good)' }} />
+                <div
+                  className="progress-fill"
+                  style={{
+                    width: `${milestoneProgress}%`,
+                    background: "var(--good)",
+                  }}
+                />
               </div>
             </article>
-            <article className="card card-glow-active card-animated" style={{ gridColumn: 'span 3' }}>
-              <div className="muted"><Briefcase size={14} style={{ verticalAlign: 'middle' }} /> Jobs</div>
-              <div className="kpi"><AnimatedKPI value={doneJobs} />/{jobs.length}</div>
-              <div className="muted">{failedJobs > 0 ? `${failedJobs} failed` : 'completed'}</div>
+            <article
+              className="card card-glow-active card-animated"
+              style={{ gridColumn: "span 3" }}
+            >
+              <div className="muted">
+                <Briefcase size={14} style={{ verticalAlign: "middle" }} /> Jobs
+              </div>
+              <div className="kpi">
+                <AnimatedKPI value={doneJobs} />/{jobs.length}
+              </div>
+              <div className="muted">
+                {failedJobs > 0 ? `${failedJobs} failed` : "completed"}
+              </div>
             </article>
-            <article className="card card-glow-active card-animated" style={{ gridColumn: 'span 3' }}>
+            <article
+              className="card card-glow-active card-animated"
+              style={{ gridColumn: "span 3" }}
+            >
               <div className="muted">Total Cost</div>
-              <div className="kpi"><AnimatedKPI value={totalCost} prefix="$" decimals={4} /></div>
+              <div className="kpi">
+                <AnimatedKPI value={totalCost} prefix="$" decimals={4} />
+              </div>
               <div className="muted">all time</div>
             </article>
           </section>
 
           {/* Milestone Timeline */}
           {milestones.length > 0 && (
-            <section className="card card-animated" style={{ marginBottom: 14 }}>
+            <section
+              className="card card-animated"
+              style={{ marginBottom: 14 }}
+            >
               <h3 style={{ marginTop: 0, fontSize: 15 }}>Milestone Timeline</h3>
-              <div style={{ display: 'flex', gap: 0, overflowX: 'auto', paddingBottom: 8 }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 0,
+                  overflowX: "auto",
+                  paddingBottom: 8,
+                }}
+              >
                 {milestones.map((m, i) => (
-                  <div key={i} style={{ flex: '1 0 0', minWidth: 100, position: 'relative', textAlign: 'center' }}>
+                  <div
+                    key={i}
+                    style={{
+                      flex: "1 0 0",
+                      minWidth: 100,
+                      position: "relative",
+                      textAlign: "center",
+                    }}
+                  >
                     {/* Connector line */}
                     {i > 0 && (
-                      <div style={{
-                        position: 'absolute', left: 0, top: 12, width: '50%', height: 2,
-                        background: milestones[i - 1].status === 'done' ? 'var(--good)' : 'var(--line)',
-                      }} />
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: 0,
+                          top: 12,
+                          width: "50%",
+                          height: 2,
+                          background:
+                            milestones[i - 1].status === "done"
+                              ? "var(--good)"
+                              : "var(--line)",
+                        }}
+                      />
                     )}
                     {i < milestones.length - 1 && (
-                      <div style={{
-                        position: 'absolute', right: 0, top: 12, width: '50%', height: 2,
-                        background: m.status === 'done' ? 'var(--good)' : 'var(--line)',
-                      }} />
+                      <div
+                        style={{
+                          position: "absolute",
+                          right: 0,
+                          top: 12,
+                          width: "50%",
+                          height: 2,
+                          background:
+                            m.status === "done" ? "var(--good)" : "var(--line)",
+                        }}
+                      />
                     )}
                     {/* Node */}
-                    <div style={{
-                      width: 24, height: 24, borderRadius: '50%', margin: '0 auto 6px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: m.status === 'done' ? 'var(--good)' : m.status === 'in_progress' ? 'var(--accent)' : 'var(--panel-2)',
-                      border: `2px solid ${m.status === 'done' ? 'var(--good)' : m.status === 'in_progress' ? 'var(--accent)' : 'var(--line)'}`,
-                      position: 'relative', zIndex: 1,
-                      fontSize: 10, color: m.status === 'done' ? '#fff' : 'var(--muted)',
-                    }}>
-                      {m.status === 'done' ? '\u2713' : i + 1}
+                    <div
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        margin: "0 auto 6px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background:
+                          m.status === "done"
+                            ? "var(--good)"
+                            : m.status === "in_progress"
+                              ? "var(--accent)"
+                              : "var(--panel-2)",
+                        border: `2px solid ${m.status === "done" ? "var(--good)" : m.status === "in_progress" ? "var(--accent)" : "var(--line)"}`,
+                        position: "relative",
+                        zIndex: 1,
+                        fontSize: 10,
+                        color: m.status === "done" ? "#fff" : "var(--muted)",
+                      }}
+                    >
+                      {m.status === "done" ? "\u2713" : i + 1}
                     </div>
-                    <div style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.3 }}>{m.name}</div>
-                    {m.target && <div className="muted" style={{ fontSize: 10 }}>{m.target}</div>}
+                    <div
+                      style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.3 }}
+                    >
+                      {m.name}
+                    </div>
+                    {m.target && (
+                      <div className="muted" style={{ fontSize: 10 }}>
+                        {m.target}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -595,27 +798,41 @@ export default function ProjectCommandCenter() {
 
           {/* Launch Claude Code */}
           <section className="card card-animated" style={{ marginBottom: 14 }}>
-            <h3 style={{ marginTop: 0, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h3
+              style={{
+                marginTop: 0,
+                fontSize: 15,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
               <Terminal size={16} color="var(--accent)" /> Work on this Project
             </h3>
             {project.repo_path ? (
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                 <div style={{ flex: 1 }}>
                   <textarea
                     value={launchTask}
-                    onChange={e => setLaunchTask(e.target.value)}
+                    onChange={(e) => setLaunchTask(e.target.value)}
                     placeholder="Describe the task... e.g. Fix the login flow and add error handling"
                     rows={2}
-                    style={{ width: '100%', fontSize: 13 }}
+                    style={{ width: "100%", fontSize: 13 }}
                   />
                 </div>
                 <button
                   className="btn-primary"
                   onClick={launchAutonomous}
                   disabled={launching || !launchTask.trim()}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    whiteSpace: "nowrap",
+                  }}
                 >
-                  <Play size={14} /> {launching ? 'Launching...' : 'Launch Autonomous'}
+                  <Play size={14} />{" "}
+                  {launching ? "Launching..." : "Launch Autonomous"}
                 </button>
               </div>
             ) : (
@@ -624,173 +841,307 @@ export default function ProjectCommandCenter() {
               </div>
             )}
             <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>
-              Claude Code will work autonomously in the project repo. Ed will notify you when done.
+              Claude Code will work autonomously in the project repo. Ed will
+              notify you when done.
             </div>
           </section>
         </>
       )}
 
       {/* DELIVERABLES TAB */}
-      {tab === 'deliverables' && (
+      {tab === "deliverables" && (
         <div>
           {/* Planning Gate KPI */}
           {gateTotal > 0 && (
-            <div className="card card-animated" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div
+              className="card card-animated"
+              style={{
+                marginBottom: 14,
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+              }}
+            >
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Planning Gate</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                  Planning Gate
+                </div>
                 <div className="progress-bar" style={{ height: 8 }}>
-                  <div className="progress-fill" style={{
-                    width: `${gateTotal > 0 ? (approvedDels / gateTotal) * 100 : 0}%`,
-                    background: gateAllApproved ? 'var(--good)' : 'var(--warn)',
-                  }} />
+                  <div
+                    className="progress-fill"
+                    style={{
+                      width: `${gateTotal > 0 ? (approvedDels / gateTotal) * 100 : 0}%`,
+                      background: gateAllApproved
+                        ? "var(--good)"
+                        : "var(--warn)",
+                    }}
+                  />
                 </div>
                 <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
                   {approvedDels}/{gateTotal} planning deliverables approved
-                  {gateAllApproved && ' — Ready for dev!'}
+                  {gateAllApproved && " — Ready for dev!"}
                 </div>
               </div>
-              <div style={{
-                fontSize: 28, fontWeight: 700,
-                color: gateAllApproved ? 'var(--good)' : 'var(--warn)',
-              }}>
+              <div
+                style={{
+                  fontSize: 28,
+                  fontWeight: 700,
+                  color: gateAllApproved ? "var(--good)" : "var(--warn)",
+                }}
+              >
                 {approvedDels}/{gateTotal}
               </div>
             </div>
           )}
 
           {/* Filter toggle */}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
-            {(['all', 'planning', 'docs'] as const).map(f => (
+          <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
+            {(["all", "planning", "docs"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setDelFilter(f)}
                 className="btn-sm"
                 style={{
-                  background: delFilter === f ? 'rgba(110,168,254,0.15)' : 'transparent',
-                  color: delFilter === f ? 'var(--accent)' : 'var(--muted)',
+                  background:
+                    delFilter === f ? "rgba(110,168,254,0.15)" : "transparent",
+                  color: delFilter === f ? "var(--accent)" : "var(--muted)",
                   fontWeight: delFilter === f ? 600 : 400,
                   fontSize: 12,
                 }}
               >
-                {f === 'all' ? `All (${deliverables.length})` : f === 'planning' ? `Planning (${deliverables.filter(d => PLANNING_TYPES.includes(d.deliverable_type)).length})` : `Docs (${deliverables.filter(d => DOC_TYPES.includes(d.deliverable_type) || d.deliverable_type === 'other').length})`}
+                {f === "all"
+                  ? `All (${deliverables.length})`
+                  : f === "planning"
+                    ? `Planning (${deliverables.filter((d) => PLANNING_TYPES.includes(d.deliverable_type)).length})`
+                    : `Docs (${deliverables.filter((d) => DOC_TYPES.includes(d.deliverable_type) || d.deliverable_type === "other").length})`}
               </button>
             ))}
           </div>
 
           {filteredDeliverables.length === 0 ? (
-            <div className="card" style={{ padding: 30, textAlign: 'center' }}>
-              <div className="muted">No deliverables yet. Complete planning jobs or save job outputs as deliverables.</div>
+            <div className="card" style={{ padding: 30, textAlign: "center" }}>
+              <div className="muted">
+                No deliverables yet. Complete planning jobs or save job outputs
+                as deliverables.
+              </div>
             </div>
           ) : (
-            ['draft', 'review', 'rejected', 'approved'].map(groupStatus => {
-              const items = filteredDeliverables.filter(d => d.status === groupStatus);
+            ["draft", "review", "rejected", "approved"].map((groupStatus) => {
+              const items = filteredDeliverables.filter(
+                (d) => d.status === groupStatus,
+              );
               if (items.length === 0) return null;
-              const groupLabel = groupStatus === 'draft' ? 'Drafts' : groupStatus === 'review' ? 'In Review' : groupStatus === 'rejected' ? 'Rejected' : 'Approved';
-              const groupColor = groupStatus === 'approved' ? 'var(--good)' : groupStatus === 'rejected' ? 'var(--bad)' : groupStatus === 'review' ? 'var(--accent)' : 'var(--muted)';
+              const groupLabel =
+                groupStatus === "draft"
+                  ? "Drafts"
+                  : groupStatus === "review"
+                    ? "In Review"
+                    : groupStatus === "rejected"
+                      ? "Rejected"
+                      : "Approved";
+              const groupColor =
+                groupStatus === "approved"
+                  ? "var(--good)"
+                  : groupStatus === "rejected"
+                    ? "var(--bad)"
+                    : groupStatus === "review"
+                      ? "var(--accent)"
+                      : "var(--muted)";
               return (
                 <div key={groupStatus} style={{ marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 14, margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className="status-dot" style={{ background: groupColor }} />
+                  <h3
+                    style={{
+                      fontSize: 14,
+                      margin: "0 0 8px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <span
+                      className="status-dot"
+                      style={{ background: groupColor }}
+                    />
                     {groupLabel} ({items.length})
                   </h3>
-                  {items.map(d => (
-                    <div key={d.id} className="card card-animated" style={{ marginBottom: 8, padding: 14 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <span style={{
-                          display: 'inline-block', padding: '2px 8px', borderRadius: 4,
-                          fontSize: 11, fontWeight: 600, color: '#fff',
-                          background: typeBadgeColor(d.deliverable_type),
-                        }}>
+                  {items.map((d) => (
+                    <div
+                      key={d.id}
+                      className="card card-animated"
+                      style={{ marginBottom: 8, padding: 14 }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          marginBottom: 8,
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "2px 8px",
+                            borderRadius: 4,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: "#fff",
+                            background: typeBadgeColor(d.deliverable_type),
+                          }}
+                        >
                           {d.deliverable_type.toUpperCase()}
                         </span>
-                        <span className={`badge ${statusBadge(d.status)}`}>{d.status}</span>
-                        <span style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{d.title}</span>
+                        <span className={`badge ${statusBadge(d.status)}`}>
+                          {d.status}
+                        </span>
+                        <span
+                          style={{ flex: 1, fontWeight: 600, fontSize: 14 }}
+                        >
+                          {d.title}
+                        </span>
                         {d.source_job_id && d.mc_jobs && (
-                          <Link href={`/jobs/${d.source_job_id}`} style={{ fontSize: 11, color: 'var(--accent)' }}>
+                          <Link
+                            href={`/jobs/${d.source_job_id}`}
+                            style={{ fontSize: 11, color: "var(--accent)" }}
+                          >
                             Source: {d.mc_jobs.title.slice(0, 40)}
                           </Link>
                         )}
                       </div>
 
                       {/* Content preview */}
-                      <div style={{
-                        background: 'var(--panel-2)', padding: 10, borderRadius: 6,
-                        fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                        maxHeight: expandedDel === d.id ? 'none' : 120, overflow: 'hidden',
-                        position: 'relative',
-                      }}>
-                        {d.content || 'No content'}
+                      <div
+                        style={{
+                          background: "var(--panel-2)",
+                          padding: 10,
+                          borderRadius: 6,
+                          fontSize: 13,
+                          lineHeight: 1.5,
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          maxHeight: expandedDel === d.id ? "none" : 120,
+                          overflow: "hidden",
+                          position: "relative",
+                        }}
+                      >
+                        {d.content || "No content"}
                         {d.content.length > 300 && expandedDel !== d.id && (
-                          <div style={{
-                            position: 'absolute', bottom: 0, left: 0, right: 0, height: 40,
-                            background: 'linear-gradient(transparent, var(--panel-2))',
-                          }} />
+                          <div
+                            style={{
+                              position: "absolute",
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              height: 40,
+                              background:
+                                "linear-gradient(transparent, var(--panel-2))",
+                            }}
+                          />
                         )}
                       </div>
                       {d.content.length > 300 && (
                         <button
                           className="btn-sm"
                           style={{ marginTop: 6, fontSize: 11 }}
-                          onClick={() => setExpandedDel(expandedDel === d.id ? null : d.id)}
+                          onClick={() =>
+                            setExpandedDel(expandedDel === d.id ? null : d.id)
+                          }
                         >
-                          {expandedDel === d.id ? 'Show less' : 'Show more'}
+                          {expandedDel === d.id ? "Show less" : "Show more"}
                         </button>
                       )}
 
                       {/* Rejected feedback */}
-                      {d.status === 'rejected' && d.feedback && (
-                        <div style={{
-                          marginTop: 8, padding: 10, borderRadius: 6,
-                          background: 'rgba(255,107,107,0.08)', borderLeft: '3px solid var(--bad)',
-                          fontSize: 12,
-                        }}>
+                      {d.status === "rejected" && d.feedback && (
+                        <div
+                          style={{
+                            marginTop: 8,
+                            padding: 10,
+                            borderRadius: 6,
+                            background: "rgba(255,107,107,0.08)",
+                            borderLeft: "3px solid var(--bad)",
+                            fontSize: 12,
+                          }}
+                        >
                           <strong>Feedback:</strong> {d.feedback}
                         </div>
                       )}
 
                       {/* Action buttons */}
-                      <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-                        {d.status === 'draft' && (
+                      <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                        {d.status === "draft" && (
                           <button
                             className="btn-sm btn-primary"
                             disabled={delActing === d.id}
-                            onClick={() => updateDeliverable(d.id, { status: 'review' })}
+                            onClick={() =>
+                              updateDeliverable(d.id, { status: "review" })
+                            }
                           >
                             Submit for Review
                           </button>
                         )}
-                        {d.status === 'review' && (
+                        {d.status === "review" && (
                           <>
                             <button
                               className="btn-sm"
-                              style={{ background: 'var(--good)', color: '#fff' }}
+                              style={{
+                                background: "var(--good)",
+                                color: "#fff",
+                              }}
                               disabled={delActing === d.id}
-                              onClick={() => updateDeliverable(d.id, { status: 'approved' })}
+                              onClick={() =>
+                                updateDeliverable(d.id, { status: "approved" })
+                              }
                             >
                               Approve
                             </button>
                             {rejectId === d.id ? (
-                              <div style={{ display: 'flex', gap: 4, alignItems: 'center', flex: 1 }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  gap: 4,
+                                  alignItems: "center",
+                                  flex: 1,
+                                }}
+                              >
                                 <input
                                   value={rejectFeedback}
-                                  onChange={e => setRejectFeedback(e.target.value)}
+                                  onChange={(e) =>
+                                    setRejectFeedback(e.target.value)
+                                  }
                                   placeholder="Feedback..."
                                   style={{ flex: 1, fontSize: 12 }}
                                 />
                                 <button
                                   className="btn-sm"
-                                  style={{ background: 'var(--bad)', color: '#fff' }}
+                                  style={{
+                                    background: "var(--bad)",
+                                    color: "#fff",
+                                  }}
                                   disabled={delActing === d.id}
-                                  onClick={() => updateDeliverable(d.id, { status: 'rejected', feedback: rejectFeedback })}
+                                  onClick={() =>
+                                    updateDeliverable(d.id, {
+                                      status: "rejected",
+                                      feedback: rejectFeedback,
+                                    })
+                                  }
                                 >
                                   Confirm Reject
                                 </button>
-                                <button className="btn-sm" onClick={() => { setRejectId(null); setRejectFeedback(''); }}>Cancel</button>
+                                <button
+                                  className="btn-sm"
+                                  onClick={() => {
+                                    setRejectId(null);
+                                    setRejectFeedback("");
+                                  }}
+                                >
+                                  Cancel
+                                </button>
                               </div>
                             ) : (
                               <button
                                 className="btn-sm"
-                                style={{ color: 'var(--bad)' }}
+                                style={{ color: "var(--bad)" }}
                                 onClick={() => setRejectId(d.id)}
                               >
                                 Reject
@@ -798,20 +1149,32 @@ export default function ProjectCommandCenter() {
                             )}
                           </>
                         )}
-                        {d.status === 'rejected' && (
+                        {d.status === "rejected" && (
                           <button
                             className="btn-sm btn-primary"
                             disabled={delActing === d.id}
-                            onClick={() => updateDeliverable(d.id, { status: 'draft' })}
+                            onClick={() =>
+                              updateDeliverable(d.id, { status: "draft" })
+                            }
                           >
                             Resubmit as Draft
                           </button>
                         )}
                       </div>
 
-                      <div className="muted" style={{ fontSize: 10, marginTop: 6 }}>
-                        Created {new Date(d.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                        {d.reviewed_at && ` · Reviewed ${new Date(d.reviewed_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`}
+                      <div
+                        className="muted"
+                        style={{ fontSize: 10, marginTop: 6 }}
+                      >
+                        Created{" "}
+                        {new Date(d.created_at).toLocaleString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                        {d.reviewed_at &&
+                          ` · Reviewed ${new Date(d.reviewed_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`}
                       </div>
                     </div>
                   ))}
@@ -823,39 +1186,76 @@ export default function ProjectCommandCenter() {
       )}
 
       {/* TASKS TAB */}
-      {tab === 'tasks' && (
+      {tab === "tasks" && (
         <div>
           {[
-            { label: 'To Do', items: todoTasks, color: 'var(--muted)' },
-            { label: 'In Progress', items: inProgressTasks, color: 'var(--accent)' },
-            { label: 'Completed', items: completedTasks, color: 'var(--good)' },
-          ].map(group => (
+            { label: "To Do", items: todoTasks, color: "var(--muted)" },
+            {
+              label: "In Progress",
+              items: inProgressTasks,
+              color: "var(--accent)",
+            },
+            { label: "Completed", items: completedTasks, color: "var(--good)" },
+          ].map((group) => (
             <div key={group.label} style={{ marginBottom: 16 }}>
-              <h3 style={{ fontSize: 14, margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="status-dot" style={{ background: group.color }} />
+              <h3
+                style={{
+                  fontSize: 14,
+                  margin: "0 0 8px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <span
+                  className="status-dot"
+                  style={{ background: group.color }}
+                />
                 {group.label} ({group.items.length})
               </h3>
               {group.items.length === 0 ? (
-                <div className="muted" style={{ fontSize: 12, paddingLeft: 20 }}>None</div>
+                <div
+                  className="muted"
+                  style={{ fontSize: 12, paddingLeft: 20 }}
+                >
+                  None
+                </div>
               ) : (
                 <div className="card" style={{ padding: 0 }}>
-                  {group.items.map(t => (
-                    <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--line)', fontSize: 13 }}>
+                  {group.items.map((t) => (
+                    <div
+                      key={t.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "10px 14px",
+                        borderBottom: "1px solid var(--line)",
+                        fontSize: 13,
+                      }}
+                    >
                       <button
                         className="btn-sm"
                         onClick={() => cycleTaskStatus(t.id, t.status)}
                         title="Cycle status"
-                        style={{ padding: '3px 6px', fontSize: 11 }}
+                        style={{ padding: "3px 6px", fontSize: 11 }}
                       >
-                        <span className={`badge ${statusBadge(t.status)}`}>{t.status}</span>
+                        <span className={`badge ${statusBadge(t.status)}`}>
+                          {t.status}
+                        </span>
                       </button>
                       <div style={{ flex: 1 }}>
                         <span style={{ fontWeight: 500 }}>{t.title}</span>
-                        <span className="muted" style={{ marginLeft: 8, fontSize: 11 }}>
+                        <span
+                          className="muted"
+                          style={{ marginLeft: 8, fontSize: 11 }}
+                        >
                           {t.task_type} \u00B7 {t.assigned_to}
                         </span>
                       </div>
-                      <span className={`badge ${t.priority <= 2 ? 'bad' : t.priority <= 5 ? 'warn' : 'good'}`}>
+                      <span
+                        className={`badge ${t.priority <= 2 ? "bad" : t.priority <= 5 ? "warn" : "good"}`}
+                      >
                         P{t.priority}
                       </span>
                     </div>
@@ -868,30 +1268,56 @@ export default function ProjectCommandCenter() {
       )}
 
       {/* JOBS TAB */}
-      {tab === 'jobs' && (
+      {tab === "jobs" && (
         <div className="card">
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Job History ({jobs.length})</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>
+            Job History ({jobs.length})
+          </h3>
           {jobs.length === 0 ? (
-            <div className="muted" style={{ padding: 20, textAlign: 'center' }}>No jobs for this project yet</div>
+            <div className="muted" style={{ padding: 20, textAlign: "center" }}>
+              No jobs for this project yet
+            </div>
           ) : (
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr><th>Title</th><th>Engine</th><th>Type</th><th>Status</th><th>QA</th><th>Created</th></tr>
+                  <tr>
+                    <th>Title</th>
+                    <th>Engine</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>QA</th>
+                    <th>Created</th>
+                  </tr>
                 </thead>
                 <tbody>
-                  {jobs.map(j => (
+                  {jobs.map((j) => (
                     <tr key={j.id}>
-                      <td style={{ fontWeight: 500 }}>{j.title}</td>
+                      <td style={{ fontWeight: 500 }}>
+                        <Link
+                          href={`/jobs/${j.id}`}
+                          style={{ color: "inherit", textDecoration: "none" }}
+                        >
+                          {j.title}
+                        </Link>
+                      </td>
                       <td>{j.engine}</td>
                       <td>{j.job_type}</td>
-                      <td><span className={`badge ${statusBadge(j.status)}`}>{j.status}</span></td>
+                      <td>
+                        <span className={`badge ${statusBadge(j.status)}`}>
+                          {j.status}
+                        </span>
+                      </td>
                       <td>
                         {j.quality_score !== null ? (
-                          <span className={`badge ${j.quality_score >= 35 ? 'good' : 'bad'}`}>
+                          <span
+                            className={`badge ${j.quality_score >= 35 ? "good" : "bad"}`}
+                          >
                             {j.quality_score}/50
                           </span>
-                        ) : '\u2014'}
+                        ) : (
+                          "\u2014"
+                        )}
                       </td>
                       <td className="muted" style={{ fontSize: 11 }}>
                         {new Date(j.created_at).toLocaleDateString()}
@@ -906,54 +1332,103 @@ export default function ProjectCommandCenter() {
       )}
 
       {/* ACTIVITY TAB */}
-      {tab === 'activity' && (
+      {tab === "activity" && (
         <div className="card">
           <h3 style={{ marginTop: 0, fontSize: 15 }}>
-            <Activity size={14} style={{ verticalAlign: 'middle' }} /> Project Activity
+            <Activity size={14} style={{ verticalAlign: "middle" }} /> Project
+            Activity
           </h3>
           {activity.length === 0 ? (
-            <div className="muted" style={{ padding: 20, textAlign: 'center' }}>No activity for this project</div>
-          ) : activity.map(item => (
-            <div key={item.id} className="feed-item" style={{ padding: '8px 0' }}>
-              <div className="feed-dot" style={{
-                background: `var(--${item.statusColor === 'accent' ? 'accent' : item.statusColor})`,
-              }} />
-              <div style={{ flex: 1, fontSize: 13 }}>
-                <span style={{ fontWeight: 500 }}>{item.title}</span>
-                <div className="muted" style={{ fontSize: 11 }}>
-                  <span className={`badge ${item.statusColor}`}>{item.status}</span>
-                  <span style={{ marginLeft: 6 }}>{item.detail}</span>
-                </div>
-              </div>
-              <span className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
-                {new Date(item.timestamp).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-              </span>
+            <div className="muted" style={{ padding: 20, textAlign: "center" }}>
+              No activity for this project
             </div>
-          ))}
+          ) : (
+            activity.map((item) => (
+              <div
+                key={item.id}
+                className="feed-item"
+                style={{ padding: "8px 0" }}
+              >
+                <div
+                  className="feed-dot"
+                  style={{
+                    background: `var(--${item.statusColor === "accent" ? "accent" : item.statusColor})`,
+                  }}
+                />
+                <div style={{ flex: 1, fontSize: 13 }}>
+                  <span style={{ fontWeight: 500 }}>{item.title}</span>
+                  <div className="muted" style={{ fontSize: 11 }}>
+                    <span className={`badge ${item.statusColor}`}>
+                      {item.status}
+                    </span>
+                    <span style={{ marginLeft: 6 }}>{item.detail}</span>
+                  </div>
+                </div>
+                <span
+                  className="muted"
+                  style={{ fontSize: 11, whiteSpace: "nowrap" }}
+                >
+                  {new Date(item.timestamp).toLocaleString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       )}
 
       {/* ENV VARS TAB */}
-      {tab === 'env' && (
+      {tab === "env" && (
         <div>
           {/* Health Score + Refresh */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              marginBottom: 16,
+            }}
+          >
             {envScore !== null && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '6px 14px', borderRadius: 8,
-                background: envScore >= 80 ? 'rgba(61,220,151,0.1)' : envScore >= 50 ? 'rgba(247,201,72,0.1)' : 'rgba(255,107,107,0.1)',
-                color: envScore >= 80 ? 'var(--good)' : envScore >= 50 ? 'var(--warn)' : 'var(--bad)',
-                fontWeight: 600, fontSize: 14,
-              }}>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 14px",
+                  borderRadius: 8,
+                  background:
+                    envScore >= 80
+                      ? "rgba(61,220,151,0.1)"
+                      : envScore >= 50
+                        ? "rgba(247,201,72,0.1)"
+                        : "rgba(255,107,107,0.1)",
+                  color:
+                    envScore >= 80
+                      ? "var(--good)"
+                      : envScore >= 50
+                        ? "var(--warn)"
+                        : "var(--bad)",
+                  fontWeight: 600,
+                  fontSize: 14,
+                }}
+              >
                 Health: {envScore}/100
               </div>
             )}
-            <button onClick={loadEnvData} disabled={envLoading} className="btn-sm">
-              {envLoading ? 'Loading...' : 'Refresh'}
+            <button
+              onClick={loadEnvData}
+              disabled={envLoading}
+              className="btn-sm"
+            >
+              {envLoading ? "Loading..." : "Refresh"}
             </button>
             {!project.vercel_project_id && (
-              <span style={{ color: 'var(--warn)', fontSize: 12 }}>
+              <span style={{ color: "var(--warn)", fontSize: 12 }}>
                 No Vercel project linked — set vercel_project_id in Settings
               </span>
             )}
@@ -966,45 +1441,72 @@ export default function ProjectCommandCenter() {
                 <thead>
                   <tr>
                     <th>Key</th>
-                    <th style={{ width: 70, textAlign: 'center' }}>Required</th>
-                    <th style={{ width: 70, textAlign: 'center' }}>Vercel</th>
-                    <th style={{ width: 70, textAlign: 'center' }}>Local</th>
+                    <th style={{ width: 70, textAlign: "center" }}>Required</th>
+                    <th style={{ width: 70, textAlign: "center" }}>Vercel</th>
+                    <th style={{ width: 70, textAlign: "center" }}>Local</th>
                     <th>Targets</th>
                     <th style={{ width: 100 }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {envRows.map(row => {
+                  {envRows.map((row) => {
                     const allGood = row.inManifest && row.inVercel;
                     const missing = row.required && !row.inVercel;
                     return (
-                      <tr key={row.key} style={{
-                        background: missing ? 'rgba(255,107,107,0.05)' : allGood ? 'rgba(61,220,151,0.03)' : undefined,
-                      }}>
-                        <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{row.key}</td>
-                        <td style={{ textAlign: 'center' }}>
-                          {row.required ? <span style={{ color: 'var(--warn)' }}>Yes</span> : <span style={{ color: 'var(--muted)' }}>-</span>}
+                      <tr
+                        key={row.key}
+                        style={{
+                          background: missing
+                            ? "rgba(255,107,107,0.05)"
+                            : allGood
+                              ? "rgba(61,220,151,0.03)"
+                              : undefined,
+                        }}
+                      >
+                        <td style={{ fontFamily: "monospace", fontSize: 12 }}>
+                          {row.key}
                         </td>
-                        <td style={{ textAlign: 'center' }}>
-                          {row.inVercel
-                            ? <span className="status-dot" style={{ background: 'var(--good)' }} />
-                            : <span className="status-dot" style={{ background: 'var(--line)' }} />
-                          }
+                        <td style={{ textAlign: "center" }}>
+                          {row.required ? (
+                            <span style={{ color: "var(--warn)" }}>Yes</span>
+                          ) : (
+                            <span style={{ color: "var(--muted)" }}>-</span>
+                          )}
                         </td>
-                        <td style={{ textAlign: 'center' }}>
-                          {row.inLocal
-                            ? <span className="status-dot" style={{ background: 'var(--good)' }} />
-                            : <span className="status-dot" style={{ background: 'var(--line)' }} />
-                          }
+                        <td style={{ textAlign: "center" }}>
+                          {row.inVercel ? (
+                            <span
+                              className="status-dot"
+                              style={{ background: "var(--good)" }}
+                            />
+                          ) : (
+                            <span
+                              className="status-dot"
+                              style={{ background: "var(--line)" }}
+                            />
+                          )}
                         </td>
-                        <td style={{ fontSize: 11, color: 'var(--muted)' }}>
-                          {row.targets?.join(', ') || '-'}
+                        <td style={{ textAlign: "center" }}>
+                          {row.inLocal ? (
+                            <span
+                              className="status-dot"
+                              style={{ background: "var(--good)" }}
+                            />
+                          ) : (
+                            <span
+                              className="status-dot"
+                              style={{ background: "var(--line)" }}
+                            />
+                          )}
+                        </td>
+                        <td style={{ fontSize: 11, color: "var(--muted)" }}>
+                          {row.targets?.join(", ") || "-"}
                         </td>
                         <td>
                           {!row.inManifest && (
                             <button
                               className="btn-sm"
-                              style={{ fontSize: 10, padding: '2px 6px' }}
+                              style={{ fontSize: 10, padding: "2px 6px" }}
                               onClick={() => addEnvToManifest(row.key)}
                             >
                               + Manifest
@@ -1018,35 +1520,51 @@ export default function ProjectCommandCenter() {
               </table>
             </div>
           ) : (
-            <p style={{ color: 'var(--muted)', fontSize: 13 }}>
-              {envLoading ? 'Loading...' : 'Click Refresh to load env var data from Vercel and local files.'}
+            <p style={{ color: "var(--muted)", fontSize: 13 }}>
+              {envLoading
+                ? "Loading..."
+                : "Click Refresh to load env var data from Vercel and local files."}
             </p>
           )}
 
           {/* Add New Env Var */}
           {project.vercel_project_id && (
             <article className="card" style={{ marginTop: 16 }}>
-              <h3 style={{ marginTop: 0, fontSize: 14 }}>Add Env Var to Vercel</h3>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <h3 style={{ marginTop: 0, fontSize: 14 }}>
+                Add Env Var to Vercel
+              </h3>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <input
                   value={newEnvKey}
-                  onChange={e => setNewEnvKey(e.target.value.toUpperCase())}
+                  onChange={(e) => setNewEnvKey(e.target.value.toUpperCase())}
                   placeholder="KEY_NAME"
-                  style={{ width: 200, fontFamily: 'monospace', fontSize: 12 }}
+                  style={{ width: 200, fontFamily: "monospace", fontSize: 12 }}
                 />
                 <input
                   type="password"
                   value={newEnvValue}
-                  onChange={e => setNewEnvValue(e.target.value)}
+                  onChange={(e) => setNewEnvValue(e.target.value)}
                   placeholder="value"
                   style={{ flex: 1, fontSize: 12 }}
                 />
-                <button onClick={addEnvToVercel} disabled={addingEnv || !newEnvKey || !newEnvValue} className="btn-sm">
-                  {addingEnv ? 'Adding...' : 'Add'}
+                <button
+                  onClick={addEnvToVercel}
+                  disabled={addingEnv || !newEnvKey || !newEnvValue}
+                  className="btn-sm"
+                >
+                  {addingEnv ? "Adding..." : "Add"}
                 </button>
               </div>
-              <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, marginBottom: 0 }}>
-                Added to all environments (production, preview, development) as encrypted.
+              <p
+                style={{
+                  fontSize: 11,
+                  color: "var(--muted)",
+                  marginTop: 4,
+                  marginBottom: 0,
+                }}
+              >
+                Added to all environments (production, preview, development) as
+                encrypted.
               </p>
             </article>
           )}
@@ -1054,44 +1572,66 @@ export default function ProjectCommandCenter() {
       )}
 
       {/* SETTINGS TAB */}
-      {tab === 'settings' && (
+      {tab === "settings" && (
         <div className="grid">
-          <article className="card" style={{ gridColumn: 'span 6' }}>
+          <article className="card" style={{ gridColumn: "span 6" }}>
             <h3 style={{ marginTop: 0, fontSize: 15 }}>Repo Path</h3>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: "flex", gap: 8 }}>
               <input
                 value={editRepoPath}
-                onChange={e => setEditRepoPath(e.target.value)}
+                onChange={(e) => setEditRepoPath(e.target.value)}
                 placeholder="/Users/david/..."
                 style={{ flex: 1, fontSize: 13 }}
               />
-              <button onClick={saveRepoPath} disabled={saving} className="btn-sm">
-                {saving ? 'Saving...' : 'Save'}
+              <button
+                onClick={saveRepoPath}
+                disabled={saving}
+                className="btn-sm"
+              >
+                {saving ? "Saving..." : "Save"}
               </button>
             </div>
           </article>
-          <article className="card" style={{ gridColumn: 'span 6' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <h3 style={{ margin: 0, fontSize: 15 }}>Project Specification (JSON)</h3>
+          <article className="card" style={{ gridColumn: "span 6" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 8,
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: 15 }}>
+                Project Specification (JSON)
+              </h3>
               <button
                 className="btn-sm"
                 onClick={() => {
                   setEditPlan(JSON.stringify(SPEC_TEMPLATE, null, 2));
-                  toast('Template loaded — fill in the fields', 'good');
+                  toast("Template loaded — fill in the fields", "good");
                 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: 11,
+                }}
               >
                 <FileText size={12} /> Load Template
               </button>
             </div>
             <textarea
               value={editPlan}
-              onChange={e => setEditPlan(e.target.value)}
+              onChange={(e) => setEditPlan(e.target.value)}
               rows={12}
-              style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
+              style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }}
             />
-            <button onClick={savePlan} disabled={saving} style={{ marginTop: 8 }}>
-              {saving ? 'Saving...' : 'Save Spec'}
+            <button
+              onClick={savePlan}
+              disabled={saving}
+              style={{ marginTop: 8 }}
+            >
+              {saving ? "Saving..." : "Save Spec"}
             </button>
           </article>
         </div>

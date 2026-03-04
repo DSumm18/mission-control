@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/db/supabase-server';
+import { supabaseAdmin } from "@/lib/db/supabase-server";
 
 export type RouteResult = {
   agent_id: string;
@@ -19,27 +19,29 @@ export async function routeJob(jobId: string): Promise<RouteResult | null> {
   const sb = supabaseAdmin();
 
   const { data: job } = await sb
-    .from('mc_jobs')
-    .select('id, title, engine, job_type, project_id')
-    .eq('id', jobId)
+    .from("mc_jobs")
+    .select("id, title, engine, job_type, project_id")
+    .eq("id", jobId)
     .single();
 
   if (!job) return null;
 
   // Get all active agents
   const { data: agents } = await sb
-    .from('mc_agents')
-    .select('id, name, role, default_engine, cost_tier, quality_score_avg, department_id')
-    .eq('active', true)
-    .order('quality_score_avg', { ascending: false });
+    .from("mc_agents")
+    .select(
+      "id, name, role, default_engine, cost_tier, quality_score_avg, department_id",
+    )
+    .eq("active", true)
+    .order("quality_score_avg", { ascending: false });
 
   if (!agents || agents.length === 0) return null;
 
   // Get running job counts per agent
   const { data: loadData } = await sb
-    .from('mc_jobs')
-    .select('agent_id')
-    .in('status', ['running', 'assigned']);
+    .from("mc_jobs")
+    .select("agent_id")
+    .in("status", ["running", "assigned"]);
 
   const loadMap = new Map<string, number>();
   for (const row of loadData || []) {
@@ -52,9 +54,9 @@ export async function routeJob(jobId: string): Promise<RouteResult | null> {
   let preferredDeptId: string | null = null;
   if (job.project_id) {
     const { data: project } = await sb
-      .from('mc_projects')
-      .select('pm_agent_id')
-      .eq('id', job.project_id)
+      .from("mc_projects")
+      .select("pm_agent_id")
+      .eq("id", job.project_id)
       .single();
 
     if (project?.pm_agent_id) {
@@ -65,51 +67,142 @@ export async function routeJob(jobId: string): Promise<RouteResult | null> {
 
   // Map engine to expected role
   const engineRoleMap: Record<string, string[]> = {
-    claude: ['coder', 'researcher', 'orchestrator', 'qa', 'ops', 'publisher'],
-    shell: ['publisher', 'ops'],
+    claude: [
+      "coder",
+      "researcher",
+      "orchestrator",
+      "qa",
+      "ops",
+      "publisher",
+      "analyst",
+      "support",
+      "data_analyst",
+    ],
+    shell: ["publisher", "ops"],
   };
 
   // Review jobs go to Inspector (qa role)
-  if (job.job_type === 'review') {
-    const inspector = agents.find((a) => a.role === 'qa');
+  if (job.job_type === "review") {
+    const inspector = agents.find((a) => a.role === "qa");
     if (inspector) {
-      return { agent_id: inspector.id, agent_name: inspector.name, reason: 'QA review assignment' };
+      return {
+        agent_id: inspector.id,
+        agent_name: inspector.name,
+        reason: "QA review assignment",
+      };
     }
   }
 
   // Decomposition/integration jobs go to Ed (orchestrator)
-  if (job.job_type === 'decomposition' || job.job_type === 'integration') {
-    const ed = agents.find((a) => a.role === 'orchestrator');
+  if (job.job_type === "decomposition" || job.job_type === "integration") {
+    const ed = agents.find((a) => a.role === "orchestrator");
     if (ed) {
-      return { agent_id: ed.id, agent_name: ed.name, reason: 'Orchestrator assignment' };
+      return {
+        agent_id: ed.id,
+        agent_name: ed.name,
+        reason: "Orchestrator assignment",
+      };
     }
   }
 
   // Keyword-based routing for specialist agents
-  const titleLower = (job.title || '').toLowerCase();
-  const keywordRoutes: { keywords: string[]; role: string; reason: string }[] = [
-    { keywords: ['budget', 'cashflow', 'revenue', 'roi', 'finance', 'cost', 'projection', 'reconcil'], role: 'analyst', reason: 'Finance keyword match' },
-    { keywords: ['security', 'audit', 'vulnerab', 'monitor', 'breach', 'rls', 'permission'], role: 'ops', reason: 'Security keyword match' },
-  ];
+  const titleLower = (job.title || "").toLowerCase();
+  const keywordRoutes: { keywords: string[]; role: string; reason: string }[] =
+    [
+      {
+        keywords: [
+          "budget",
+          "cashflow",
+          "revenue",
+          "roi",
+          "finance",
+          "cost",
+          "projection",
+          "reconcil",
+        ],
+        role: "analyst",
+        reason: "Finance keyword match",
+      },
+      {
+        keywords: [
+          "security",
+          "audit",
+          "vulnerab",
+          "monitor",
+          "breach",
+          "rls",
+          "permission",
+        ],
+        role: "ops",
+        reason: "Security keyword match",
+      },
+      {
+        keywords: [
+          "sql",
+          "query",
+          "dashboard",
+          "kpi",
+          "metric",
+          "data analy",
+          "funnel",
+          "cohort",
+        ],
+        role: "data_analyst",
+        reason: "Data/analytics keyword match",
+      },
+      {
+        keywords: [
+          "newsletter",
+          "blog",
+          "documentation",
+          "guide",
+          "long-form",
+          "article",
+        ],
+        role: "publisher",
+        reason: "Content keyword match",
+      },
+      {
+        keywords: [
+          "ticket",
+          "triage",
+          "customer",
+          "support",
+          "complaint",
+          "escalat",
+        ],
+        role: "support",
+        reason: "Support keyword match",
+      },
+    ];
 
   for (const route of keywordRoutes) {
     if (route.keywords.some((kw) => titleLower.includes(kw))) {
       const match = agents.find((a) => a.role === route.role);
       if (match) {
-        return { agent_id: match.id, agent_name: match.name, reason: route.reason };
+        return {
+          agent_id: match.id,
+          agent_name: match.name,
+          reason: route.reason,
+        };
       }
     }
   }
 
-  const costOrder: Record<string, number> = { free: 0, low: 1, medium: 2, high: 3 };
+  const costOrder: Record<string, number> = {
+    free: 0,
+    low: 1,
+    medium: 2,
+    high: 3,
+  };
 
   // Score each agent
   const scored = agents
-    .filter((a) => a.role !== 'orchestrator') // Ed never does tasks
+    .filter((a) => a.role !== "orchestrator") // Ed never does tasks
     .filter((a) => {
       // Engine compatibility
-      if (job.engine === 'shell') return a.default_engine === 'shell';
-      return a.default_engine === job.engine || a.default_engine === 'claude';
+      if (job.engine === "shell") return a.default_engine === "shell";
+      return a.default_engine === job.engine || a.default_engine === "claude";
     })
     .map((a) => {
       let score = 0;
@@ -118,7 +211,7 @@ export async function routeJob(jobId: string): Promise<RouteResult | null> {
       if (preferredDeptId && a.department_id === preferredDeptId) score += 10;
 
       // Cost preference (cheaper = higher score)
-      score += (3 - (costOrder[a.cost_tier || 'medium'] || 2)) * 2;
+      score += (3 - (costOrder[a.cost_tier || "medium"] || 2)) * 2;
 
       // Quality score bonus
       score += Number(a.quality_score_avg || 0);
@@ -137,6 +230,6 @@ export async function routeJob(jobId: string): Promise<RouteResult | null> {
   return {
     agent_id: best.id,
     agent_name: best.name,
-    reason: `Best match: dept=${preferredDeptId === best.department_id ? 'yes' : 'no'}, cost=${best.cost_tier}, quality=${best.quality_score_avg}, load=${best.load}`,
+    reason: `Best match: dept=${preferredDeptId === best.department_id ? "yes" : "no"}, cost=${best.cost_tier}, quality=${best.quality_score_avg}, load=${best.load}`,
   };
 }

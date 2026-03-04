@@ -1,4 +1,5 @@
-import { supabaseAdmin } from '@/lib/db/supabase-server';
+import { supabaseAdmin } from "@/lib/db/supabase-server";
+import { getSetting } from "@/lib/db/settings";
 
 export type QAScores = {
   completeness: number;
@@ -24,7 +25,7 @@ export async function scoreJob(
   jobId: string,
   reviewerAgentId: string | null,
   scores: QAScores,
-  feedback: string
+  feedback: string,
 ): Promise<QAResult> {
   const sb = supabaseAdmin();
 
@@ -37,9 +38,9 @@ export async function scoreJob(
 
   // Get pass threshold from settings
   const { data: setting } = await sb
-    .from('mc_settings')
-    .select('value')
-    .eq('key', 'qa_pass_threshold')
+    .from("mc_settings")
+    .select("value")
+    .eq("key", "qa_pass_threshold")
     .single();
 
   const threshold = setting?.value ? Number(setting.value) : 35;
@@ -47,7 +48,7 @@ export async function scoreJob(
 
   // Insert review row
   const { data: review, error: reviewErr } = await sb
-    .from('mc_job_reviews')
+    .from("mc_job_reviews")
     .insert({
       job_id: jobId,
       reviewer_agent_id: reviewerAgentId,
@@ -59,43 +60,74 @@ export async function scoreJob(
       passed,
       feedback,
     })
-    .select('id')
+    .select("id")
     .single();
 
-  if (reviewErr) throw new Error(`Failed to insert review: ${reviewErr.message}`);
+  if (reviewErr)
+    throw new Error(`Failed to insert review: ${reviewErr.message}`);
 
   // Update job quality_score and review_notes
   await sb
-    .from('mc_jobs')
+    .from("mc_jobs")
     .update({
       quality_score: total,
       review_notes: feedback,
-      status: passed ? 'done' : 'rejected',
+      status: passed ? "done" : "rejected",
     })
-    .eq('id', jobId);
+    .eq("id", jobId);
+
+  // Auto-approve deliverables if QA score meets threshold
+  if (passed) {
+    try {
+      const autoThresholdStr = await getSetting("auto_approve_qa_threshold");
+      const autoThreshold = autoThresholdStr ? Number(autoThresholdStr) : 40;
+
+      if (total >= autoThreshold) {
+        const { data: deliverables } = await sb
+          .from("mc_project_deliverables")
+          .select("id, status")
+          .eq("source_job_id", jobId)
+          .in("status", ["draft", "review"]);
+
+        if (deliverables?.length) {
+          await sb
+            .from("mc_project_deliverables")
+            .update({
+              status: "approved",
+              reviewed_by: "Ed (auto-approve)",
+              feedback: `Auto-approved: QA score ${total}/50 (threshold ${autoThreshold})`,
+              reviewed_at: new Date().toISOString(),
+            })
+            .in(
+              "id",
+              deliverables.map((d) => d.id),
+            );
+        }
+      }
+    } catch {
+      // Auto-approve is non-critical — don't break QA scoring
+    }
+  }
 
   // Get the job's agent to update their rolling average
   const { data: job } = await sb
-    .from('mc_jobs')
-    .select('agent_id')
-    .eq('id', jobId)
+    .from("mc_jobs")
+    .select("agent_id")
+    .eq("id", jobId)
     .single();
 
   if (job?.agent_id) {
     // Get last 20 reviews for this agent's jobs
     const { data: recentReviews } = await sb
-      .from('mc_job_reviews')
-      .select('total_score, job_id')
+      .from("mc_job_reviews")
+      .select("total_score, job_id")
       .in(
-        'job_id',
+        "job_id",
         (
-          await sb
-            .from('mc_jobs')
-            .select('id')
-            .eq('agent_id', job.agent_id)
-        ).data?.map((j) => j.id) || []
+          await sb.from("mc_jobs").select("id").eq("agent_id", job.agent_id)
+        ).data?.map((j) => j.id) || [],
       )
-      .order('created_at', { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(20);
 
     if (recentReviews && recentReviews.length > 0) {
@@ -111,22 +143,24 @@ export async function scoreJob(
         updateFields.consecutive_failures = 0;
         // Increment total_jobs_completed
         const { data: agent } = await sb
-          .from('mc_agents')
-          .select('total_jobs_completed')
-          .eq('id', job.agent_id)
+          .from("mc_agents")
+          .select("total_jobs_completed")
+          .eq("id", job.agent_id)
           .single();
-        updateFields.total_jobs_completed = (agent?.total_jobs_completed || 0) + 1;
+        updateFields.total_jobs_completed =
+          (agent?.total_jobs_completed || 0) + 1;
       } else {
         // Increment consecutive_failures
         const { data: agent } = await sb
-          .from('mc_agents')
-          .select('consecutive_failures')
-          .eq('id', job.agent_id)
+          .from("mc_agents")
+          .select("consecutive_failures")
+          .eq("id", job.agent_id)
           .single();
-        updateFields.consecutive_failures = (agent?.consecutive_failures || 0) + 1;
+        updateFields.consecutive_failures =
+          (agent?.consecutive_failures || 0) + 1;
       }
 
-      await sb.from('mc_agents').update(updateFields).eq('id', job.agent_id);
+      await sb.from("mc_agents").update(updateFields).eq("id", job.agent_id);
     }
   }
 

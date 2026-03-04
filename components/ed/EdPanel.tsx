@@ -1,22 +1,25 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, X } from 'lucide-react';
-import EdMessageList from './EdMessageList';
-import EdInput from './EdInput';
-import VoiceInput from './VoiceInput';
-import VoiceOutput, { type VoicePersona, unlockAudio } from './VoiceOutput';
-import EdNotifications from './EdNotifications';
-import type { ImagePreview } from './ImageUpload';
+import { useState, useEffect, useCallback } from "react";
+import { Plus, X } from "lucide-react";
+import EdMessageList from "./EdMessageList";
+import EdInput from "./EdInput";
+import VoiceInput from "./VoiceInput";
+import VoiceOutput, { type VoicePersona, unlockAudio } from "./VoiceOutput";
+import EdNotifications from "./EdNotifications";
+import type { ImagePreview } from "./ImageUpload";
+
+type ChatTarget = "ed" | "jarvis";
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
   actions_taken?: ActionResult[];
   model_used?: string | null;
   duration_ms?: number | null;
   created_at: string;
+  sender?: string; // 'david' | 'ed' | 'jarvis'
 }
 
 interface ActionResult {
@@ -36,48 +39,76 @@ interface Conversation {
 
 interface EdPanelProps {
   onClose: () => void;
+  pathname?: string;
 }
 
-export default function EdPanel({ onClose }: EdPanelProps) {
+export default function EdPanel({ onClose, pathname }: EdPanelProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConv, setActiveConv] = useState<string | null>(null);
+  const [activeConv, setActiveConv] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("ed-active-conv");
+    }
+    return null;
+  });
   const [messages, setMessages] = useState<Message[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingContent, setStreamingContent] = useState('');
-  const [voiceMode, setVoiceMode] = useState<'off' | VoicePersona>('off');
-  const [lastAssistantText, setLastAssistantText] = useState('');
+  const [streamingContent, setStreamingContent] = useState("");
+  const [voiceMode, setVoiceMode] = useState<"off" | VoicePersona>("off");
+  const [lastAssistantText, setLastAssistantText] = useState("");
   const [notifCount, setNotifCount] = useState(0);
 
-  // Load conversations
+  // Load conversations + validate stored activeConv
   useEffect(() => {
-    fetch('/api/ed/conversations')
+    fetch("/api/ed/conversations")
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data)) {
           setConversations(data);
-          if (data.length > 0 && !activeConv) {
-            setActiveConv(data[0].id);
+          if (data.length > 0) {
+            const stored = activeConv;
+            const valid =
+              stored && data.some((c: Conversation) => c.id === stored);
+            if (!valid) {
+              setActiveConv(data[0].id);
+            }
           }
         }
       })
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Persist activeConv to localStorage
+  useEffect(() => {
+    if (activeConv) {
+      localStorage.setItem("ed-active-conv", activeConv);
+    }
+  }, [activeConv]);
+
   // Load messages when conversation changes
   useEffect(() => {
     if (!activeConv) return;
 
-    // We don't have a messages-list endpoint yet — messages come from chat responses.
-    // For now, clear messages when switching conversations.
     setMessages([]);
-    setStreamingContent('');
+    setStreamingContent("");
+    setLoadingMessages(true);
+
+    fetch(`/api/ed/conversations/${activeConv}/messages`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setMessages(data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMessages(false));
   }, [activeConv]);
 
   const createConversation = async () => {
-    const res = await fetch('/api/ed/conversations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'New conversation' }),
+    const res = await fetch("/api/ed/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "New conversation" }),
     });
     const conv = await res.json();
     if (conv.id) {
@@ -90,15 +121,15 @@ export default function EdPanel({ onClose }: EdPanelProps) {
   const handleSend = useCallback(
     async (text: string, images?: ImagePreview[]) => {
       // Unlock audio on user gesture — required for iOS Safari / PWA
-      if (voiceMode !== 'off') {
+      if (voiceMode !== "off") {
         unlockAudio();
       }
 
       if (!activeConv) {
         // Auto-create conversation
-        const res = await fetch('/api/ed/conversations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch("/api/ed/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title: text.slice(0, 50) }),
         });
         const conv = await res.json();
@@ -114,25 +145,38 @@ export default function EdPanel({ onClose }: EdPanelProps) {
     [activeConv, voiceMode], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const sendMessage = async (convId: string, text: string, images?: ImagePreview[]) => {
+  const [streamingSender, setStreamingSender] = useState<string>("ed");
+
+  const sendMessage = async (
+    convId: string,
+    text: string,
+    images?: ImagePreview[],
+  ) => {
+    // Detect target: @jarvis routes to Jarvis/OpenClaw
+    const target: ChatTarget = /@ed\b/i.test(text) ? "ed" : "jarvis";
+
     // Add user message to local state
     const userMsg: Message = {
       id: `temp-${Date.now()}`,
-      role: 'user',
+      role: "user",
       content: text,
+      sender: "david",
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, userMsg]);
     setIsStreaming(true);
-    setStreamingContent('');
+    setStreamingContent("");
+    setStreamingSender(target);
 
     try {
-      const res = await fetch('/api/ed/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/ed/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conversation_id: convId,
           message: text,
+          target,
+          page_context: pathname || null,
           images: images?.map((img) => ({
             base64: img.base64,
             mimeType: img.mimeType,
@@ -146,9 +190,9 @@ export default function EdPanel({ onClose }: EdPanelProps) {
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let fullText = '';
+      let fullText = "";
       const actions: ActionResult[] = [];
-      let messageId = '';
+      let messageId = "";
       let durationMs = 0;
       let modelUsed: string | null = null;
 
@@ -157,31 +201,31 @@ export default function EdPanel({ onClose }: EdPanelProps) {
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
+        const lines = chunk.split("\n");
 
         for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
+          if (!line.startsWith("data: ")) continue;
           try {
             const data = JSON.parse(line.slice(6));
             switch (data.type) {
-              case 'text':
+              case "text":
                 // Handle action-stripped replacement
-                if (data.content.startsWith('\n<!-- REPLACE -->\n')) {
-                  fullText = data.content.replace('\n<!-- REPLACE -->\n', '');
+                if (data.content.startsWith("\n<!-- REPLACE -->\n")) {
+                  fullText = data.content.replace("\n<!-- REPLACE -->\n", "");
                 } else {
                   fullText += data.content;
                 }
                 setStreamingContent(fullText);
                 break;
-              case 'action':
+              case "action":
                 actions.push(data.action);
                 break;
-              case 'done':
+              case "done":
                 messageId = data.message_id;
                 durationMs = data.duration_ms;
                 modelUsed = data.model_used || null;
                 break;
-              case 'error':
+              case "error":
                 fullText += `\n\n**Error:** ${data.error}`;
                 setStreamingContent(fullText);
                 break;
@@ -195,29 +239,30 @@ export default function EdPanel({ onClose }: EdPanelProps) {
       // Replace streaming content with final message
       const assistantMsg: Message = {
         id: messageId || `msg-${Date.now()}`,
-        role: 'assistant',
+        role: "assistant",
         content: fullText,
         actions_taken: actions,
         model_used: modelUsed,
         duration_ms: durationMs || null,
         created_at: new Date().toISOString(),
+        sender: target,
       };
       setMessages((prev) => [...prev, assistantMsg]);
       setLastAssistantText(fullText);
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      const errorMsg = err instanceof Error ? err.message : "Unknown error";
       setMessages((prev) => [
         ...prev,
         {
           id: `err-${Date.now()}`,
-          role: 'assistant',
+          role: "assistant",
           content: `Something went wrong: ${errorMsg}. Try again.`,
           created_at: new Date().toISOString(),
         },
       ]);
     } finally {
       setIsStreaming(false);
-      setStreamingContent('');
+      setStreamingContent("");
     }
   };
 
@@ -225,8 +270,8 @@ export default function EdPanel({ onClose }: EdPanelProps) {
     <aside className="ed-panel">
       <div className="ed-header">
         <div className="ed-header-left">
-          <span className="ed-name">Ed</span>
-          <span className="ed-status">CEO</span>
+          <span className="ed-name">Jarvis</span>
+          <span className="ed-status">@ed to switch</span>
         </div>
         <div className="ed-header-actions">
           {notifCount > 0 && (
@@ -235,14 +280,20 @@ export default function EdPanel({ onClose }: EdPanelProps) {
           <select
             className="ed-voice-select"
             value={voiceMode}
-            onChange={(e) => setVoiceMode(e.target.value as 'off' | VoicePersona)}
+            onChange={(e) =>
+              setVoiceMode(e.target.value as "off" | VoicePersona)
+            }
             title="Voice persona"
           >
             <option value="off">Mute</option>
             <option value="ed">Ed</option>
             <option value="edwina">Edwina</option>
           </select>
-          <button className="ed-icon-btn" onClick={createConversation} title="New conversation">
+          <button
+            className="ed-icon-btn"
+            onClick={createConversation}
+            title="New conversation"
+          >
             <Plus size={14} />
           </button>
           <button className="ed-icon-btn" onClick={onClose} title="Close Ed">
@@ -258,7 +309,7 @@ export default function EdPanel({ onClose }: EdPanelProps) {
           {conversations.slice(0, 5).map((c) => (
             <button
               key={c.id}
-              className={`ed-conv-tab ${c.id === activeConv ? 'active' : ''}`}
+              className={`ed-conv-tab ${c.id === activeConv ? "active" : ""}`}
               onClick={() => setActiveConv(c.id)}
             >
               {c.title.slice(0, 20)}
@@ -271,6 +322,8 @@ export default function EdPanel({ onClose }: EdPanelProps) {
         messages={messages}
         streamingContent={streamingContent}
         isStreaming={isStreaming}
+        streamingSender={streamingSender}
+        isLoading={loadingMessages}
       />
 
       <EdInput
@@ -284,7 +337,7 @@ export default function EdPanel({ onClose }: EdPanelProps) {
         }
       />
 
-      {voiceMode !== 'off' && lastAssistantText && (
+      {voiceMode !== "off" && lastAssistantText && (
         <VoiceOutput text={lastAssistantText} enabled voice={voiceMode} />
       )}
     </aside>

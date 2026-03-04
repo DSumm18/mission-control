@@ -3,34 +3,39 @@
  * Supports streaming via --output-format stream-json and non-streaming calls.
  */
 
-import { spawn } from 'child_process';
-import { createInterface } from 'readline';
+import { spawn } from "child_process";
+import { createInterface } from "readline";
 
-const MC_REPO = '/Users/david/.openclaw/workspace/mission-control';
+const MC_REPO = "/Users/david/.openclaw/workspace/mission-control";
 const DEFAULT_MAX_TOKENS = 4096;
 const OPUS_MAX_TOKENS = 8192;
 
 export interface ClaudeStreamOptions {
   systemPrompt: string;
   /** Multi-turn messages array. Last user message text is sent as the prompt. */
-  messages: { role: 'user' | 'assistant'; content: string | unknown[] }[];
+  messages: { role: "user" | "assistant"; content: string | unknown[] }[];
   model?: string; // 'haiku', 'sonnet', 'opus'
+}
+
+export interface ClaudeUsage {
+  input_tokens: number;
+  output_tokens: number;
 }
 
 /**
  * Flatten messages array into a single prompt string for Claude CLI.
  * CLI doesn't support multi-turn natively, so we format history as context.
  */
-function buildPrompt(messages: ClaudeStreamOptions['messages']): string {
+function buildPrompt(messages: ClaudeStreamOptions["messages"]): string {
   if (messages.length <= 1) {
     const msg = messages[0];
-    if (!msg) return '';
-    return typeof msg.content === 'string'
+    if (!msg) return "";
+    return typeof msg.content === "string"
       ? msg.content
       : (msg.content as { type: string; text?: string }[])
-          .filter((b) => b.type === 'text' && b.text)
+          .filter((b) => b.type === "text" && b.text)
           .map((b) => b.text!)
-          .join('\n');
+          .join("\n");
   }
 
   // Format history as context prefix, last user message as the actual prompt
@@ -38,25 +43,25 @@ function buildPrompt(messages: ClaudeStreamOptions['messages']): string {
   for (let i = 0; i < messages.length - 1; i++) {
     const m = messages[i];
     const text =
-      typeof m.content === 'string'
+      typeof m.content === "string"
         ? m.content
         : (m.content as { type: string; text?: string }[])
-            .filter((b) => b.type === 'text' && b.text)
+            .filter((b) => b.type === "text" && b.text)
             .map((b) => b.text!)
-            .join('\n');
-    parts.push(`[${m.role === 'user' ? 'David' : 'Ed'}]: ${text}`);
+            .join("\n");
+    parts.push(`[${m.role === "user" ? "David" : "Ed"}]: ${text}`);
   }
 
   const last = messages[messages.length - 1];
   const lastText =
-    typeof last.content === 'string'
+    typeof last.content === "string"
       ? last.content
       : (last.content as { type: string; text?: string }[])
-          .filter((b) => b.type === 'text' && b.text)
+          .filter((b) => b.type === "text" && b.text)
           .map((b) => b.text!)
-          .join('\n');
+          .join("\n");
 
-  return `Previous conversation:\n${parts.join('\n')}\n\n[David]: ${lastText}`;
+  return `Previous conversation:\n${parts.join("\n")}\n\n[David]: ${lastText}`;
 }
 
 /**
@@ -70,19 +75,23 @@ export async function* claudeStream(
   const prompt = buildPrompt(messages);
   if (!prompt) return;
 
-  const cliModel = model || 'haiku';
-  const maxTokens =
-    cliModel === 'opus' ? OPUS_MAX_TOKENS : DEFAULT_MAX_TOKENS;
+  const cliModel = model || "haiku";
+  const maxTokens = cliModel === "opus" ? OPUS_MAX_TOKENS : DEFAULT_MAX_TOKENS;
 
   const args = [
-    '-p',
-    '--output-format', 'stream-json',
-    '--verbose',
-    '--model', cliModel,
-    '--max-turns', '1',
-    '--system-prompt', systemPrompt,
-    '--no-session-persistence',
-    '--permission-mode', 'bypassPermissions',
+    "-p",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--model",
+    cliModel,
+    "--max-turns",
+    "1",
+    "--system-prompt",
+    systemPrompt,
+    "--no-session-persistence",
+    "--permission-mode",
+    "bypassPermissions",
     prompt,
   ];
 
@@ -90,13 +99,13 @@ export async function* claudeStream(
   const env = { ...process.env };
   delete env.CLAUDECODE;
 
-  const child = spawn('claude', args, {
+  const child = spawn("claude", args, {
     env,
     cwd: MC_REPO,
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ["ignore", "pipe", "pipe"],
   });
 
-  let lastContent = '';
+  let lastContent = "";
 
   const rl = createInterface({ input: child.stdout!, crlfDelay: Infinity });
 
@@ -117,11 +126,11 @@ export async function* claudeStream(
       }
 
       // Handle assistant message updates (partial messages with --include-partial-messages)
-      if (parsed.type === 'assistant' && parsed.message?.content) {
+      if (parsed.type === "assistant" && parsed.message?.content) {
         const textBlocks = parsed.message.content.filter(
-          (b) => b.type === 'text' && b.text,
+          (b) => b.type === "text" && b.text,
         );
-        const fullText = textBlocks.map((b) => b.text!).join('');
+        const fullText = textBlocks.map((b) => b.text!).join("");
         if (fullText.length > lastContent.length) {
           const delta = fullText.slice(lastContent.length);
           lastContent = fullText;
@@ -130,7 +139,7 @@ export async function* claudeStream(
       }
 
       // Handle result event (final)
-      if (parsed.type === 'result' && parsed.result) {
+      if (parsed.type === "result" && parsed.result) {
         if (parsed.result.length > lastContent.length) {
           const delta = parsed.result.slice(lastContent.length);
           yield delta;
@@ -138,8 +147,111 @@ export async function* claudeStream(
       }
     }
   } finally {
-    child.kill('SIGTERM');
+    child.kill("SIGTERM");
   }
+}
+
+export interface ClaudeStreamWithUsageResult {
+  stream: AsyncGenerator<string, void, undefined>;
+  getUsage: () => ClaudeUsage | null;
+}
+
+/**
+ * Wrapper around claudeStream that also captures token usage from the result event.
+ * Usage is available after the stream completes via getUsage().
+ */
+export function claudeStreamWithUsage(
+  opts: ClaudeStreamOptions,
+): ClaudeStreamWithUsageResult {
+  const { systemPrompt, messages, model } = opts;
+  const prompt = buildPrompt(messages);
+  let usage: ClaudeUsage | null = null;
+
+  async function* innerStream(): AsyncGenerator<string, void, undefined> {
+    if (!prompt) return;
+
+    const cliModel = model || "haiku";
+
+    const args = [
+      "-p",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--model",
+      cliModel,
+      "--max-turns",
+      "1",
+      "--system-prompt",
+      systemPrompt,
+      "--no-session-persistence",
+      "--permission-mode",
+      "bypassPermissions",
+      prompt,
+    ];
+
+    const env = { ...process.env };
+    delete env.CLAUDECODE;
+
+    const child = spawn("claude", args, {
+      env,
+      cwd: MC_REPO,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let lastContent = "";
+    const rl = createInterface({ input: child.stdout!, crlfDelay: Infinity });
+
+    try {
+      for await (const line of rl) {
+        if (!line.trim()) continue;
+
+        let parsed: {
+          type?: string;
+          subtype?: string;
+          message?: { content?: { type: string; text?: string }[] };
+          result?: string;
+          usage?: { input_tokens?: number; output_tokens?: number };
+        };
+        try {
+          parsed = JSON.parse(line);
+        } catch {
+          continue;
+        }
+
+        if (parsed.type === "assistant" && parsed.message?.content) {
+          const textBlocks = parsed.message.content.filter(
+            (b) => b.type === "text" && b.text,
+          );
+          const fullText = textBlocks.map((b) => b.text!).join("");
+          if (fullText.length > lastContent.length) {
+            const delta = fullText.slice(lastContent.length);
+            lastContent = fullText;
+            yield delta;
+          }
+        }
+
+        if (parsed.type === "result") {
+          if (parsed.result && parsed.result.length > lastContent.length) {
+            const delta = parsed.result.slice(lastContent.length);
+            yield delta;
+          }
+          if (parsed.usage) {
+            usage = {
+              input_tokens: parsed.usage.input_tokens || 0,
+              output_tokens: parsed.usage.output_tokens || 0,
+            };
+          }
+        }
+      }
+    } finally {
+      child.kill("SIGTERM");
+    }
+  }
+
+  return {
+    stream: innerStream(),
+    getUsage: () => usage,
+  };
 }
 
 /**
@@ -151,17 +263,22 @@ export async function claudeCall(
   userMessage: string,
   model?: string,
 ): Promise<string> {
-  const cliModel = model || 'haiku';
+  const cliModel = model || "haiku";
 
   const args = [
-    '-p',
-    '--output-format', 'json',
-    '--verbose',
-    '--model', cliModel,
-    '--max-turns', '1',
-    '--system-prompt', systemPrompt,
-    '--no-session-persistence',
-    '--permission-mode', 'bypassPermissions',
+    "-p",
+    "--output-format",
+    "json",
+    "--verbose",
+    "--model",
+    cliModel,
+    "--max-turns",
+    "1",
+    "--system-prompt",
+    systemPrompt,
+    "--no-session-persistence",
+    "--permission-mode",
+    "bypassPermissions",
     userMessage,
   ];
 
@@ -169,23 +286,23 @@ export async function claudeCall(
   delete env.CLAUDECODE;
 
   return new Promise((resolve, reject) => {
-    const child = spawn('claude', args, {
+    const child = spawn("claude", args, {
       env,
       cwd: MC_REPO,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ["ignore", "pipe", "pipe"],
     });
 
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
 
-    child.stdout!.on('data', (d: Buffer) => {
+    child.stdout!.on("data", (d: Buffer) => {
       stdout += d.toString();
     });
-    child.stderr!.on('data', (d: Buffer) => {
+    child.stderr!.on("data", (d: Buffer) => {
       stderr += d.toString();
     });
 
-    child.on('close', (code) => {
+    child.on("close", (code) => {
       if (code !== 0 && !stdout.trim()) {
         reject(new Error(`Claude CLI exited ${code}: ${stderr.slice(0, 500)}`));
         return;
@@ -194,14 +311,14 @@ export async function claudeCall(
       // Parse JSON output — result field contains the text
       try {
         const parsed = JSON.parse(stdout.trim());
-        resolve(parsed.result || '');
+        resolve(parsed.result || "");
       } catch {
         // If not valid JSON, return raw stdout
         resolve(stdout.trim());
       }
     });
 
-    child.on('error', (err) => {
+    child.on("error", (err) => {
       reject(new Error(`Claude CLI spawn error: ${err.message}`));
     });
   });

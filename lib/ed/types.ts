@@ -11,7 +11,7 @@ export interface EdConversation {
 export interface EdMessage {
   id: string;
   conversation_id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
   actions_taken: EdActionResult[];
   metadata: Record<string, unknown>;
@@ -37,15 +37,24 @@ export interface EdActionResult {
 
 /** SSE stream chunk sent to the client */
 export type EdStreamChunk =
-  | { type: 'text'; content: string }
-  | { type: 'action'; action: EdActionResult }
-  | { type: 'done'; message_id: string; duration_ms: number; model_used?: string }
-  | { type: 'error'; error: string };
+  | { type: "text"; content: string }
+  | { type: "action"; action: EdActionResult }
+  | {
+      type: "done";
+      message_id: string;
+      duration_ms: number;
+      model_used?: string;
+    }
+  | { type: "error"; error: string };
+
+export type ChatTarget = "ed" | "jarvis";
 
 export interface EdChatRequest {
   conversation_id: string;
   message: string;
   images?: EdImageAttachment[];
+  target?: ChatTarget;
+  page_context?: string | null;
 }
 
 export interface EdImageAttachment {
