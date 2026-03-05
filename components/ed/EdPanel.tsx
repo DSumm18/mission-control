@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Maximize2, Minimize2 } from "lucide-react";
 import EdMessageList from "./EdMessageList";
 import EdInput from "./EdInput";
 import VoiceInput from "./VoiceInput";
@@ -57,6 +57,7 @@ export default function EdPanel({ onClose, pathname }: EdPanelProps) {
   const [voiceMode, setVoiceMode] = useState<"off" | VoicePersona>("off");
   const [lastAssistantText, setLastAssistantText] = useState("");
   const [notifCount, setNotifCount] = useState(0);
+  const [expanded, setExpanded] = useState(false);
 
   // Load conversations + validate stored activeConv
   useEffect(() => {
@@ -268,7 +269,7 @@ export default function EdPanel({ onClose, pathname }: EdPanelProps) {
   };
 
   return (
-    <aside className="ed-panel">
+    <aside className={`ed-panel ${expanded ? "ed-panel-expanded" : ""}`}>
       <div className="ed-header">
         <div className="ed-header-left">
           <span className="ed-name">Jarvis</span>
@@ -290,6 +291,13 @@ export default function EdPanel({ onClose, pathname }: EdPanelProps) {
             <option value="ed">Ed</option>
             <option value="edwina">Edwina</option>
           </select>
+          <button
+            className="ed-icon-btn"
+            onClick={() => setExpanded((v) => !v)}
+            title={expanded ? "Collapse panel" : "Expand panel"}
+          >
+            {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          </button>
           <button
             className="ed-icon-btn"
             onClick={createConversation}

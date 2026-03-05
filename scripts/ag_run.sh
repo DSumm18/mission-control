@@ -224,33 +224,41 @@ PY
     ;;
 
   gemini)
-    if curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
-      # Use AntiGravity proxy for Gemini
-      USER_MSG="$COMMAND_TEXT"
-      if [[ -n "$ARGS_JOINED" ]]; then
-        USER_MSG="$USER_MSG\nArgs: $ARGS_JOINED"
-      fi
+    PROMPT="$COMMAND_TEXT"
+    if [[ -n "$ARGS_JOINED" ]]; then
+      PROMPT="$PROMPT\n\nArgs: $ARGS_JOINED"
+    fi
 
-      PAYLOAD="$(USER_MSG="$USER_MSG" python3 - <<'PY'
+    # Pick Gemini model — default to gemini-2.5-flash (fast + free on Pro)
+    GEMINI_MODEL="${MODEL:-gemini-2.5-flash}"
+
+    # Build system prompt flag for Gemini CLI
+    GEMINI_ARGS=(-p --model "$GEMINI_MODEL")
+    if [[ -n "$SYSTEM_PROMPT" ]]; then
+      GEMINI_ARGS+=(--system-prompt "$SYSTEM_PROMPT")
+    fi
+    GEMINI_ARGS+=("$PROMPT")
+
+    # Try Gemini CLI directly (uses Google OAuth from `gemini auth login`)
+    if command -v gemini >/dev/null 2>&1; then
+      OUT="$(gemini "${GEMINI_ARGS[@]}" 2>&1 || true)"
+
+      # Check for quota/auth errors — fall back to Claude CLI
+      if echo "$OUT" | grep -qi "quota\|TerminalQuotaError\|not authenticated\|PERMISSION_DENIED"; then
+        unset CLAUDECODE 2>/dev/null || true
+        OUT="$(claude -p --permission-mode bypassPermissions "$PROMPT" 2>&1 || true)"
+        OUT="$OUT" python3 - <<'PY'
 import json, os
-print(json.dumps({
-  "model": "gemini-3-flash",
-  "max_tokens": 1024,
-  "messages": [{"role":"user","content": os.environ.get("USER_MSG","")}]
-}))
+print(json.dumps({"ok": True, "engine": "gemini-fallback-claude", "result": os.environ.get("OUT","")[:12000]}))
 PY
-)"
-      OUT="$(curl -sS http://localhost:8080/v1/messages -H 'content-type: application/json' -H 'anthropic-version: 2023-06-01' -H 'x-api-key: test' -d "$PAYLOAD" 2>&1)"
-      OUT="$OUT" python3 - <<'PY'
+      else
+        OUT="$OUT" python3 - <<'PY'
 import json, os
 print(json.dumps({"ok": True, "engine": "gemini", "result": os.environ.get("OUT","")[:12000]}))
 PY
-    else
-      # Proxy down — fall back to Claude CLI
-      PROMPT="$COMMAND_TEXT"
-      if [[ -n "$ARGS_JOINED" ]]; then
-        PROMPT="$PROMPT\n\nArgs: $ARGS_JOINED"
       fi
+    else
+      # Gemini CLI not installed — fall back to Claude CLI
       unset CLAUDECODE 2>/dev/null || true
       OUT="$(claude -p --permission-mode bypassPermissions "$PROMPT" 2>&1 || true)"
       OUT="$OUT" python3 - <<'PY'

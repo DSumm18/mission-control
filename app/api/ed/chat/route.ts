@@ -34,6 +34,12 @@ function sseEncode(chunk: EdStreamChunk): string {
   return `data: ${JSON.stringify(chunk)}\n\n`;
 }
 
+// Track active Jarvis sessions to detect busy state
+const activeSessions = new Map<
+  string,
+  { startedAt: number; message: string }
+>();
+
 /** Quick-path: answer simple status questions from Supabase directly */
 async function tryQuickPath(message: string): Promise<string | null> {
   const lower = message.toLowerCase();
@@ -427,6 +433,67 @@ export async function POST(req: NextRequest) {
 
   // --- JARVIS PATH: Route to OpenClaw agent ---
   if (target === "jarvis") {
+    const sessionKey = `jarvis-${conversation_id.slice(0, 8)}`;
+
+    // Busy detection: if Jarvis is already processing for this conversation, queue as job
+    const existing = activeSessions.get(sessionKey);
+    if (existing) {
+      const { data: job } = await sb
+        .from("mc_jobs")
+        .insert({
+          title: `Queued chat: ${message.slice(0, 80)}`,
+          prompt_text: message,
+          engine: "claude",
+          status: "queued",
+          priority: 2,
+          source: "chat-overflow",
+        })
+        .select("id")
+        .single();
+
+      const elapsed = Math.round((Date.now() - existing.startedAt) / 1000);
+      const busyResponse = `Jarvis is working on your previous request (${elapsed}s ago). Queued this as a job${job ? ` (${job.id.slice(0, 8)})` : ""} — you'll get a notification when it's done.`;
+
+      await sb.from("mc_ed_messages").insert({
+        conversation_id,
+        role: "assistant",
+        content: busyResponse,
+        metadata: { sender: "jarvis", queued_job_id: job?.id },
+        model_used: "busy-queue",
+        duration_ms: Date.now() - startTime,
+      });
+
+      const busyStream = new ReadableStream({
+        start(controller) {
+          const enc = new TextEncoder();
+          controller.enqueue(
+            enc.encode(sseEncode({ type: "text", content: busyResponse })),
+          );
+          controller.enqueue(
+            enc.encode(
+              sseEncode({
+                type: "done",
+                message_id: "",
+                duration_ms: Date.now() - startTime,
+                model_used: "busy-queue",
+              }),
+            ),
+          );
+          controller.close();
+        },
+      });
+      return new Response(busyStream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      });
+    }
+
+    // Mark session as busy
+    activeSessions.set(sessionKey, { startedAt: Date.now(), message });
+
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
@@ -437,28 +504,132 @@ export async function POST(req: NextRequest) {
           ]);
           const context = pageCtx + jarvisCtx;
           let fullText = "";
-          for await (const chunk of openclawStream({
-            message,
-            context,
-            sessionId: `jarvis-${conversation_id.slice(0, 8)}`,
-          })) {
-            fullText += chunk;
+          let lastChunkAt = Date.now();
+          let sentStillWorking = false;
+          let timedOut = false;
+
+          const STALL_TIMEOUT = 30_000; // 30s no text = "still working"
+          const HARD_TIMEOUT = 90_000; // 90s = graceful close (buffer before Cloudflare 100s)
+
+          const stallChecker = setInterval(() => {
+            const now = Date.now();
+            const elapsed = now - startTime;
+            const sinceLastChunk = now - lastChunkAt;
+
+            if (elapsed >= HARD_TIMEOUT && fullText.length > 0) {
+              timedOut = true;
+              clearInterval(stallChecker);
+              return;
+            }
+
+            if (sinceLastChunk >= STALL_TIMEOUT && !sentStillWorking) {
+              sentStillWorking = true;
+              controller.enqueue(
+                encoder.encode(
+                  sseEncode({
+                    type: "text",
+                    content: "\n\n*Still working on this...*",
+                  }),
+                ),
+              );
+            }
+          }, 5_000);
+
+          try {
+            for await (const chunk of openclawStream({
+              message,
+              context,
+              sessionId: sessionKey,
+            })) {
+              lastChunkAt = Date.now();
+              fullText += chunk;
+              controller.enqueue(
+                encoder.encode(sseEncode({ type: "text", content: chunk })),
+              );
+              if (timedOut) break;
+            }
+          } finally {
+            clearInterval(stallChecker);
+          }
+
+          // If timed out, create a continuation job
+          if (timedOut) {
+            const timeoutNote =
+              "\n\n---\n*Taking longer than expected. Jarvis is continuing in the background — you'll get a notification when done.*";
             controller.enqueue(
-              encoder.encode(sseEncode({ type: "text", content: chunk })),
+              encoder.encode(sseEncode({ type: "text", content: timeoutNote })),
             );
+            fullText += timeoutNote;
+
+            const { data: bgJob } = await sb
+              .from("mc_jobs")
+              .insert({
+                title: `Jarvis continuation: ${message.slice(0, 60)}`,
+                prompt_text: `Continue this work that timed out.\n\nOriginal request: ${message}\n\nPartial response:\n${fullText.slice(0, 2000)}`,
+                engine: "claude",
+                status: "queued",
+                priority: 1,
+                source: "timeout-continuation",
+              })
+              .select("id")
+              .single();
+
+            if (bgJob) {
+              controller.enqueue(
+                encoder.encode(
+                  sseEncode({
+                    type: "action",
+                    action: { type: "create_job", job_id: bgJob.id, ok: true },
+                  }),
+                ),
+              );
+            }
+          }
+
+          // Parse actions from Jarvis response (same pipeline as Ed)
+          const { cleanText, actions } = parseActions(fullText);
+
+          if (actions.length > 0 && cleanText !== fullText) {
+            controller.enqueue(
+              encoder.encode(
+                sseEncode({
+                  type: "text",
+                  content: `\n<!-- REPLACE -->\n${cleanText}`,
+                }),
+              ),
+            );
+          }
+
+          let actionResults: {
+            type: string;
+            ok: boolean;
+            id?: string;
+            job_id?: string;
+            task_id?: string;
+            error?: string;
+          }[] = [];
+          if (actions.length > 0) {
+            actionResults = await executeActions(actions);
+            for (const result of actionResults) {
+              controller.enqueue(
+                encoder.encode(sseEncode({ type: "action", action: result })),
+              );
+            }
           }
 
           const durationMs = Date.now() - startTime;
 
-          // Store Jarvis response
+          // Store Jarvis response (clean text + actions)
           const { data: assistantMsg } = await sb
             .from("mc_ed_messages")
             .insert({
               conversation_id,
               role: "assistant",
-              content: fullText,
+              content: cleanText,
+              actions_taken:
+                actionResults.length > 0 ? actionResults : undefined,
               metadata: { sender: "jarvis" },
-              model_used: "openclaw",
+              model_used: timedOut ? "openclaw-timeout" : "openclaw",
               duration_ms: durationMs,
             })
             .select("id")
@@ -470,7 +641,7 @@ export async function POST(req: NextRequest) {
                 type: "done",
                 message_id: assistantMsg?.id || "",
                 duration_ms: durationMs,
-                model_used: "openclaw",
+                model_used: timedOut ? "openclaw-timeout" : "openclaw",
               }),
             ),
           );
@@ -490,6 +661,7 @@ export async function POST(req: NextRequest) {
             encoder.encode(sseEncode({ type: "error", error: errorMessage })),
           );
         } finally {
+          activeSessions.delete(sessionKey);
           controller.close();
         }
       },

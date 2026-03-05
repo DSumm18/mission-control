@@ -619,6 +619,143 @@ button:disabled {
   }
 }
 
+/* ── Expanded panel ── */
+.ed-panel-expanded {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 60vw;
+  min-width: 500px;
+  max-width: 900px;
+  z-index: 80;
+  border-radius: 0;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+  animation: mc-slide-in-right 0.2s ease-out;
+}
+@keyframes mc-slide-in-right {
+  from {
+    transform: translateX(40px);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ── Media embeds ── */
+.ed-media-embeds {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ed-media-audio {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.ed-media-audio audio {
+  width: 100%;
+  height: 32px;
+}
+.ed-media-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.ed-media-image {
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  max-width: 280px;
+  transition: border-color 0.15s;
+}
+.ed-media-image:hover {
+  border-color: var(--accent);
+}
+.ed-media-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  object-fit: cover;
+}
+.ed-media-video {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  max-width: 320px;
+}
+.ed-media-video video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+}
+
+/* ── Lightbox ── */
+.ed-lightbox-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: mc-fade-in 0.15s ease-out;
+}
+.ed-lightbox-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+.ed-lightbox-content img {
+  display: block;
+  max-width: 90vw;
+  max-height: 85vh;
+  border-radius: 8px;
+  object-fit: contain;
+}
+.ed-lightbox-close {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ed-lightbox-close:hover {
+  background: rgba(0, 0, 0, 0.9);
+}
+.ed-lightbox-audio {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 24px 32px;
+  min-width: 400px;
+}
+.ed-lightbox-audio-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
 /* Org chart hierarchy */
 .org-agent-card {
   border: 1px solid var(--line);
@@ -1572,6 +1709,13 @@ tbody tr:hover {
       transform: translateY(0);
       opacity: 1;
     }
+  }
+
+  /* Expanded panel: just fullscreen on mobile */
+  .ed-panel-expanded {
+    width: 100% !important;
+    min-width: unset;
+    top: 0;
   }
 
   /* Ed toggle in sidebar hidden on mobile (use header button instead) */

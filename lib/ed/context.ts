@@ -551,6 +551,19 @@ export async function buildJarvisContext(): Promise<string> {
     }
 
     lines.push(`Date: ${new Date().toISOString().split("T")[0]}`);
+
+    // MC dispatch instructions — teach Jarvis to delegate long tasks
+    lines.push("");
+    lines.push("[MC Dispatch]");
+    lines.push(
+      "For tasks >30s (music generation, multi-file code changes, deploys, deep research), dispatch as an MC job instead of doing inline:",
+    );
+    lines.push(
+      '[MC_ACTION:create_job]{"title":"...","prompt_text":"detailed instructions","engine":"claude"}[/MC_ACTION]',
+    );
+    lines.push(
+      "David gets notified when done. Quick answers: respond inline as normal.",
+    );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     lines.push(`(Error: ${message})`);

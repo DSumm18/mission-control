@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 interface Message {
   id: string;
@@ -162,6 +162,51 @@ function ChallengeCard({
   );
 }
 
+/* ── Media detection ── */
+
+const AUDIO_EXT = /\.(mp3|wav|ogg|m4a|aac|flac)(\?[^)\s]*)?$/i;
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|svg|bmp)(\?[^)\s]*)?$/i;
+const VIDEO_EXT = /\.(mp4|webm|mov)(\?[^)\s]*)?$/i;
+
+interface MediaEmbed {
+  type: "audio" | "image" | "video";
+  url: string;
+  label?: string;
+}
+
+/** Extract bare URLs and markdown links that point to media files */
+function extractMedia(text: string): MediaEmbed[] {
+  const embeds: MediaEmbed[] = [];
+  const seen = new Set<string>();
+
+  // Markdown links: [label](url)
+  const mdLinkRe = /\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g;
+  let m: RegExpExecArray | null;
+  while ((m = mdLinkRe.exec(text)) !== null) {
+    const url = m[2];
+    if (seen.has(url)) continue;
+    seen.add(url);
+    if (AUDIO_EXT.test(url)) embeds.push({ type: "audio", url, label: m[1] });
+    else if (IMAGE_EXT.test(url))
+      embeds.push({ type: "image", url, label: m[1] });
+    else if (VIDEO_EXT.test(url))
+      embeds.push({ type: "video", url, label: m[1] });
+  }
+
+  // Bare URLs (not inside markdown links)
+  const bareUrlRe = /(?<!\()(https?:\/\/[^\s)<>]+)/g;
+  while ((m = bareUrlRe.exec(text)) !== null) {
+    const url = m[1];
+    if (seen.has(url)) continue;
+    seen.add(url);
+    if (AUDIO_EXT.test(url)) embeds.push({ type: "audio", url });
+    else if (IMAGE_EXT.test(url)) embeds.push({ type: "image", url });
+    else if (VIDEO_EXT.test(url)) embeds.push({ type: "video", url });
+  }
+
+  return embeds;
+}
+
 /** Simple markdown: bold, italic, code, links, lists */
 function renderMarkdown(text: string): string {
   return text
@@ -177,6 +222,117 @@ function renderMarkdown(text: string): string {
     .replace(/\n/g, "<br/>");
 }
 
+/* ── Lightbox overlay ── */
+
+function Lightbox({
+  media,
+  onClose,
+}: {
+  media: MediaEmbed;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  return (
+    <div className="ed-lightbox-overlay" onClick={onClose}>
+      <div className="ed-lightbox-content" onClick={(e) => e.stopPropagation()}>
+        <button className="ed-lightbox-close" onClick={onClose}>
+          &times;
+        </button>
+        {media.type === "image" && (
+          <img src={media.url} alt={media.label || "Image"} />
+        )}
+        {media.type === "video" && (
+          <video
+            src={media.url}
+            controls
+            autoPlay
+            style={{ maxWidth: "100%", maxHeight: "80vh" }}
+          />
+        )}
+        {media.type === "audio" && (
+          <div className="ed-lightbox-audio">
+            <div className="ed-lightbox-audio-label">
+              {media.label || "Audio"}
+            </div>
+            <audio
+              src={media.url}
+              controls
+              autoPlay
+              style={{ width: "100%" }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Inline media embeds ── */
+
+function MediaEmbeds({
+  embeds,
+  onOpen,
+}: {
+  embeds: MediaEmbed[];
+  onOpen: (m: MediaEmbed) => void;
+}) {
+  if (embeds.length === 0) return null;
+  return (
+    <div className="ed-media-embeds">
+      {embeds.map((embed, i) => {
+        if (embed.type === "audio") {
+          return (
+            <div key={i} className="ed-media-audio">
+              <audio src={embed.url} controls preload="metadata" />
+              {embed.label && (
+                <div className="ed-media-label">{embed.label}</div>
+              )}
+            </div>
+          );
+        }
+        if (embed.type === "image") {
+          return (
+            <div
+              key={i}
+              className="ed-media-image"
+              onClick={() => onOpen(embed)}
+            >
+              <img
+                src={embed.url}
+                alt={embed.label || "Image"}
+                loading="lazy"
+              />
+            </div>
+          );
+        }
+        if (embed.type === "video") {
+          return (
+            <div key={i} className="ed-media-video">
+              <video
+                src={embed.url}
+                controls
+                preload="metadata"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onOpen(embed);
+                }}
+              />
+            </div>
+          );
+        }
+        return null;
+      })}
+    </div>
+  );
+}
+
 export default function EdMessageList({
   messages,
   streamingContent,
@@ -187,6 +343,9 @@ export default function EdMessageList({
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const userScrolledRef = useRef(false);
+  const [lightboxMedia, setLightboxMedia] = useState<MediaEmbed | null>(null);
+  const openLightbox = useCallback((m: MediaEmbed) => setLightboxMedia(m), []);
+  const closeLightbox = useCallback(() => setLightboxMedia(null), []);
 
   // Detect if user has scrolled up (away from bottom)
   useEffect(() => {
@@ -238,6 +397,8 @@ export default function EdMessageList({
             ? extractChallengeBoard(msg.content)
             : { cleanText: msg.content, board: null };
 
+        const mediaEmbeds = extractMedia(cleanText);
+
         return (
           <div
             key={msg.id}
@@ -250,6 +411,7 @@ export default function EdMessageList({
               className="ed-message-content"
               dangerouslySetInnerHTML={{ __html: renderMarkdown(cleanText) }}
             />
+            <MediaEmbeds embeds={mediaEmbeds} onOpen={openLightbox} />
             {board && <ChallengeCard board={board} />}
             {msg.actions_taken && msg.actions_taken.length > 0 && (
               <div className="ed-actions">
@@ -303,6 +465,10 @@ export default function EdMessageList({
       )}
 
       <div ref={bottomRef} />
+
+      {lightboxMedia && (
+        <Lightbox media={lightboxMedia} onClose={closeLightbox} />
+      )}
     </div>
   );
 }
