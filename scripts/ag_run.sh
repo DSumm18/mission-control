@@ -32,6 +32,52 @@ if [[ -z "$JOB_ID" || -z "$ENGINE" || -z "$COMMAND_TEXT" ]]; then
   exit 2
 fi
 
+# ── Job management: dedup, timeout, PID tracking ──
+JOB_DIR="/tmp/mc-jobs"
+mkdir -p "$JOB_DIR"
+
+# 1. Kill any stale jobs older than 30 minutes
+find "$JOB_DIR" -name "*.pid" -mmin +30 2>/dev/null | while read pidfile; do
+  STALE_PID=$(cat "$pidfile" 2>/dev/null || echo "")
+  if [[ -n "$STALE_PID" ]] && kill -0 "$STALE_PID" 2>/dev/null; then
+    echo "Killing stale job: $(basename "$pidfile" .pid) (PID $STALE_PID)" >&2
+    kill -TERM "$STALE_PID" 2>/dev/null || true
+    sleep 1
+    kill -9 "$STALE_PID" 2>/dev/null || true
+  fi
+  rm -f "$pidfile"
+done
+
+# 2. Dedup — skip if this exact job ID is already running
+if [[ -f "$JOB_DIR/$JOB_ID.pid" ]]; then
+  EXISTING_PID=$(cat "$JOB_DIR/$JOB_ID.pid" 2>/dev/null || echo "")
+  if [[ -n "$EXISTING_PID" ]] && kill -0 "$EXISTING_PID" 2>/dev/null; then
+    echo "{\"ok\":false,\"error\":\"job $JOB_ID already running (PID $EXISTING_PID)\"}"
+    exit 0
+  fi
+  rm -f "$JOB_DIR/$JOB_ID.pid"
+fi
+
+# 3. Cap total concurrent jobs (max 3)
+RUNNING_JOBS=$(find "$JOB_DIR" -name "*.pid" 2>/dev/null | while read pf; do
+  p=$(cat "$pf" 2>/dev/null || echo "")
+  if [[ -n "$p" ]] && kill -0 "$p" 2>/dev/null; then echo "$p"; fi
+done | wc -l | tr -d ' ')
+if [[ "$RUNNING_JOBS" -ge 3 ]]; then
+  echo "{\"ok\":false,\"error\":\"too many concurrent jobs ($RUNNING_JOBS running, max 3)\"}"
+  exit 0
+fi
+
+# 4. Register this job
+echo $$ > "$JOB_DIR/$JOB_ID.pid"
+
+# 5. Cleanup on exit
+cleanup_job() {
+  rm -f "$JOB_DIR/$JOB_ID.pid"
+  rm -f "/tmp/mcp-${JOB_ID}.json"
+}
+trap cleanup_job EXIT
+
 # Default repo to mission-control if not set or invalid
 MC_REPO="/Users/david/.openclaw/workspace/mission-control"
 if [[ -z "$REPO" || "$REPO" == "null" || ! -d "$REPO" ]]; then
